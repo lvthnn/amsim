@@ -1,3 +1,9 @@
+# Build directories
+build/
+out/
+bin/
+lib/
+
 # Prerequisites
 *.d
 
@@ -39,3 +45,6 @@
 
 # debug information files
 *.dwo
+
+# LSP specific
+.cache
