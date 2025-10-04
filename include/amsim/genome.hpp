@@ -63,6 +63,7 @@ namespace amsim {
     inline double v_lmean(std::size_t loc) const noexcept { return v_lmean_[loc]; }
     inline double v_lvar(std::size_t loc) const noexcept { return v_lvar_[loc]; }
     inline double v_lmaf(std::size_t loc) const noexcept { return v_lmaf_[loc]; }
+    inline HapMatView view() const noexcept { return H0_.view(); }
     inline HapMat& H0() noexcept { return H0_; }
     inline HapMat& H1() noexcept { return H1_; }
     void generate_haplotypes() noexcept;
