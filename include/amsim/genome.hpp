@@ -4,9 +4,6 @@
 #include <vector>
 
 #include <amsim/rng.hpp>
-#include <amsim/phenotype.hpp>
-
-namespace amsim { struct Phenotype; }
 
 namespace amsim {
   enum class HapMatView : bool {
@@ -60,22 +57,29 @@ namespace amsim {
     Genome(size_t n_ind, size_t n_loc, std::vector<double> v_mut,
            std::vector<double> v_rec, std::vector<double> v_maf,
            uint64_t rng_seed);
+    inline std::vector<double>& v_lmean() noexcept { return v_lmean_; }
+    inline std::vector<double>& v_lvar() noexcept { return v_lvar_; }
+    inline std::vector<double>& v_lmaf() noexcept { return v_lmaf_; }
+    inline double v_lmean(std::size_t loc) const noexcept { return v_lmean_[loc]; }
+    inline double v_lvar(std::size_t loc) const noexcept { return v_lvar_[loc]; }
+    inline double v_lmaf(std::size_t loc) const noexcept { return v_lmaf_[loc]; }
+    inline HapMat& H0() noexcept { return H0_; }
+    inline HapMat& H1() noexcept { return H1_; }
     void generate_haplotypes() noexcept;
     void transpose();
     void compute_mafs();
     void compute_stats();
-    void score(Phenotype& phenotype);
     void update(std::vector<std::size_t> matching);
     
   private:
     const std::vector<double> v_mut_;
     const std::vector<double> v_rec_;
     const std::vector<double> v_maf_;
-    rng::BW16 bw_;
     std::vector<double> v_lmean_;
     std::vector<double> v_bmean;
     std::vector<double> v_lvar_;
     std::vector<double> v_lmaf_;
+    rng::BW16 bw_;
     HapMat H0_;
     HapMat H1_;
     uint64_t gam_word_(std::size_t ind, std::size_t word) noexcept;
