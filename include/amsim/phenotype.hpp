@@ -1,8 +1,11 @@
 #pragma once
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
-#include <cmath>
+#include <unordered_map>
+
+#include <amsim/genome.hpp>
 
 namespace amsim {
   struct Phenotype {
@@ -10,22 +13,17 @@ namespace amsim {
     const std::vector<size_t> loci;
     const std::vector<uint64_t> word_masks;
     const double h2;
-    double scale_const; 
+
+    std::vector<double> loc_effects;
+    std::unordered_map<std::size_t, std::uint64_t> loc_mask;
 
     std::vector<double> values_gen;
     std::vector<double> values_env;
+    std::vector<double> values;
 
 		Phenotype(const std::string name_, const std::vector<size_t>& loci_,
-              const double h2_)
-    : name(name_),
-      loci(loci_),
-      h2(h2_) { };
+              const double h2_);
 
-    inline std::vector<double> values() {
-      std::vector<double> values(values_gen.size());
-      for (std::size_t el = 0; el < values_gen.size(); el++)
-        values[el] = values_gen[el] + values_env[el];
-      return values;
-    }
+    void score(Genome& genome);
   };
 }
