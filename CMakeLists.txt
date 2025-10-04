@@ -5,6 +5,8 @@ project(amsimcpp LANGUAGES CXX VERSION 0.1.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_BUILD_TYPE Release)
 
 # Library target
 add_library(amsimcpp STATIC
@@ -18,6 +20,18 @@ target_include_directories(amsimcpp
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
+
+# Link to BLAS
+option(USE_BLAS "Enable BLAS acceleration for phenotype scoring" OFF)
+
+if (APPLE AND USE_BLAS)
+  target_compile_definitions(amsimcpp PRIVATE ACCELERATE_NEW_LAPACK USE_BLAS)
+  target_link_libraries(amsimcpp PRIVATE "-framework Accelerate")
+elseif (UNIX AND USE_BLAS)
+  find_package(BLAS REQUIRED)
+  target_compile_definitions(amsimcpp PRIVATE USE_BLAS)
+  target_link_libraries(PRIVATE BLAS::BLAS)
+endif()
 
 # Reasonable warnings (optional)
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
