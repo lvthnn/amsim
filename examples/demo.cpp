@@ -39,14 +39,14 @@ double variance(std::vector<double> a, int n)
 
 std::vector<std::size_t> range_inclusive_iota(std::size_t a, std::size_t b) {
   std::vector<std::size_t> v(b - a + 1);
-  std::iota(v.begin(), v.end(), a);  // fills a, a+1, ..., b
+  std::iota(v.begin(), v.end(), a);
   return v;
 }
 
 int main() {
   // Parameters for genome
   std::size_t n_ind = 256000;
-  std::size_t n_loc = 14000;
+  std::size_t n_loc = 32000;
   std::vector<double> v_mut(n_loc, 1e-8);
   std::vector<double> v_rec(n_loc, 0.5);
   std::vector<double> v_maf(n_loc, 0.5);
@@ -60,7 +60,7 @@ int main() {
 
   // Parameters for phenotype
   std::string name = "height";
-  std::vector<std::size_t> loci = range_inclusive_iota(0, 999);
+  std::vector<std::size_t> loci = range_inclusive_iota(0, 13999);
   double h2 = 0.5;
 
   amsim::Phenotype phenotype(name, loci, h2);
@@ -68,15 +68,13 @@ int main() {
   std::cout << "Initialised phenotype" << std::endl;
 
   // Run the simulation
-  // Redo this section, adding timers around each step
   const auto total_start = SteadyClock::now();
 
   time_step("Generated haplotypes", [&]{ genome.generate_haplotypes(); });
-  time_step("Transposed",          [&]{ genome.transpose(); });
-  time_step("Computed MAFs",       [&]{ genome.compute_mafs(); });
-  time_step("Computed stats",      [&]{ genome.compute_stats(); });
-  time_step("Transposed",          [&]{ genome.transpose(); });
-  time_step("Scored phenotype",    [&]{ phenotype.score(genome); });
+  time_step("Transposed",           [&]{ genome.transpose(); });
+  time_step("Computed MAFs",        [&]{ genome.compute_mafs(); });
+  time_step("Computed stats",       [&]{ genome.compute_stats(); });
+  time_step("Scored phenotype",     [&]{ phenotype.score(genome); });
 
   const auto total_ms =
       std::chrono::duration_cast<std::chrono::milliseconds>(
