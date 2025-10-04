@@ -24,6 +24,10 @@ namespace amsim {
 		Phenotype(const std::string name_, const std::vector<size_t>& loci_,
               const double h2_);
 
+    void score_bitwise(Genome& genome);
+
+    void score_tiled64(Genome& genome);
+
     void score(Genome& genome);
   };
 }
