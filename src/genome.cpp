@@ -51,6 +51,9 @@ namespace amsim {
 		: v_mut_(std::move(v_mut)),
 			v_rec_(std::move(v_rec)),
 			v_maf_(std::move(v_maf)),
+      v_lmean_(n_loc),
+      v_lvar_(n_loc),
+      v_lmaf_(n_loc),
       bw_(rng_seed),
       H0_(n_ind, n_loc),
       H1_(n_ind, n_loc) {};

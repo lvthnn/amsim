@@ -32,14 +32,14 @@ namespace amsim {
 		};
 
     inline const std::uint64_t* rowptr(std::size_t i) const noexcept {
-			return (view_ == HapMatView::IND_MAJOR)
-				? &data_[i * n_words_] : &data_[i * n_rows_];
-		};
+      if (view_ == HapMatView::IND_MAJOR) return &data_[i * n_words_];
+      return nullptr;
+    }
 
     inline std::uint64_t* rowptr(std::size_t i) noexcept {
-			return (view_ == HapMatView::IND_MAJOR)
-				? &data_[i * n_words_] : &data_[i * n_rows_];
-		};
+      if (view_ == HapMatView::IND_MAJOR) return &data_[i * n_words_];
+      return nullptr;
+    }
 
     void transpose() noexcept;
 

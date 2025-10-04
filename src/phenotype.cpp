@@ -1,6 +1,7 @@
 #include <amsim/phenotype.hpp>
 #include <amsim/genome.hpp>
 
+#include <iostream>
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -14,6 +15,7 @@ namespace amsim {
                        const std::vector<std::size_t>& loci_,
                        const double h2_)
     : name(name_),
+      loci(std::move(loci_)),
       h2(h2_) {
     for (std::size_t loc : loci_) {
       std::size_t block = loc / 64;
