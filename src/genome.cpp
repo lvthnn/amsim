@@ -140,29 +140,6 @@ namespace amsim {
     }
 	}
 
-  void Genome::score(Phenotype& phenotype) {
-    // assume we already have processed stats
-    if (H0_.view() == HapMatView::LOC_MAJOR)
-      throw std::runtime_error("Score phenotypes in ind-major view.");
-    
-    std::size_t n_ind = H0_.n_ind();
-    std::vector<double> values(n_ind);
-
-    for (std::size_t ind = 0; ind < n_ind; ind++) {
-      for (std::size_t loc = 0; loc < phenotype.loci.size(); loc++) {
-        std::size_t word = n_ind / 64;
-        std::size_t offset = n_ind % 64;
-
-        double eff = phenotype.effects[loc];
-        double eff_std[3];
-
-        for (std::size_t i = 0; i < 3; i++)
-          eff_std[i] = eff * (static_cast<double>(i) - v_lmean_[loc]) / v_lvar_[loc];
-      }
-    }
-
-  }
-
 	void Genome::update(std::vector<std::size_t> matching) {
 		if (H0_.view() == HapMatView::LOC_MAJOR)
       throw std::runtime_error("Update in ind-major view.");
