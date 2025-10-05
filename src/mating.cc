@@ -4,6 +4,14 @@
 #include <numeric>
 #include <algorithm>
 
+#if defined(__APPLE__) && defined(USE_BLAS)
+  #include <Accelerate/Accelerate.h>
+#elif defined(__linux__) && defined(USE_BLAS)
+  #include <cblas.h>
+#endif
+
+#include <Accelerate/Accelerate.h>
+
 #include <amsim/mating.h>
 
 namespace amsim::mating {
@@ -15,48 +23,35 @@ namespace amsim::mating {
   }
 
   GeneralModel::GeneralModel(std::vector<std::vector<double> const*> vals_ptr,
-                             std::tuple<std::size_t, std::size_t, double> cor,
-                             const std::size_t n_itr, const std::size_t n_sex,
-                             double tmp_init, double tmp_decay)
+                             std::vector<double> cor, const std::size_t n_itr,
+                             const std::size_t n_sex, double tmp_init,
+                             double tmp_decay)
     : MatingModel(MatingType::ASSORTATIVE, n_sex),
+      cor_(std::move(cor)),
       vals_ptr_(std::move(vals_ptr)),
-      cor_(cor),
       n_itr_(n_itr),
-      n_sex_(n_sex),
       tmp_init_(tmp_init),
-      tmp_decay_(tmp_decay) {}
-
-  double GeneralModel::delta_(std::vector<std::size_t> cur, std::size_t i0,
-                              std::size_t i1) {
-    // compute the delta vector
-    double delta = 0.0;
-    for (std::size_t el = 0; el < vals_ptr_.size(); el++) {
-      double m0 = (*vals_ptr_[el])[i0]; double m1 = (*vals_ptr_[el])[i1];
-      double df = (*vals_ptr_[el])[cur[i1]] - (*vals_ptr_[el])[cur[i0]];
-      delta += m0 * df - m1 * df;
-    }
-
-    // get the energy differential using dot products
-
-    return delta;
+      tmp_decay_(tmp_decay) {
+    if (cor_.size() != std::pow(vals_ptr_.size(), 2))
+      throw std::runtime_error("cor_ length must be vals_ptr_.size() squared");
   }
 
-  void GeneralModel::update_vals(std::vector<std::vector<double> const*> vals_ptr) {
-    if (vals_ptr.size() != vals_ptr_.size())
-      throw std::runtime_error("vals_ptr must be same length as vals_ptr_");
+  std::vector<double> GeneralModel::cmp_cor_(std::vector<std::size_t> state) {
+    std::size_t dim = vals_ptr_.size();
+    std::size_t n_el = dim * dim;
+    std::vector<double> cor(n_el, 0.0);
 
-    for (std::size_t el = 0; el < vals_ptr_.size(); el++)
-      vals_ptr_[el] = vals_ptr[el];
-  }
+    for (std::size_t el = 0; el < n_el; el++) {
+      std::size_t r = el / dim;
+      std::size_t c = el % dim;
 
-  std::vector<std::size_t> GeneralModel::match() {
-    std::vector<std::size_t> state = rand_state_();
-    std::uniform_int_distribution<std::size_t> unif(0, n_sex_ - 1); 
-    double tmp = tmp_init_;
-
-    for (std::size_t it = 0; it < n_itr_; it++) {
-      tmp *= tmp_decay_;
+      #if defined(USE_BLAS)
+        cor[el] = cblas_ddot(2 * n_sex_, (*vals_ptr_[r]).data(), 1, (*vals_ptr_[c]).data(), 1);
+      #else
+        cor[el] = ddot_(2 * n_sex_, double *dx, int *incx, double *dy, int *incy)
+      #endif
     }
-    return state;
+
+    return cor;
   }
 }
