@@ -10,9 +10,9 @@ set(CMAKE_BUILD_TYPE Release)
 
 # Library target
 add_library(amsimcpp STATIC
-  src/genome.cpp
-  src/phenotype.cpp
-  src/utils.cpp
+  src/genome.cc
+  src/phenotype.cc
+  src/utils.cc
 )
 
 # Public headers for users of the lib
