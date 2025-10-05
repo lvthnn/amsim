@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <vector>
 
-#include <amsim/rng.hpp>
+#include <amsim/rng.h>
 
 namespace amsim {
   enum class HapMatView : bool {
