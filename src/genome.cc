@@ -9,16 +9,16 @@
 #include <stdexcept>
 
 namespace amsim {
-  HapMat::HapMat(std::size_t n_ind, std::size_t n_loc)
+  HaploBuf::HaploBuf(std::size_t n_ind, std::size_t n_loc)
     : n_ind_(n_ind),
       n_loc_(n_loc),
       n_rows_((n_ind + 63) & ~std::size_t(63)),
       n_words_((n_loc + 63) / 64),
-      view_(HapMatView::IND_MAJOR) {
+      view_(HaploView::IND_MAJOR) {
     data_.resize(n_rows_ * n_words_);
   }
 
-  void HapMat::transpose() noexcept {
+  void HaploBuf::transpose() noexcept {
     std::size_t ct, cb, r;
     std::size_t n_tiles_row = n_rows_ / 64;
     std::size_t n_tiles_col = n_words_;
@@ -34,14 +34,14 @@ namespace amsim {
       }
     }
 
-    if (view_ == HapMatView::IND_MAJOR) {
+    if (view_ == HaploView::IND_MAJOR) {
       n_rows_  = (n_loc_ + 63) & ~size_t(63);
       n_words_ = (n_ind_ + 63) / 64;
-      view_    = HapMatView::LOC_MAJOR;
+      view_    = HaploView::LOC_MAJOR;
     } else {
       n_rows_  = (n_ind_ + 63) & ~size_t(63);
       n_words_ = (n_loc_ + 63) / 64;
-      view_    = HapMatView::IND_MAJOR;
+      view_    = HaploView::IND_MAJOR;
     }
   }
 
@@ -94,7 +94,7 @@ namespace amsim {
   }
 
   void Genome::compute_mafs() {
-    if (H0_.view() == HapMatView::IND_MAJOR)
+    if (H0_.view() == HaploView::IND_MAJOR)
       throw std::runtime_error("Compute MAFs in locus-major view.");
 
     std::size_t n_ind = H0_.n_ind();
@@ -119,7 +119,7 @@ namespace amsim {
   }
 
 	void Genome::compute_stats() {
-    if (H0_.view() == HapMatView::IND_MAJOR)
+    if (H0_.view() == HaploView::IND_MAJOR)
       throw std::runtime_error("Compute stats in loc-major view.");
 
     std::size_t n_ind = H0_.n_ind();
@@ -144,7 +144,7 @@ namespace amsim {
 	}
 
 	void Genome::update(std::vector<std::size_t> matching) {
-		if (H0_.view() == HapMatView::LOC_MAJOR)
+		if (H0_.view() == HaploView::LOC_MAJOR)
       throw std::runtime_error("Update in ind-major view.");
 
     for (std::size_t el = 0; el < matching.size(); el++)
