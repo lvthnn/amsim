@@ -59,7 +59,7 @@ namespace amsim::rng {
 
 	template<int BITS>
 	using ThrT = std::conditional_t<BITS==8,  std::uint8_t,
-							std::conditional_t<BITS==16, std::uint16_t, std::uint64_t>>;
+							  std::conditional_t<BITS==16, std::uint16_t, std::uint64_t>>;
 
 	inline std::uint64_t lowbits_mask(unsigned k) noexcept {
 		if (k == 0)  return 0ULL;
