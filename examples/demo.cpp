@@ -5,8 +5,8 @@
 #include <numeric>
 #include <chrono>
 
-#include <amsim/genome.hpp>
-#include <amsim/phenotype.hpp>
+#include <amsim/genome.h>
+#include <amsim/phenotype.h>
 
 using SteadyClock = std::chrono::steady_clock;
 
@@ -46,7 +46,7 @@ std::vector<std::size_t> range_inclusive_iota(std::size_t a, std::size_t b) {
 int main() {
   // Parameters for genome
   std::size_t n_ind = 256000;
-  std::size_t n_loc = 32000;
+  std::size_t n_loc = 10000;
   std::vector<double> v_mut(n_loc, 1e-8);
   std::vector<double> v_rec(n_loc, 0.5);
   std::vector<double> v_maf(n_loc, 0.5);
@@ -60,10 +60,13 @@ int main() {
 
   // Parameters for phenotype
   std::string name = "height";
-  std::vector<std::size_t> loci = range_inclusive_iota(0, 13999);
-  double h2 = 0.5;
+  std::vector<std::size_t> loci = range_inclusive_iota(0, 999);
+  double h2_gen = 0.5;
+  double h2_env = 0.25;
+  double h2_vert = 0.25;
 
-  amsim::Phenotype phenotype(name, loci, h2);
+  amsim::PhenoBuf buf(n_ind, 1);
+  amsim::Phenotype phenotype(buf, name, loci, h2_gen, h2_env, h2_vert);
 
   std::cout << "Initialised phenotype" << std::endl;
 
