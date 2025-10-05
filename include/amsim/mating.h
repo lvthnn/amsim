@@ -2,7 +2,6 @@
 #include <vector>
 #include <cstddef>
 #include <random>
-#include <tuple>
 
 #include <amsim/phenotype.h>
 
@@ -31,24 +30,23 @@ namespace amsim::mating {
   class GeneralModel : public MatingModel {
   public:
     GeneralModel(std::vector<std::vector<double> const*> vals_ptr,
-                 std::tuple<std::size_t, std::size_t, double> cor_,
-                 const std::size_t n_itr, const std::size_t n_sex,
-                 double tmp_init, double tmp_decay);
+                 std::vector<double> cor, const std::size_t n_itr,
+                 const std::size_t n_sex, double tmp_init, double tmp_decay);
 
     void update_vals(std::vector<std::vector<double> const*> vals_ptr);
     std::vector<std::size_t> match() override;
 
   private:
-    MatingType type_ = MatingType::ASSORTATIVE;
+    std::vector<double> cor_;
     std::vector<std::vector<double> const*> vals_ptr_;
-    std::tuple<std::size_t, std::size_t, double> cor_;
-    std::mt19937 g_;
+    std::vector<std::size_t> opt_state_;
+
     const std::size_t n_itr_;
-    const std::size_t n_sex_;
     double tmp_init_;
     double tmp_decay_;
 
+    std::vector<double> cmp_cor_(std::vector<std::size_t> state);
     double delta_(std::vector<std::size_t> cur, std::size_t i0, std::size_t i1);
-    double energy_(std::vector<std::size_t> matching);
+    double energy_(std::vector<std::size_t> state);
   };
 }
