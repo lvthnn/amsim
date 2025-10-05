@@ -1,7 +1,7 @@
-#include <amsim/genome.hpp>
-#include <amsim/phenotype.hpp>
-#include <amsim/utils.hpp>
-#include <amsim/rng.hpp>
+#include <amsim/genome.h>
+#include <amsim/phenotype.h>
+#include <amsim/utils.h>
+#include <amsim/rng.h>
 
 #include <cstddef>
 #include <cstdint>

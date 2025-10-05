@@ -1,5 +1,5 @@
-#include <amsim/phenotype.hpp>
-#include <amsim/genome.hpp>
+#include <amsim/phenotype.h>
+#include <amsim/genome.h>
 
 #include <string>
 #include <vector>
@@ -8,24 +8,29 @@
 #include <cmath>
 #include <unordered_map>
 #include <stdexcept>
-#include <Accelerate/Accelerate.h>
+
+#if defined(__APPLE__) && defined(USE_BLAS)
+  #include <Accelerate/Accelerate.h>
+#elif defined(__linux__) && defined(USE_BLAS)
+  #include <cblas.h>
+#endif
 
 namespace amsim {
   
-  Phenotype::Phenotype(const std::string name_,
-                       const std::vector<std::size_t>& loci_,
-                       const double h2_)
-    : name(name_),
-      loci(std::move(loci_)),
-      h2(h2_) {
+  Phenotype::Phenotype(const std::string name,
+                       const std::vector<std::size_t>& loci,
+                       const double h2)
+    : name_(name),
+      loci_(std::move(loci)),
+      h2_(h2) {
     for (std::size_t el = 0; el < loci_.size(); el++) {
       std::size_t loc = loci_[el];
       std::size_t block = loc / 64;
       std::size_t offset = loc % 64;
-      loc_mask[block] |= std::uint64_t(1) << offset;
+      loc_mask_[block] |= std::uint64_t(1) << offset;
     }
 
-    loc_effects.resize(loci.size(), std::sqrt(h2 / loci.size()));
+    loc_effects_.resize(loci.size(), std::sqrt(h2 / loci.size()));
   }
 
   void Phenotype::score_bitwise(Genome& genome) {
@@ -39,13 +44,13 @@ namespace amsim {
 
     double global_centre = 0.0;
 
-    values_gen.resize(n_ind, 0.0);
+    values_gen_.resize(n_ind, 0.0);
   
-    for (std::size_t el = 0; el < loci.size(); el++) {
-      const std::size_t loc = loci[el];
+    for (std::size_t el = 0; el < loci_.size(); el++) {
+      const std::size_t loc = loci_[el];
       const double loc_sd = std::sqrt(genome.v_lvar(loc));
-      const double loc_effect = loc_effects[loc] / loc_sd;
-      const double loc_centre = loc_effects[loc] * genome.v_lmean(loc) / loc_sd;
+      const double loc_effect = loc_effects_[loc] / loc_sd;
+      const double loc_centre = loc_effects_[loc] * genome.v_lmean(loc) / loc_sd;
       
       global_centre += loc_centre;
 
@@ -59,19 +64,19 @@ namespace amsim {
         for (std::uint64_t m = HET; m; m &= (m - 1)) {
           unsigned t = static_cast<unsigned>(__builtin_ctzll(m));
           std::size_t ind = (word << 6) + t;
-          values_gen[ind] += 1.0 * loc_effect;
+          values_gen_[ind] += 1.0 * loc_effect;
         }
 
         for (std::uint64_t m = HOM; m; m &= (m - 1)) {
           unsigned t = static_cast<unsigned>(__builtin_ctzll(m));
           std::size_t ind = (word << 6) + t;
-          values_gen[ind] += 2.0 * loc_effect;
+          values_gen_[ind] += 2.0 * loc_effect;
         }
       }
     }
 
     for (std::size_t ind = 0; ind < n_ind; ind++) 
-      values_gen[ind] -= global_centre;
+      values_gen_[ind] -= global_centre;
   }
   
   void Phenotype::score_tiled64(Genome& genome) {
@@ -83,20 +88,20 @@ namespace amsim {
 
       const std::size_t n_ind = H0.n_ind();
       const std::size_t n_words = H0.n_words();
-      const std::size_t n_causal_loc = loci.size();
+      const std::size_t n_causal_loc = loci_.size();
 
-      values_gen.assign(n_ind, 0.0);
+      values_gen_.assign(n_ind, 0.0);
 
       std::vector<double> effects(n_causal_loc);
       std::vector<double> centres(n_causal_loc);
 
       for (std::size_t el = 0; el < n_causal_loc; ++el) {
-          std::size_t loc = loci[el];
+          std::size_t loc = loci_[el];
           double var = genome.v_lvar(loc);
           if (var == 0.0) { effects[el] = 0.0; centres[el] = 0.0; continue; }
           double sd = std::sqrt(var);
-          effects[el] = loc_effects[el] / sd;
-          centres[el] = -loc_effects[el] * genome.v_lmean(loc) / sd;
+          effects[el] = loc_effects_[el] / sd;
+          centres[el] = -loc_effects_[el] * genome.v_lmean(loc) / sd;
       }
 
       std::vector<double> ones(n_causal_loc, 1.0);
@@ -108,7 +113,7 @@ namespace amsim {
           std::vector<double> Gd(tile_size * n_causal_loc);
 
           for (std::size_t el = 0; el < n_causal_loc; ++el) {
-              std::size_t loc = loci[el];
+              std::size_t loc = loci_[el];
               std::uint64_t HOM = H0(loc, b) & H1(loc, b);
               std::uint64_t HET = H0(loc, b) ^ H1(loc, b);
 
@@ -128,7 +133,7 @@ namespace amsim {
                       out.data(), 1);
 
           for (std::size_t k = 0; k < tile_size; ++k)
-              values_gen[tile_start + k] = out[k];
+              values_gen_[tile_start + k] = out[k];
       }
   }
 
