@@ -10,7 +10,8 @@ namespace amsim {
   enum class ComponentType {
     GENETIC,
     ENVIRONMENTAL,
-    VERTICAL
+    VERTICAL,
+    TOTAL
   };
 
   class PhenoBuf {
@@ -18,19 +19,29 @@ namespace amsim {
     PhenoBuf(const std::size_t n_ind, const std::size_t n_pheno);
 
     inline const double* operator()(std::size_t id, ComponentType type) const noexcept {
-      if (type == ComponentType::GENETIC)
-        return ptr_gen_[id];
-      else if (type == ComponentType::ENVIRONMENTAL)
-        return ptr_env_[id];
-      return ptr_vert_[id];
+      switch (type) {
+        case ComponentType::GENETIC:
+          return ptr_gen_[id];
+        case ComponentType::ENVIRONMENTAL:
+          return ptr_env_[id];
+        case ComponentType::VERTICAL:
+          return ptr_vert_[id];
+        case ComponentType::TOTAL:
+          return ptr_tot_[id];
+      }
     }
 
     inline double* operator()(std::size_t id, ComponentType type) noexcept {
-      if (type == ComponentType::GENETIC)
-        return ptr_gen_[id];
-      else if (type == ComponentType::ENVIRONMENTAL)
-        return ptr_env_[id];
-      return ptr_vert_[id];
+      switch (type) {
+        case ComponentType::GENETIC:
+          return ptr_gen_[id];
+        case ComponentType::ENVIRONMENTAL:
+          return ptr_env_[id];
+        case ComponentType::VERTICAL:
+          return ptr_vert_[id];
+        case ComponentType::TOTAL:
+          return ptr_tot_[id];
+      }
     }
 
     inline std::size_t n_ind() const noexcept { return n_ind_; }
@@ -46,6 +57,7 @@ namespace amsim {
     std::vector<double*> ptr_gen_;
     std::vector<double*> ptr_env_;
     std::vector<double*> ptr_vert_;
+    std::vector<double*> ptr_tot_;
     std::vector<bool> occupied_;
   };
 
@@ -64,34 +76,39 @@ namespace amsim {
     inline const double& operator()(std::size_t id, ComponentType type) const {
       if (id >= n_ind_)
         throw std::runtime_error("attempting out-of-bounds access of phenotype");
-      if (type == ComponentType::GENETIC)
-        return ptr_gen_[id];
-      else if (type == ComponentType::ENVIRONMENTAL)
-        return ptr_env_[id];
-      return ptr_vert_[id];
+      switch (type) {
+        case ComponentType::GENETIC:
+          return ptr_gen_[id];
+        case ComponentType::ENVIRONMENTAL:
+          return ptr_env_[id];
+        case ComponentType::VERTICAL:
+          return ptr_vert_[id];
+        case ComponentType::TOTAL:
+          return ptr_tot_[id];
+      }
     }
 
     inline const double& operator()(std::size_t id) const {
       if (id >= n_ind_)
         throw std::runtime_error("attempting out-of-bounds access of phenotype");
-      return vals_[id];
+      return ptr_tot_[id];
     }
 
     inline void transmit_vert() {
-      double scale = std::sqrt(h2_vert_);
+      const double scale = std::sqrt(h2_vert_);
       std::copy(vals_.begin(), vals_.end(), ptr_vert_);
       for (std::size_t ind = 0; ind < n_ind_; ind++)
-        vals_[ind] *= scale;
+        ptr_vert_[ind] *= scale;
     }
 
-    inline void score_values() {
+    inline void score_tot() {
       for (std::size_t ind = 0; ind < n_ind_; ind++)
-        vals_[ind] = ptr_gen_[ind] + ptr_env_[ind] + ptr_vert_[ind];
+        ptr_tot_[ind] = ptr_gen_[ind] + ptr_env_[ind] + ptr_vert_[ind];
     }
 
-    void score_bitwise(Genome& genome);
-    void score_tiled64(Genome& genome);
-    void score(Genome& genome);
+    void score_bitwise(Genome& genome) const;
+    void score_tiled64(Genome& genome) const;
+    void score(Genome& genome) const;
 
   private:
     const std::string name_;
@@ -105,7 +122,6 @@ namespace amsim {
     double* ptr_gen_;
     double* ptr_env_;
     double* ptr_vert_;
-
-    std::vector<double> vals_;
+    double* ptr_tot_;
   };
 }

@@ -21,22 +21,24 @@ namespace amsim {
     : n_ind_(n_ind),
       n_pheno_(n_pheno) {
     // allocate and initialise buffers to storage component values
-    buffer_.resize(3 * n_ind_ * n_pheno_);
+    buffer_.resize(4 * n_ind_ * n_pheno_);
     ptr_gen_.resize(n_pheno_);
     ptr_env_.resize(n_pheno_);
     ptr_vert_.resize(n_pheno_);
+    ptr_tot_.resize(n_pheno_);
     occupied_.resize(n_pheno_);
     
     // setup pointers for genetic components of phenotypes
     for (std::size_t id = 0; id < n_pheno; id++) {
-      ptr_gen_[id] = &buffer_[id * n_ind_];
-      ptr_env_[id] = &buffer_[(n_pheno_ + id) * n_ind_];
+      ptr_gen_[id]  = &buffer_[id * n_ind_];
+      ptr_env_[id]  = &buffer_[(n_pheno_ + id) * n_ind_];
       ptr_vert_[id] = &buffer_[(2 * n_pheno_ + id) * n_ind_];
+      ptr_tot_[id]  = &buffer_[(3 * n_pheno_ + id) * n_ind_];
     }
   }
 
   std::optional<std::size_t> PhenoBuf::unoccupied() const {
-    auto it = std::find(occupied_.begin(), occupied_.end(), false);
+    std::__bit_iterator<std::vector<bool>, true> it = std::find(occupied_.begin(), occupied_.end(), false);
     if (it != occupied_.end()) {
       std::size_t id = std::distance(occupied_.begin(), it);
       return id;
@@ -70,7 +72,7 @@ namespace amsim {
     ptr_vert_ = buf(id.value(), ComponentType::VERTICAL);
   }
 
-  void Phenotype::score_bitwise(Genome& genome) {
+  void Phenotype::score_bitwise(Genome& genome) const {
     if (genome.view() != HaploView::LOC_MAJOR)
       throw std::runtime_error("Phenotype::score: requires loc-major view.");
 
@@ -115,7 +117,7 @@ namespace amsim {
   }
  
   #if defined(USE_BLAS)
-  void Phenotype::score_tiled64(Genome& genome) {
+  void Phenotype::score_tiled64(Genome& genome) const {
     if (genome.H0().view() != HaploView::LOC_MAJOR)
       throw std::runtime_error("Phenotype::score_tiled64: require LOC_MAJOR view.");
 
@@ -172,7 +174,7 @@ namespace amsim {
   }
   #endif
 
-  void Phenotype::score(Genome& genome) {
+  void Phenotype::score(Genome& genome) const {
     #ifdef USE_BLAS
       score_tiled64(genome);
     #else
