@@ -41,7 +41,7 @@ elseif (MSVC)
 endif()
 
 # Example program (optional)
-add_executable(demo examples/demo.cpp)
+add_executable(demo examples/demo.cc)
 target_link_libraries(demo PRIVATE amsimcpp)
 
 # Enable tests later (optional)
