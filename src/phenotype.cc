@@ -97,14 +97,14 @@ namespace amsim {
         std::uint64_t HOM = H0(loc, word) & H1(loc, word);
 
         for (std::uint64_t m = HET; m; m &= (m - 1)) {
-          unsigned t = static_cast<unsigned>(__builtin_ctzll(m));
-          std::size_t ind = (word << 6) + t;
+          std::size_t t = static_cast<std::size_t>(__builtin_ctzll(m));
+          std::size_t ind = word * 64 + t;
           ptr_gen_[ind] += 1.0 * loc_effect;
         }
 
         for (std::uint64_t m = HOM; m; m &= (m - 1)) {
-          unsigned t = static_cast<unsigned>(__builtin_ctzll(m));
-          std::size_t ind = (word << 6) + t;
+          std::size_t t = static_cast<std::size_t>(__builtin_ctzll(m));
+          std::size_t ind = word * 64 + t;
           ptr_gen_[ind] += 2.0 * loc_effect;
         }
       }
