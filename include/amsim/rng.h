@@ -192,5 +192,5 @@ namespace amsim::rng {
 		Xoshiro256ss rng_;
 	};
 
-  using BW16 = BernoulliWordVar<16>;
+  using BW16 = BernoulliWordConst<16>;
 }
