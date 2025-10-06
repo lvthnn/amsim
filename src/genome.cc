@@ -1,20 +1,20 @@
-#include <amsim/genome.h>
-#include <amsim/phenotype.h>
-#include <amsim/utils.h>
-#include <amsim/rng.h>
-
 #include <cstddef>
 #include <cstdint>
 #include <vector>
 #include <stdexcept>
 
+#include <amsim/genome.h>
+#include <amsim/phenotype.h>
+#include <amsim/utils.h>
+#include <amsim/rng.h>
+
 namespace amsim {
   HaploBuf::HaploBuf(std::size_t n_ind, std::size_t n_loc)
     : n_ind_(n_ind),
       n_loc_(n_loc),
-      n_rows_((n_ind + 63) & ~std::size_t(63)),
-      n_words_((n_loc + 63) / 64),
-      view_(HaploView::IND_MAJOR) {
+      n_rows_((n_loc + 63) & ~std::size_t(63)),
+      n_words_((n_ind + 63) / 64),
+      view_(HaploView::LOC_MAJOR) {
     data_.resize(n_rows_ * n_words_);
   }
 
@@ -72,16 +72,15 @@ namespace amsim {
   }
 
 	void Genome::generate_haplotypes() noexcept {
-    bw_.set_prob(0.5);
-
-    std::size_t n_ind = H0_.n_ind();
+    std::size_t n_loc = H0_.n_loc();
     std::size_t n_words = H0_.n_words();
 
-    for (size_t ind = 0; ind < n_ind; ind++) {
-      std::uint64_t* word0 = H0_.rowptr(ind);
-      std::uint64_t* word1 = H1_.rowptr(ind);
+    for (std::size_t loc = 0; loc < n_loc; loc++) {
+      bw_.set_prob(v_maf_[loc]);
+      std::uint64_t* word0 = H0_.rowptr(loc); 
+      std::uint64_t* word1 = H1_.rowptr(loc);
 
-      for (std::size_t word = 0; word < n_words; ++word) {
+      for (std::size_t word = 0; word < n_words; word++) {
         word0[word] = bw_.sample();
         word1[word] = bw_.sample();
       }
