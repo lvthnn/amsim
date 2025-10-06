@@ -29,9 +29,9 @@ namespace amsim {
     
     // setup pointers for genetic components of phenotypes
     for (std::size_t id = 0; id < n_pheno; id++) {
-      ptr_gen_[id] = &buffer_[3 * id * n_ind_];
-      ptr_env_[id] = &buffer_[3 * id * n_ind_ + n_ind_];
-      ptr_vert_[id] = &buffer_[3 * id * n_ind_ + 2 * n_ind_];
+      ptr_gen_[id] = &buffer_[id * n_ind_];
+      ptr_env_[id] = &buffer_[(n_pheno_ + id) * n_ind_];
+      ptr_vert_[id] = &buffer_[(2 * n_pheno_ + id) * n_ind_];
     }
   }
 
