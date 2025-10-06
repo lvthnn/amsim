@@ -77,6 +77,18 @@ namespace amsim {
       return vals_[id];
     }
 
+    inline void transmit_vert() {
+      double scale = std::sqrt(h2_vert_);
+      std::copy(vals_.begin(), vals_.end(), ptr_vert_);
+      for (std::size_t ind = 0; ind < n_ind_; ind++)
+        vals_[ind] *= scale;
+    }
+
+    inline void score_values() {
+      for (std::size_t ind = 0; ind < n_ind_; ind++)
+        vals_[ind] = ptr_gen_[ind] + ptr_env_[ind] + ptr_vert_[ind];
+    }
+
     void score_bitwise(Genome& genome);
     void score_tiled64(Genome& genome);
     void score(Genome& genome);
