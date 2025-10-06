@@ -53,3 +53,6 @@ compile_commands.json
 
 # LSP specific
 .cache
+
+# IntelliJ
+.idea
