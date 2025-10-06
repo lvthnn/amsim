@@ -22,23 +22,19 @@ namespace amsim {
     inline HaploView view() const noexcept { return view_; }
 
     inline std::uint64_t& operator()(std::size_t i, std::size_t j) noexcept {
-			return (view_ == HaploView::IND_MAJOR)
-				? data_[i * n_words_ + j] : data_[j * n_rows_ + i];
+      return data_[i * n_words_ + j];
 		}
 
     inline const std::uint64_t& operator()(std::size_t i, std::size_t j) const noexcept {
-			return (view_ == HaploView::IND_MAJOR)
-				? data_[i * n_words_ + j] : data_[j * n_rows_ + i];
+      return data_[i * n_words_ + j];
 		}
 
     inline const std::uint64_t* rowptr(std::size_t i) const noexcept {
-      if (view_ == HaploView::IND_MAJOR) return &data_[i * n_words_];
-      return nullptr;
+      return &data_[i * n_words_];
     }
 
     inline std::uint64_t* rowptr(std::size_t i) noexcept {
-      if (view_ == HaploView::IND_MAJOR) return &data_[i * n_words_];
-      return nullptr;
+      return &data_[i * n_words_];
     }
 
     void transpose() noexcept;
