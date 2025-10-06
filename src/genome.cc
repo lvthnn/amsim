@@ -87,7 +87,7 @@ namespace amsim {
     }
 	}
 
-  void Genome::transpose() {
+  void Genome::transpose() noexcept {
     H0_.transpose();
     H1_.transpose();
   }

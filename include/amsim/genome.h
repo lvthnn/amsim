@@ -63,7 +63,7 @@ namespace amsim {
     inline HaploBuf& H0() noexcept { return H0_; }
     inline HaploBuf& H1() noexcept { return H1_; }
     void generate_haplotypes() noexcept;
-    void transpose();
+    void transpose() noexcept;
     void compute_mafs();
     void compute_stats();
     void update(std::vector<std::size_t> matching);
