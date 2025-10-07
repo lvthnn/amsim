@@ -13,6 +13,10 @@ add_library(amsimcpp STATIC
   src/genome.cc
   src/phenotype.cc
   src/utils.cc
+  src/mating.cc
+  src/phenobuf.cc
+  src/phenoarch.cc
+  src/haplobuf.cc
 )
 
 # Public headers for users of the lib
@@ -22,7 +26,7 @@ target_include_directories(amsimcpp
     $<INSTALL_INTERFACE:include>)
 
 # Link to BLAS
-option(USE_BLAS "Enable BLAS acceleration for phenotype scoring" OFF)
+option(USE_BLAS "Enable code acceleration using BLAS" OFF)
 
 if (APPLE AND USE_BLAS)
   target_compile_definitions(amsimcpp PRIVATE ACCELERATE_NEW_LAPACK USE_BLAS)

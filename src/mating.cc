@@ -22,36 +22,46 @@ namespace amsim::mating {
     return state_;
   }
 
-  GeneralModel::GeneralModel(std::vector<std::vector<double> const*> vals_ptr,
+  GeneralModel::GeneralModel(const std::vector<double*> &ptr_tot,
                              std::vector<double> cor, const std::size_t n_itr,
                              const std::size_t n_sex, double tmp_init,
                              double tmp_decay)
     : MatingModel(MatingType::ASSORTATIVE, n_sex),
+      ptr_tot_(ptr_tot),
       cor_(std::move(cor)),
-      vals_ptr_(std::move(vals_ptr)),
+      n_pheno_(ptr_tot.size()),
       n_itr_(n_itr),
+      n_sex_(n_sex),
       tmp_init_(tmp_init),
       tmp_decay_(tmp_decay) {
-    if (cor_.size() != std::pow(vals_ptr_.size(), 2))
-      throw std::runtime_error("cor_ length must be vals_ptr_.size() squared");
+    male_.resize(n_sex_ * n_pheno_);
+    female_.resize(n_sex_ * n_pheno_);
+  }
+
+  // pack male and (permuted) female phenotypes into allocated buffers
+  // male_ and female_
+  void setup_(std::vector<std::size_t> state) {
+    for (std::size_t pheno = 0; pheno < n_pheno_; pheno++) {
+      const double* ptr_male_ = ptr_tot_[pheno];
+      const double* ptr_female_ = ptr_male_ + n_sex_;
+      double* male_col_ = male_ + pheno * n_sex_;
+      double* female_col_ = female_ + pheno * n_sex_;
+
+      std::copy(ptr_male_, ptr_male_ + n_sex_, male_col_);
+
+      for (std::size_t ind = 0; ind < n_sex; ind++)
+        female_col_[ind] = ptr_female_[state[ind]];
+    }
   }
 
   std::vector<double> GeneralModel::cmp_cor_(std::vector<std::size_t> state) {
-    std::size_t dim = vals_ptr_.size();
-    std::size_t n_el = dim * dim;
-    std::vector<double> cor(n_el, 0.0);
-
-    for (std::size_t el = 0; el < n_el; el++) {
-      std::size_t r = el / dim;
-      std::size_t c = el % dim;
-
-      #if defined(USE_BLAS)
-        cor[el] = cblas_ddot(2 * n_sex_, (*vals_ptr_[r]).data(), 1, (*vals_ptr_[c]).data(), 1);
-      #else
-        cor[el] = ddot_(2 * n_sex_, double *dx, int *incx, double *dy, int *incy)
-      #endif
-    }
-
-    return cor;
+    std::vector<double> cross_cor_(n_pheno_ * n_pheno_);
+    #if defined(USE_BLAS)
+      cblas_dgemm(CblasColMajor, CblasTrans, CblasNoTrans,
+                  n_sex_, n_sex_, n_pheno_, 1.0 / static_cast<double>(n_pheno_),
+                  male_.data(), 1, female_.data(), 1, 0.0, cross_cor_.data())
+    #else
+      throw std::runtime_error("Not implemented.");
+    #endif
   }
 }

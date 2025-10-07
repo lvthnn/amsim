@@ -1,3 +1,10 @@
+//------------------------------------------------------------------------------
+// amsimcpp : phenotype.h
+//------------------------------------------------------------------------------
+
+#ifndef AMSIMCPP_PHENOTYPE_H
+#define AMSIMCPP_PHENOTYPE_H
+
 #pragma once
 #include <cstddef>
 #include <string>
@@ -5,61 +12,10 @@
 #include <optional>
 
 #include <amsim/genome.h>
+#include <amsim/phenobuf.h>
+#include <amsim/componenttype.h>
 
 namespace amsim {
-  enum class ComponentType {
-    GENETIC,
-    ENVIRONMENTAL,
-    VERTICAL,
-    TOTAL
-  };
-
-  class PhenoBuf {
-  public:
-    PhenoBuf(const std::size_t n_ind, const std::size_t n_pheno);
-
-    inline const double* operator()(std::size_t id, ComponentType type) const noexcept {
-      switch (type) {
-        case ComponentType::GENETIC:
-          return ptr_gen_[id];
-        case ComponentType::ENVIRONMENTAL:
-          return ptr_env_[id];
-        case ComponentType::VERTICAL:
-          return ptr_vert_[id];
-        case ComponentType::TOTAL:
-          return ptr_tot_[id];
-      }
-    }
-
-    inline double* operator()(std::size_t id, ComponentType type) noexcept {
-      switch (type) {
-        case ComponentType::GENETIC:
-          return ptr_gen_[id];
-        case ComponentType::ENVIRONMENTAL:
-          return ptr_env_[id];
-        case ComponentType::VERTICAL:
-          return ptr_vert_[id];
-        case ComponentType::TOTAL:
-          return ptr_tot_[id];
-      }
-    }
-
-    inline std::size_t n_ind() const noexcept { return n_ind_; }
-    inline bool occupied(std::size_t id) const noexcept { return occupied_[id]; }
-  
-    std::optional<std::size_t> unoccupied() const;
-    void occupy(std::size_t);
-    
-  private:
-    const std::size_t n_ind_;
-    const std::size_t n_pheno_;
-    std::vector<double> buffer_;
-    std::vector<double*> ptr_gen_;
-    std::vector<double*> ptr_env_;
-    std::vector<double*> ptr_vert_;
-    std::vector<double*> ptr_tot_;
-    std::vector<bool> occupied_;
-  };
 
   class Phenotype {
   public:
@@ -94,9 +50,12 @@ namespace amsim {
       return ptr_tot_[id];
     }
 
+    // @TODO: Rework this function. We need to access the mate matching of the
+    //        generation and compute the sum of the two parental phenotypes
+    //        weighted by some additional slop.
     inline void transmit_vert() {
       const double scale = std::sqrt(h2_vert_);
-      std::copy(vals_.begin(), vals_.end(), ptr_vert_);
+      std::copy(ptr_tot_, ptr_tot_ + n_ind_, ptr_vert_);
       for (std::size_t ind = 0; ind < n_ind_; ind++)
         ptr_vert_[ind] *= scale;
     }
@@ -106,9 +65,9 @@ namespace amsim {
         ptr_tot_[ind] = ptr_gen_[ind] + ptr_env_[ind] + ptr_vert_[ind];
     }
 
-    void score_bitwise(Genome& genome) const;
-    void score_tiled64(Genome& genome) const;
-    void score(Genome& genome) const;
+    void score_bitwise(Genome& genome);
+    void score_tiled64(Genome& genome);
+    void score(Genome& genome);
 
   private:
     const std::string name_;
@@ -125,3 +84,5 @@ namespace amsim {
     double* ptr_tot_;
   };
 }
+
+#endif // AMSIMCPP_PHENOTYPE_H
