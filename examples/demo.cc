@@ -71,7 +71,6 @@ int main() {
 
   // Parameters for phenotypes
   double h2_gen = 0.5;
-  double h2_env = 0.25;
   double h2_vert = 0.25;
 
   std::vector<std::size_t> height_loci = range_inclusive_iota(0, 999);
@@ -79,11 +78,9 @@ int main() {
   std::vector<std::size_t> bmi_loci = range_inclusive_iota(2000, 2999);
 
   amsim::PhenoBuf  buf(n_ind, 3);
-  amsim::Phenotype height(buf, "height", height_loci, h2_gen, h2_env, h2_vert);
-  amsim::Phenotype weight(buf, "height", weight_loci, h2_gen, h2_env, h2_vert);
-  amsim::Phenotype bmi(buf, "bmi", bmi_loci, h2_gen, h2_env, h2_vert);
-
-  std::cout << "Initialised phenotype" << std::endl;
+  amsim::Phenotype height(buf, "height", height_loci, h2_gen, h2_vert);
+  amsim::Phenotype weight(buf, "weight", weight_loci, h2_gen, h2_vert);
+  amsim::Phenotype bmi(buf, "bmi", bmi_loci, h2_gen, h2_vert);
 
   // Run the simulation
   const auto total_start = SteadyClock::now();
@@ -91,10 +88,10 @@ int main() {
   time_step("Generated haplotypes", [&]{ genome.generate_haplotypes(); });
   time_step("Computed MAFs",        [&]{ genome.compute_mafs(); });
   time_step("Computed stats",       [&]{ genome.compute_stats(); });
-  time_step("Scored phenotypes",    [&]{ height.score(genome); weight.score(genome); bmi.score(genome); });
+  time_step("Scored phenotypes",    [&]{ height.score(genome); weight.score(genome); });
   time_step("Transpose",            [&]{ genome.transpose(); });
 
-  const auto total_ms =
+  const long long total_ms =
       std::chrono::duration_cast<std::chrono::milliseconds>(
           SteadyClock::now() - total_start).count();
   std::cout << "Total elapsed: " << total_ms << " ms\n\n";
