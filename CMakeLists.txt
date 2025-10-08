@@ -48,6 +48,15 @@ endif()
 add_executable(demo examples/demo.cc)
 target_link_libraries(demo PRIVATE amsimcpp)
 
+add_executable(test_phenoarch examples/test_phenoarch.cc)
+target_link_libraries(test_phenoarch PRIVATE amsimcpp)
+
+add_executable(benchmark_polar_m19937 examples/benchmark_polar_m19937.cc)
+target_link_libraries(benchmark_polar_m19937 PRIVATE amsimcpp)
+
+add_executable(unif_int_rng examples/unif_int_rng.cc)
+target_link_libraries(unif_int_rng PRIVATE amsimcpp)
+
 # Enable tests later (optional)
 enable_testing()
 
