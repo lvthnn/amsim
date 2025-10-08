@@ -105,7 +105,7 @@ namespace amsim {
       }
     }
 
-    // optimise the expected panmictic genetic correlation matrix using greedy
-    // approach
+    // optimise expected panmictic genetic correlation matrix greedily
+    // (1) prepare the matrix of
   }
 }
