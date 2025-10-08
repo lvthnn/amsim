@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <vector>
 
+#include <amsim/haplobuf.h>
 #include <amsim/rng.h>
 
 namespace amsim {
