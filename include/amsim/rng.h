@@ -72,7 +72,7 @@ namespace amsim::rng {
 		static_assert(BITS==8 || BITS==16 || BITS==64, "BITS must be 8,16,64");
 		if (p <= 0.0) return ThrT<BITS>(0);
 		if (p >= 1.0) return ThrT<BITS>(~ThrT<BITS>(0));
-		long double v = std::ldexp((long double)p, BITS);
+		long double v = std::ldexp(static_cast<long double>(p), BITS);
 		std::uint64_t t = static_cast<std::uint64_t>(v);
 		if constexpr (BITS < 64) {
 			const std::uint64_t cap = (1ULL << BITS) - 1ULL;
@@ -88,8 +88,8 @@ namespace amsim::rng {
 		static_assert(BITS==8 || BITS==16 || BITS==64);
 		using T = ThrT<BITS>;
 
-		explicit BernoulliWordConst(std::uint64_t seed = 0x0123456789abcdefULL)
-		: Tj(0), rng_(seed_xoshiro(auto_seed(seed))) {}
+		explicit BernoulliWordConst(const Xoshiro256ss &rng)
+		: Tj(0), rng_(rng) {}
 
 		inline void set_prob(double p) noexcept {
 			if (p < 0.0) p = 0.0; if (p > 1.0) p = 1.0;
@@ -110,7 +110,7 @@ namespace amsim::rng {
 					std::uint64_t r = rng_.next();
 					for (int k = 0; k < 8 && j < 64; ++k, ++j) {
 						std::uint8_t rv = static_cast<std::uint8_t>(r >> 56); r <<= 8;
-						w |= (std::uint64_t)-(rv < Tj) & (1ULL << j);
+						w |= static_cast<std::uint64_t>(-(rv < Tj)) & (1ULL << j);
 					}
 				}
 			} else if constexpr (BITS == 16) {
@@ -118,13 +118,13 @@ namespace amsim::rng {
 					std::uint64_t r = rng_.next();
 					for (int k = 0; k < 4 && j < 64; ++k, ++j) {
 						std::uint16_t rv = static_cast<std::uint16_t>(r >> 48); r <<= 16;
-						w |= (std::uint64_t)-(rv < Tj) & (1ULL << j);
+						w |= static_cast<std::uint64_t>(-(rv < Tj)) & (1ULL << j);
 					}
 				}
 			} else { // 64
 				for (int j = 0; j < 64; ++j) {
 					std::uint64_t rv = rng_.next();
-					w |= (std::uint64_t)-(rv < Tj) & (1ULL << j);
+					w |= static_cast<std::uint64_t>(-(rv < Tj)) & (1ULL << j);
 				}
 			}
 			if (valid_bits < 64) w &= lowbits_mask(valid_bits);
@@ -141,8 +141,8 @@ namespace amsim::rng {
 		static_assert(BITS==8 || BITS==16 || BITS==64);
 		using T = ThrT<BITS>;
 
-		explicit BernoulliWordVar(std::uint64_t seed = 0x0123456789abcdefULL)
-		: rng_(seed_xoshiro(auto_seed(seed))) { Tj.fill(T(0)); }
+		explicit BernoulliWordVar(const Xoshiro256ss &rng)
+		: rng_(rng) { Tj.fill(T(0)); }
 
 		inline void set_prob(double p) noexcept {
 			if (p < 0.0) p = 0.0; if (p > 1.0) p = 1.0;
@@ -166,7 +166,7 @@ namespace amsim::rng {
 					std::uint64_t r = rng_.next();
 					for (int k = 0; k < 8 && j < 64; ++k, ++j) {
 						std::uint8_t rv = static_cast<std::uint8_t>(r >> 56); r <<= 8;
-						w |= (std::uint64_t)-(rv < Tj[j]) & (1ULL << j);
+						w |= static_cast<std::uint64_t>(-(rv < Tj[j])) & (1ULL << j);
 					}
 				}
 			} else if constexpr (BITS == 16) {
@@ -174,13 +174,13 @@ namespace amsim::rng {
 					std::uint64_t r = rng_.next();
 					for (int k = 0; k < 4 && j < 64; ++k, ++j) {
 						std::uint16_t rv = static_cast<std::uint16_t>(r >> 48); r <<= 16;
-						w |= (std::uint64_t)-(rv < Tj[j]) & (1ULL << j);
+						w |= static_cast<std::uint64_t>(-(rv < Tj[j])) & (1ULL << j);
 					}
 				}
 			} else { // 64
 				for (int j = 0; j < 64; ++j) {
 					std::uint64_t rv = rng_.next();
-					w |= (std::uint64_t)-(rv < Tj[j]) & (1ULL << j);
+					w |= static_cast<std::uint64_t>(-(rv < Tj[j])) & (1ULL << j);
 				}
 			}
 			if (valid_bits < 64) w &= lowbits_mask(valid_bits);
@@ -193,4 +193,72 @@ namespace amsim::rng {
 	};
 
   using BW16 = BernoulliWordConst<16>;
+
+	// polar method for generating iid standard normal variables
+
+	inline double u01_53(const uint64_t x) noexcept {
+		return ( (x >> 11) + 0.5 ) * (1.0 / 9007199254740992.0);
+	}
+
+	struct NormalPolar {
+		Xoshiro256ss rng;
+
+		explicit NormalPolar(const Xoshiro256ss &rng_)
+			: rng(rng_) {}
+
+		inline void reseed(uint64_t seed) noexcept { rng = seed_xoshiro(seed); }
+
+		inline std::array<double,2> two() noexcept {
+			double u, v, s;
+			do {
+				u = 2.0 * u01_53(rng.next()) - 1.0;
+				v = 2.0	* u01_53(rng.next()) - 1.0;
+				s = u *	u + v * v;
+			} while (s >= 1.0 || s == 0.0);
+			const double m = std::sqrt(-2.0 * std::log(s) / s);
+			return { u * m, v * m };
+		}
+
+		inline void fill(double* out, std::size_t n) noexcept {
+			std::size_t i = 0;
+			for (	; i + 1 < n; i += 2) {
+				auto z = two();
+				out[i]     = z[0];
+				out[i + 1] = z[1];
+			}
+			if (i < n) out[i] = two()[0];
+		}
+
+		template<std::size_t N>
+		inline std::array<double,N> batch() noexcept {
+			static_assert(N % 2 == 0, "N must be even");
+			std::array<double, N> a{};
+			for (std::size_t i = 0; i < N; i += 2) {
+				auto z = two();
+				a[i] = z[0]; a[i + 1] = z[1];
+			}
+			return a;
+		}
+	};
+
+	struct UniformIntRange {
+		Xoshiro256ss rng;
+
+		explicit UniformIntRange(const Xoshiro256ss &rng_)
+			: rng(rng_) {}
+
+		std::size_t sample(const std::size_t n) {
+			if (n == 0)
+				return 0;
+
+			const std::size_t thresh = UINT64_MAX - (UINT64_MAX % n);
+			std::size_t x;
+
+			do {
+				x = rng.next();
+			} while (x >= thresh);
+
+			return x % n;
+		}
+	};
 }
