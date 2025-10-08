@@ -30,9 +30,9 @@ namespace amsim::mating {
     std::vector<std::size_t> rand_state_();
   };
 
-  class GeneralModel : public MatingModel {
+  class AssortativeModel : public MatingModel {
   public:
-    GeneralModel(const std::vector<double*> &ptr_tot, std::vector<double> cor,
+    AssortativeModel(const std::vector<double*> &ptr_tot, std::vector<double> cor,
                  const std::size_t n_itr, const std::size_t n_sex,
                  double tmp_init = 1e-9, double tmp_decay = 0.99995);
 
@@ -48,14 +48,13 @@ namespace amsim::mating {
     const double tmp_init_;
     const double tmp_decay_;
 
-    std::vector<std::size_t> male_;
-    std::vector<std::size_t> female_;
+    std::vector<double> male_;
+    std::vector<double> female_;
     std::vector<std::size_t> opt_state_;
 
-    void setup_();
-    std::vector<double> cmp_cor_(std::vector<std::size_t> state);
+    std::vector<double> cmp_cor_();
+    void setup_(std::vector<std::size_t> state);
     double delta_(std::vector<std::size_t> cur, std::size_t i0, std::size_t i1);
-
   };
 }
 #endif
