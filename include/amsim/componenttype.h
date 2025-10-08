@@ -7,7 +7,7 @@
 
 namespace amsim {
 
-  enum class componenttype {
+  enum class ComponentType {
     GENETIC,
     ENVIRONMENTAL,
     VERTICAL,
