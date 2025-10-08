@@ -1,3 +1,7 @@
+//------------------------------------------------------------------------------
+// amsimcpp : genome.cc
+//------------------------------------------------------------------------------
+
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -16,7 +20,7 @@ namespace amsim {
       v_lmean_(n_loc),
       v_lvar_(n_loc),
       v_lmaf_(n_loc),
-      bw_(rng_seed),
+      bw_(rng::seed_xoshiro(rng::auto_seed(rng_seed))),
       H0_(n_ind, n_loc),
       H1_(n_ind, n_loc) {};
 
