@@ -21,7 +21,7 @@ namespace amsim {
   public:
 		Phenotype(PhenoBuf& buf, std::string name,
               std::vector<size_t>& loci, double h2_gen, double h2_vert,
-              std::optional<std::size_t> id);
+              std::optional<std::size_t> id = std::nullopt);
 
     inline const std::string name() const noexcept { return name_; }
     inline const std::vector<std::size_t> loci() const& noexcept { return loci_; }
@@ -65,9 +65,9 @@ namespace amsim {
         ptr_tot_[ind] = ptr_gen_[ind] + ptr_env_[ind] + ptr_vert_[ind];
     }
 
-    void score_bitwise(Genome& genome);
-    void score_tiled64(Genome& genome);
-    void score(Genome& genome);
+    void score_bitwise(Genome& genome) const;
+    void score_tiled64(Genome& genome) const;
+    void score(Genome& genome) const;
 
   private:
     const std::string name_;
