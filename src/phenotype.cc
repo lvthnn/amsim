@@ -1,3 +1,7 @@
+//------------------------------------------------------------------------------
+// amsimcpp : phenotype.cc
+//------------------------------------------------------------------------------
+
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -6,6 +10,7 @@
 #include <optional>
 #include <stdexcept>
 
+#include <amsim/componenttype.h>
 #include <amsim/haplobuf.h>
 #include <amsim/genome.h>
 #include <amsim/phenobuf.h>
@@ -35,14 +40,16 @@ namespace amsim {
 
     if (!id.has_value()) id = buf.unoccupied();
     if (!id.has_value()) throw std::runtime_error("all buffer slots occupied");
-    buf.occupy(id.value());
+    const std::size_t id_val = id.value();
 
-    ptr_gen_ = buf(id.value(), ComponentType::GENETIC);
-    ptr_env_ = buf(id.value(), ComponentType::ENVIRONMENTAL);
-    ptr_vert_ = buf(id.value(), ComponentType::VERTICAL);
+    ptr_gen_  = buf(id_val, ComponentType::GENETIC);
+    ptr_env_  = buf(id_val, ComponentType::ENVIRONMENTAL);
+    ptr_vert_ = buf(id_val, ComponentType::VERTICAL);
+    ptr_tot_  = buf(id_val, ComponentType::TOTAL);
+    buf.occupy(id_val);
   }
 
-  void Phenotype::score_bitwise(Genome& genome) {
+  void Phenotype::score_bitwise(Genome& genome) const {
     if (genome.view() != HaploView::LOC_MAJOR)
       throw std::runtime_error("Phenotype::score: requires loc-major view.");
 
@@ -88,7 +95,7 @@ namespace amsim {
   }
  
   #if defined(USE_BLAS)
-  void Phenotype::score_tiled64(Genome& genome) {
+  void Phenotype::score_tiled64(Genome& genome) const {
     if (genome.H0().view() != HaploView::LOC_MAJOR)
       throw std::runtime_error("Phenotype::score_tiled64: require LOC_MAJOR view.");
 
@@ -146,7 +153,7 @@ namespace amsim {
   }
   #endif
 
-  void Phenotype::score(Genome& genome) {
+  void Phenotype::score(Genome& genome) const {
     #ifdef USE_BLAS
       score_tiled64(genome);
     #else
