@@ -47,6 +47,7 @@ namespace amsim {
     int clpk_lda_ = 3;
     int clpk_out_;
 
+    // @TODO: Rework this since we're integrating BLAS and LAPACK
     #if defined(__APPLE__) && defined(USE_BLAS)
       dpotrf_(&clpk_uplo_, &clpk_n_pheno_, env_chol_.data(), &clpk_lda_,
               &clpk_out_);
@@ -71,29 +72,16 @@ namespace amsim {
     #endif
   }
 
-  std::vector<double> PhenoArch::init_weights_() const {
-    std::vector<double> cost_vec((n_pheno_ * (n_pheno_ + 1)) / 2);
-    std::size_t idx = 0;
-    for (std::size_t i = 0; i < n_pheno_; i++) {
-      for (std::size_t j = i; j < n_pheno_; j++) {
-        cost_vec[idx] = gen_cor_[j * n_pheno_ + i] * std::sqrt(n_loc_[i] * n_loc_[j]);
-        idx++;
-      }
-    }
-    return cost_vec;
-  }
-
   std::vector<uint64_t> PhenoArch::init_mask_() {
     const std::size_t n_words = (n_loc_tot_ + 63) / 64;
     std::vector<uint64_t> loc_mask(n_words * n_pheno_);
 
     for (std::size_t pheno = 0; pheno < n_pheno_; pheno++) {
       uint64_t* loc_ptr = &loc_mask[pheno * n_words];
+
       const std::size_t n_loc_pheno = n_loc_[pheno];
       for (std::size_t r_id = n_loc_tot_ - n_loc_pheno; r_id < n_loc_tot_; r_id++) {
         const std::size_t l_id = rng_unf_.sample(r_id + 1);
-
-        // @TODO: Change this so we write in row-major format (makes optimisation step less computationally heavy)
         const std::size_t lw = l_id / 64; const std::size_t lo = l_id % 64;
         const std::size_t rw = r_id / 64; const std::size_t ro = r_id % 64;
 
@@ -104,7 +92,7 @@ namespace amsim {
     return loc_mask;
   }
 
-  std::vector<std::size_t> PhenoArch::init_intersect_(const std::vector<uint64_t> &mask) const {
+  std::vector<std::size_t> PhenoArch::init_intersect_(const std::vector<std::uint64_t> &mask) const {
     std::vector<std::size_t> intersect(n_pheno_ * (n_pheno_ - 1) / 2);
     const std::size_t n_words = (n_loc_tot_ + 63) / 64;
 
@@ -122,42 +110,42 @@ namespace amsim {
     return intersect;
   }
 
-  // void PhenoArch::optim_arch(double eps, std::size_t max_it) {
-  //   const std::size_t n_words = (n_loc_tot_ + 63) / 64;
-  //   std::vector<double> init_weights = init_weights_();
-  //   std::vector<uint64_t> mask = init_mask_();
+  std::vector<double> PhenoArch::init_weights_(const std::vector<std::size_t> &intersect) const {
+    std::vector<double> cost_vec((n_pheno_ * (n_pheno_ + 1)) / 2);
+    std::size_t id = 0;
+    for (std::size_t i = 0; i < n_pheno_; i++) {
+      for (std::size_t j = i; j < n_pheno_; j++) {
+        cost_vec[id] = intersect[id] - gen_cor_[j * n_pheno_ + i] * std::sqrt(n_loc_[i] * n_loc_[j]);
+        id++;
+      }
+    }
+    return cost_vec;
+  }
 
-  //   for (std::size_t it = 0; it < max_it; it++) {
-  //     // index of the phenotype currently inspected
-  //     std::size_t pheno = it % n_pheno_;
+  void PhenoArch::optim_arch(double eps, std::size_t max_it) {
+    std::vector<uint64_t> mask = init_mask_();
+    std::vector<std::size_t> intersect = init_intersect_(mask);
+    std::vector<double> weights = init_weights_(intersect);
 
-  //     // pointer to phenotype locus mask in buffer
-  //     uint64_t *ptr_pheno = &mask[n_words * pheno];
+    const std::size_t n_words = (n_loc_tot_ + 63) / 64;
+    for (std::size_t it = 0; it < max_it; it++) {
+      std::size_t pheno = it % n_pheno_;
+      uint64_t* ptr_pheno = &mask[n_words * pheno];
 
-  //     for (std::size_t loc = 0; loc < n_loc_tot_; loc++) {
-  //       // block containing locus in mask
-  //       std::size_t block = loc / 64;
+      for (std::size_t loc = 0; loc < n_loc_tot_; loc++) {
+        std::size_t block = loc / 64;
+        std::size_t offset = loc % 64;
 
-  //       // relative position of locus in the mask
-  //       std::size_t offset = loc % 64;
+        ArchOp op = (ptr_pheno[block] & (1ull << offset))
+          ? ArchOp::ADDITION
+          : ArchOp::DELETION;
 
-  //       // what kind of operation are we considering?
-  //       ArchOp op = (ptr_pheno[block] & (1ull << offset))
-  //         ? ArchOp::ADDITION
-  //         : ArchOp::DELETION;
-
-  //       // scan over same locus in the other phenotypes
-  //       for (std::size_t pheno_adj = 0; pheno_adj < n_pheno_; pheno_adj++) {
-  //         if (pheno == pheno_adj) continue;
-
-  //         // pointer to adjacent phenotype locus mask in buffer
-  //         uint64_t *ptr_pheno_adj = &mask[n_words * pheno_adj];
-
-  //         // if the relevant site is activated, increment or decrement the
-  //         // intersection list depending on
-  //       }
-
-  //     }
-  //   }
-  // }
+        for (std::size_t pheno_adj = 0; pheno_adj < n_pheno_; pheno_adj++) {
+          if (pheno == pheno_adj) continue;
+          uint64_t *ptr_pheno_adj = &mask[n_words * pheno_adj];
+          // intersection list depending on
+        }
+      }
+    }
+  }
 }

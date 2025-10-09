@@ -30,11 +30,6 @@ namespace amsim {
     std::vector<double> env_chol() const noexcept { return env_chol_; }
     std::vector<double> gen_cor() const noexcept { return gen_cor_; }
 
-    std::vector<double> init_weights_() const;
-    std::vector<std::size_t> init_intersect_(const std::vector<std::uint64_t> &mask) const;
-    std::vector<uint64_t> init_mask_();
-    void to_masks_();
-
   private:
     const std::size_t n_pheno_;
     const std::size_t n_loc_tot_;
@@ -47,6 +42,11 @@ namespace amsim {
 
     rng::NormalPolar rng_polar_;
     rng::UniformIntRange rng_unf_;
+
+    std::vector<uint64_t> init_mask_();
+    std::vector<double> init_energy_() const;
+    std::vector<double> init_weights_(const std::vector<std::size_t> &intersect) const;
+    std::vector<std::size_t> init_intersect_(const std::vector<std::uint64_t> &mask) const;
   };
 
 }
