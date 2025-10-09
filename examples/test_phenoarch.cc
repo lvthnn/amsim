@@ -15,9 +15,9 @@
 int main() {
   std::size_t n_pheno = 3;
   std::size_t n_ind = 256000;
-  std::size_t seed = 123456ull;
+  std::size_t seed = 12345678ull;
   std::vector<double> h2_gen{0.5, 0.5, 0.5};
-  std::vector<std::size_t> n_loc{3000, 3000, 3000};
+  std::vector<std::size_t> n_loc{1000, 1000, 1000};
   std::vector<double> env_buffer(n_pheno * n_ind);
 
   // specify column-major layout
@@ -33,12 +33,20 @@ int main() {
     0.1, 0.1, 1.0
   };
 
-  amsim::rng::Xoshiro256ss rng = amsim::rng::seed_xoshiro(amsim::rng::auto_seed(seed));
+  const amsim::rng::Xoshiro256ss rng = amsim::rng::seed_xoshiro(amsim::rng::auto_seed(seed));
 
-  amsim::PhenoArch arch(n_pheno, n_loc, 9000, h2_gen, gen_cor,
-                      env_cor, rng);
+  amsim::PhenoArch arch(n_pheno, 3000, n_loc, h2_gen, gen_cor, env_cor, rng);
 
-  arch.optim_arch();
+  std::vector<std::uint64_t> mask = arch.init_mask_();
+  std::vector<std::size_t> intersect = arch.init_intersect_(mask);
+
+  std::size_t id = 0;
+  for (std::size_t i = 0; i < n_pheno; i++) {
+    for (std::size_t j = i + 1 ; j < n_pheno; j++) {
+      std::cout << i << " " << j << ": " << intersect[id] << "\n";
+      id++;
+    }
+  }
 
   // std::cout << std::setprecision(5);
   // std::size_t cnt = 0;
