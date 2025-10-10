@@ -141,14 +141,14 @@ namespace amsim {
   }
 
   void PhenoArch::optim_arch(double eps, std::size_t max_it) {
-    std::vector<std::uint64_t> mask = init_mask_();
-    std::vector<std::size_t> intersect = init_intersect_(mask);
+    loc_mask_ = init_mask_();
+    std::vector<std::size_t> intersect = init_intersect_(loc_mask_);
     std::vector<double> weights = init_weights_(intersect);
 
     const std::size_t n_words = (n_loc_tot_ + 63) / 64;
     for (std::size_t it = 0; it < max_it; it++) {
       std::size_t pheno = it % n_pheno_;
-      std::uint64_t* ptr_pheno = &mask[n_words * pheno];
+      std::uint64_t* ptr_pheno = &loc_mask_[n_words * pheno];
 
       double opt_add_delta = std::numeric_limits<double>::max();
       double opt_del_delta = std::numeric_limits<double>::max();
@@ -166,7 +166,7 @@ namespace amsim {
         for (std::size_t pheno_adj = 0; pheno_adj < n_pheno_; pheno_adj++) {
           if (pheno == pheno_adj) continue;
 
-          std::uint64_t* ptr_pheno_adj = &mask[n_words * pheno_adj];
+          std::uint64_t* ptr_pheno_adj = &loc_mask_[n_words * pheno_adj];
           bool causal_adj = (ptr_pheno_adj[block] & (1ull << offset));
 
           if (causal_adj) {
@@ -215,7 +215,7 @@ namespace amsim {
         for (std::size_t pheno_adj = 0; pheno_adj < n_pheno_; pheno_adj++) {
           if (pheno == pheno_adj) continue;
 
-          std::uint64_t* ptr_pheno_adj = &mask[n_words * pheno_adj];
+          std::uint64_t* ptr_pheno_adj = &loc_mask_[n_words * pheno_adj];
           if (ptr_pheno_adj[del_block] & (1ull << del_offset)) {
             std::size_t i = std::min(pheno, pheno_adj);
             std::size_t j = std::max(pheno, pheno_adj);
@@ -228,7 +228,7 @@ namespace amsim {
         for (std::size_t pheno_adj = 0; pheno_adj < n_pheno_; pheno_adj++) {
           if (pheno == pheno_adj) continue;
 
-          std::uint64_t *ptr_pheno_adj = &mask[n_words * pheno_adj];
+          std::uint64_t *ptr_pheno_adj = &loc_mask_[n_words * pheno_adj];
           if (ptr_pheno_adj[add_block] & (1ull << add_offset)) {
             std::size_t i = std::min(pheno, pheno_adj);
             std::size_t j = std::max(pheno, pheno_adj);
