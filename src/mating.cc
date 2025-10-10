@@ -12,7 +12,7 @@
 
 #include <amsim/mating.h>
 
-namespace amsim::mating {
+namespace amsim {
   std::vector<std::size_t> MatingModel::rand_state_() {
     std::vector<std::size_t> state_(n_sex_);
     std::iota(state_.begin(), state_.end(), n_sex_ + 1);
