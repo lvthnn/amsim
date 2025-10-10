@@ -8,7 +8,7 @@
 
 #include <amsim/phenotype.h>
 
-namespace amsim::mating {
+namespace amsim {
   enum class MatingType {
     RANDOM,
     ASSORTATIVE
