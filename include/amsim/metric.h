@@ -21,12 +21,10 @@ namespace amsim {
         n_cols_(n_cols),
         file_(file) {
       buf_.resize(n_rows_ * n_cols_);
-      n_it_ = 0;
+      it_ = 0;
     }
 
-    // the vector of phenotypes should be managed by a simulation class, which
-    // we've yet to implement
-    void log(std::vector<Phenotype> &phenotypes, Genome &genome) {
+    void stream(std::vector<Phenotype> &phenotypes, Genome &genome) {
       buf_ = f_(phenotypes, genome);
 
       // print the header first
@@ -43,7 +41,7 @@ namespace amsim {
         file_ << "\t" << val << "\t";
       file_ << "\n";
 
-      n_it_++;
+      it_++;
     }
 
   private:
@@ -51,7 +49,7 @@ namespace amsim {
     const std::string name_;
     const std::size_t n_rows_;
     const std::size_t n_cols_;
-    std::size_t n_it_;
+    std::size_t it_;
     std::ofstream file_;
     std::vector<T> buf_;
   };
@@ -59,8 +57,8 @@ namespace amsim {
   namespace metrics {
     template<typename F>
     inline auto make_metric(F f, const std::string& name,
-                            const std::string& file, std::size_t n_rows,
-                            std::size_t n_cols = 1) {
+                            const std::string& file, const std::size_t n_rows,
+                            const std::size_t n_cols = 1) {
       using T = typename std::invoke_result_t<F, std::vector<Phenotype>&, Genome&>::value_type;
       return Metric<F, T>(std::move(f), name, file, n_rows, n_cols);
     }
@@ -75,9 +73,9 @@ namespace amsim {
       }
     }
 
-    inline auto loc_maf(const std::string& file, std::size_t n_loc) { return make_metric(fgenome::loc_maf, "loc_mafs", file, n_loc); }
-    inline auto loc_mean(const std::string& file, std::size_t n_loc) { return make_metric(fgenome::loc_mean, "loc_means", file, n_loc); }
-    inline auto loc_var(const std::string& file, std::size_t n_loc) { return make_metric(fgenome::loc_var, "loc_vars", file, n_loc); }
+    inline auto loc_maf(const std::string& file, const std::size_t n_loc) { return make_metric(fgenome::loc_maf, "loc_mafs", file, n_loc); }
+    inline auto loc_mean(const std::string& file, const std::size_t n_loc) { return make_metric(fgenome::loc_mean, "loc_means", file, n_loc); }
+    inline auto loc_var(const std::string& file, const std::size_t n_loc) { return make_metric(fgenome::loc_var, "loc_vars", file, n_loc); }
   }
 }
 
