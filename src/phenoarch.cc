@@ -81,8 +81,7 @@ namespace amsim {
     std::size_t id = 0;
     for (std::size_t i = 0; i < n_pheno_; i++) {
       for (std::size_t j = i + 1; j < n_pheno_; j++) {
-        double actual_cor = intersect[id] / std::sqrt(n_loc_[i] * n_loc_[j]);
-
+        const double actual_cor = intersect[id] / std::sqrt(n_loc_[i] * n_loc_[j]);
         std::cout << "  Pheno " << i << " vs " << j << ": " << actual_cor << "\n";
         id++;
       }
@@ -129,18 +128,18 @@ namespace amsim {
   }
 
   std::vector<double> PhenoArch::init_weights_(const std::vector<std::size_t> &intersect) const {
-    std::vector<double> cost_vec((n_pheno_ * (n_pheno_ - 1)) / 2);
+    std::vector<double> weights((n_pheno_ * (n_pheno_ - 1)) / 2);
     std::size_t id = 0;
     for (std::size_t i = 0; i < n_pheno_; i++) {
       for (std::size_t j = i + 1; j < n_pheno_; j++) {
-        cost_vec[id] = intersect[id] - gen_cor_[j * n_pheno_ + i] * std::sqrt(n_loc_[i] * n_loc_[j]);
+        weights[id] = gen_cor_[j * n_pheno_ + i] * std::sqrt(n_loc_[i] * n_loc_[j]);
         id++;
       }
     }
-    return cost_vec;
+    return weights;
   }
 
-  void PhenoArch::optim_arch(double eps, std::size_t max_it) {
+  void PhenoArch::optim_arch(std::size_t max_it, double eps) {
     loc_mask_ = init_mask_();
     std::vector<std::size_t> intersect = init_intersect_(loc_mask_);
     std::vector<double> weights = init_weights_(intersect);
@@ -174,18 +173,12 @@ namespace amsim {
             std::size_t i = std::min(pheno, pheno_adj);
             std::size_t j = std::max(pheno, pheno_adj);
             std::size_t idx = i * n_pheno_ - (i * (i + 1)) / 2 + (j - i - 1);
-
             std::size_t intersect_prev = intersect[idx];
             std::size_t intersect_cur = intersect_prev + (causal ? -1 : 1);
+            double target = weights[idx];
 
-            double denom = std::sqrt(n_loc_[i] * n_loc_[j]);
-            double target = gen_cor_[j * n_pheno_ + i];
-
-            double cor_prev = intersect_prev / denom;
-            double cor_cur = intersect_cur / denom;
-
-            delta += (cor_cur - target) * (cor_cur - target)
-                   - (cor_prev - target) * (cor_prev - target);
+            delta += (intersect_cur - target) * (intersect_cur - target)
+                   - (intersect_prev - target) * (intersect_prev - target);
           }
         }
 

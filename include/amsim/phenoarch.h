@@ -20,7 +20,7 @@ namespace amsim {
               std::vector<double> gen_cor, std::vector<double> env_cor,
               const rng::Xoshiro256ss &rng);
     void gen_env(double* ptr_env, std::size_t n_ind);
-    void optim_arch(double eps = 1e-12, std::size_t max_it);
+    void optim_arch(std::size_t max_it, double eps = 1e-12);
     void print_correlations(const std::vector<std::size_t>& intersect) const;
     std::vector<double> env_chol() const noexcept { return env_chol_; }
     std::vector<double> gen_cor() const noexcept { return gen_cor_; }
