@@ -37,5 +37,5 @@ int main() {
 
   amsim::PhenoArch arch(n_pheno, 3000, n_loc, h2_gen, gen_cor, env_cor, rng);
 
-  arch.optim_arch();
+  arch.optim_arch(std::size_t(3e3));
 }
