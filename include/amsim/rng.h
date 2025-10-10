@@ -1,9 +1,13 @@
+#ifndef AMSIMCPP_RNG_H
+#define AMSIMCPP_RNG_H
+
 #pragma once
 #include <array>
 #include <cstdint>
 #include <chrono>
 #include <type_traits>
 #include <cmath>
+
 #if __cpp_lib_bitops
   #include <bit>
 #endif
@@ -262,3 +266,5 @@ namespace amsim::rng {
 		}
 	};
 }
+
+#endif // AMSIMCPP_RNG_H

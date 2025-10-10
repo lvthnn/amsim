@@ -1,7 +1,3 @@
-//------------------------------------------------------------------------------
-// amsimcpp : phenoarch.h
-//------------------------------------------------------------------------------
-
 #ifndef AMSIMCPP_PHENOARCH_H
 #define AMSIMCPP_PHENOARCH_H
 
@@ -24,6 +20,7 @@ namespace amsim {
     void print_correlations(const std::vector<std::size_t>& intersect) const;
     std::vector<double> env_chol() const noexcept { return env_chol_; }
     std::vector<double> gen_cor() const noexcept { return gen_cor_; }
+    std::vector<std::size_t> pheno_mask(std::size_t pheno_id) const;
 
   private:
     const std::size_t n_pheno_;

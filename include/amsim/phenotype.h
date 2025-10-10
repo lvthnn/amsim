@@ -1,7 +1,3 @@
-//------------------------------------------------------------------------------
-// amsimcpp : phenotype.h
-//------------------------------------------------------------------------------
-
 #ifndef AMSIMCPP_PHENOTYPE_H
 #define AMSIMCPP_PHENOTYPE_H
 
@@ -13,15 +9,16 @@
 
 #include <amsim/genome.h>
 #include <amsim/phenobuf.h>
+#include <amsim/phenoarch.h>
 #include <amsim/componenttype.h>
 
 namespace amsim {
 
   class Phenotype {
   public:
-		Phenotype(PhenoBuf& buf, std::string name,
-              std::vector<size_t>& loci, double h2_gen, double h2_vert,
-              std::optional<std::size_t> id = std::nullopt);
+		Phenotype(PhenoBuf& buf, PhenoArch& arch, std::string name,
+              const double h2_gen, const double h2_env, const double h2_vert,
+              const std::optional<std::size_t> id = std::nullopt);
 
     inline const std::string name() const noexcept { return name_; }
     inline const std::vector<std::size_t> loci() const& noexcept { return loci_; }
@@ -33,14 +30,10 @@ namespace amsim {
       if (id >= n_ind_)
         throw std::runtime_error("attempting out-of-bounds access of phenotype");
       switch (type) {
-        case ComponentType::GENETIC:
-          return ptr_gen_[id];
-        case ComponentType::ENVIRONMENTAL:
-          return ptr_env_[id];
-        case ComponentType::VERTICAL:
-          return ptr_vert_[id];
-        case ComponentType::TOTAL:
-          return ptr_tot_[id];
+        case ComponentType::GENETIC: return ptr_gen_[id];
+        case ComponentType::ENVIRONMENTAL: return ptr_env_[id];
+        case ComponentType::VERTICAL: return ptr_vert_[id];
+        case ComponentType::TOTAL: return ptr_tot_[id];
       }
     }
 
@@ -54,6 +47,7 @@ namespace amsim {
     //        generation and compute the sum of the two parental phenotypes
     //        weighted by some additional slop.
     inline void transmit_vert() {
+      if (h2_vert_ == 0.0) return;
       const double scale = std::sqrt(h2_vert_);
       std::copy(ptr_tot_, ptr_tot_ + n_ind_, ptr_vert_);
       for (std::size_t ind = 0; ind < n_ind_; ind++)
@@ -71,12 +65,13 @@ namespace amsim {
 
   private:
     const std::string name_;
+    const std::size_t id_;
     const std::size_t n_ind_;
     const std::vector<std::size_t> loci_;
     const std::vector<double> loc_effects_;
     const double h2_gen_;
-    const double h2_vert_;
     const double h2_env_;
+    const double h2_vert_;
 
     double* ptr_gen_;
     double* ptr_env_;
