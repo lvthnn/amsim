@@ -140,6 +140,7 @@ namespace amsim {
   }
 
   void PhenoArch::optim_arch(std::size_t max_it, double eps) {
+    // @TODO: Make optimisation routine terminate for error < eps
     loc_mask_ = init_mask_();
     std::vector<std::size_t> intersect = init_intersect_(loc_mask_);
     std::vector<double> weights = init_weights_(intersect);
@@ -147,12 +148,12 @@ namespace amsim {
     const std::size_t n_words = (n_loc_tot_ + 63) / 64;
     for (std::size_t it = 0; it < max_it; it++) {
       std::size_t pheno = it % n_pheno_;
-      std::uint64_t* ptr_pheno = &loc_mask_[n_words * pheno];
-
-      double opt_add_delta = std::numeric_limits<double>::max();
-      double opt_del_delta = std::numeric_limits<double>::max();
       std::size_t opt_add = 0;
       std::size_t opt_del = 0;
+      double opt_add_delta = std::numeric_limits<double>::max();
+      double opt_del_delta = std::numeric_limits<double>::max();
+
+      std::uint64_t* ptr_pheno = &loc_mask_[n_words * pheno];
 
       // scan through loci and determine optimal addition and deletion
       for (std::size_t loc = 0; loc < n_loc_tot_; loc++) {
@@ -231,7 +232,20 @@ namespace amsim {
         }
       }
     }
-    std::cout << "Final iteration:\n";
-    print_correlations(intersect);
+  }
+
+  std::vector<std::size_t> PhenoArch::pheno_mask(const std::size_t pheno_id) const {
+    const std::size_t n_words = (n_loc_tot_ + 63) / 64;
+    const std::uint64_t* ptr_pheno = &loc_mask_[pheno_id * n_words];
+    std::vector<std::size_t> loci;
+
+    for (std::size_t word = 0; word < n_words; word++) {
+      for (std::uint64_t mask = ptr_pheno[word]; mask; mask &= (mask - 1)) {
+        const std::size_t offset = static_cast<std::uint64_t>(__builtin_ctzll(mask));
+        const std::size_t loc = 64 * word + offset;
+        loci.push_back(loc);
+      }
+    }
+    return loci;
   }
 }
