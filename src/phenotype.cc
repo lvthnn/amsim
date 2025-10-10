@@ -9,12 +9,14 @@
 #include <cmath>
 #include <optional>
 #include <stdexcept>
+#include <iostream>
 
-#include <amsim/componenttype.h>
 #include <amsim/haplobuf.h>
 #include <amsim/genome.h>
 #include <amsim/phenobuf.h>
+#include <amsim/phenoarch.h>
 #include <amsim/phenotype.h>
+#include <amsim/componenttype.h>
 
 #if defined(__APPLE__) && defined(USE_BLAS)
   #include <Accelerate/Accelerate.h>
@@ -23,30 +25,35 @@
 #endif
 
 namespace amsim {
-  Phenotype::Phenotype(PhenoBuf& buf, std::string name,
-                       std::vector<std::size_t>& loci, double h2_gen,
-                       double h2_vert, std::optional<std::size_t> id)
+  namespace utils {
+    std::size_t attach(PhenoBuf &buf, std::optional<std::size_t> id) {
+      if (!id.has_value()) id = buf.unoccupied();
+      if (!id.has_value()) throw std::runtime_error("all phenotype buffer slots occupied");
+      return id.value();
+    }
+  }
+
+  Phenotype::Phenotype(PhenoBuf& buf, PhenoArch& arch, std::string name,
+                       const double h2_gen, const double h2_env, const double h2_vert,
+                       const std::optional<std::size_t> id)
     : name_(std::move(name)),
+      id_(utils::attach(buf, id)),
       n_ind_(buf.n_ind()),
-      loci_(std::move(loci)),
+      loci_(arch.pheno_mask(id_)),
       loc_effects_(loci_.size(), std::sqrt(h2_gen / loci_.size())),
       h2_gen_(h2_gen),
+      h2_env_(h2_env),
       h2_vert_(h2_vert),
-      h2_env_(1 - h2_gen - h2_vert) {
+      ptr_gen_(buf(id_, ComponentType::GENETIC)),
+      ptr_env_(buf(id_, ComponentType::ENVIRONMENTAL)),
+      ptr_vert_(buf(id_, ComponentType::VERTICAL)),
+      ptr_tot_(buf(id_, ComponentType::TOTAL)) {
     if (h2_gen_ < 0 || h2_env_ < 0 || h2_vert_ < 0)
       throw std::runtime_error("phenotype component variances must be positive");
     if (h2_gen_ + h2_env_ + h2_vert_ != 1.0)
       throw std::runtime_error("sum of phenotype component variances must equal one");
 
-    if (!id.has_value()) id = buf.unoccupied();
-    if (!id.has_value()) throw std::runtime_error("all buffer slots occupied");
-    const std::size_t id_val = id.value();
-
-    ptr_gen_  = buf(id_val, ComponentType::GENETIC);
-    ptr_env_  = buf(id_val, ComponentType::ENVIRONMENTAL);
-    ptr_vert_ = buf(id_val, ComponentType::VERTICAL);
-    ptr_tot_  = buf(id_val, ComponentType::TOTAL);
-    buf.occupy(id_val);
+    buf.occupy(id_);
   }
 
   void Phenotype::score_bitwise(Genome& genome) const {
@@ -159,5 +166,7 @@ namespace amsim {
     #else
       score_bitwise(genome);
     #endif
+
+    // calculate the mean and the variance
   }
 }
