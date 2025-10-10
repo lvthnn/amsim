@@ -1,7 +1,3 @@
-//------------------------------------------------------------------------------
-// amsimcpp : genome.h
-//------------------------------------------------------------------------------
-
 #ifndef AMSIMCPP_GENOME_H
 #define AMSIMCPP_GENOME_H
 
@@ -25,6 +21,8 @@ namespace amsim {
     inline double v_lmean(std::size_t loc) const noexcept { return v_lmean_[loc]; }
     inline double v_lvar(std::size_t loc) const noexcept { return v_lvar_[loc]; }
     inline double v_lmaf(std::size_t loc) const noexcept { return v_lmaf_[loc]; }
+    inline std::size_t n_loc() const noexcept { return H0_.n_loc(); }
+    inline std::size_t n_ind() const noexcept { return H0_.n_ind(); }
     inline HaploView view() const noexcept { return H0_.view(); }
     inline HaploBuf& H0() noexcept { return H0_; }
     inline HaploBuf& H1() noexcept { return H1_; }
