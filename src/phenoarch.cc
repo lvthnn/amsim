@@ -10,6 +10,8 @@
 #include <numeric>
 #include <cassert>
 #include <iostream>
+#include <iomanip>
+#include <limits>
 
 #include <amsim/phenoarch.h>
 #include <amsim/rng.h>
@@ -72,12 +74,28 @@ namespace amsim {
     #endif
   }
 
-  std::vector<uint64_t> PhenoArch::init_mask_() {
+  void PhenoArch::print_correlations(const std::vector<std::size_t>& intersect) const {
+    std::cout << "Phenotype correlations:\n";
+    std::cout << std::fixed << std::setprecision(4);
+
+    std::size_t id = 0;
+    for (std::size_t i = 0; i < n_pheno_; i++) {
+      for (std::size_t j = i + 1; j < n_pheno_; j++) {
+        double actual_cor = intersect[id] / std::sqrt(n_loc_[i] * n_loc_[j]);
+
+        std::cout << "  Pheno " << i << " vs " << j << ": " << actual_cor << "\n";
+        id++;
+      }
+    }
+    std::cout << "\n";
+  }
+
+  std::vector<std::uint64_t> PhenoArch::init_mask_() {
     const std::size_t n_words = (n_loc_tot_ + 63) / 64;
-    std::vector<uint64_t> loc_mask(n_words * n_pheno_);
+    std::vector<std::uint64_t> loc_mask(n_words * n_pheno_);
 
     for (std::size_t pheno = 0; pheno < n_pheno_; pheno++) {
-      uint64_t* loc_ptr = &loc_mask[pheno * n_words];
+      std::uint64_t* loc_ptr = &loc_mask[pheno * n_words];
 
       const std::size_t n_loc_pheno = n_loc_[pheno];
       for (std::size_t r_id = n_loc_tot_ - n_loc_pheno; r_id < n_loc_tot_; r_id++) {
@@ -99,8 +117,8 @@ namespace amsim {
     std::size_t id = 0;
     for (std::size_t i = 0; i < n_pheno_; i++) {
       for (std::size_t j = i + 1; j < n_pheno_; j++) {
-        const uint64_t* pheno_i = &mask[n_words * i];
-        const uint64_t* pheno_j = &mask[n_words * j];
+        const std::uint64_t* pheno_i = &mask[n_words * i];
+        const std::uint64_t* pheno_j = &mask[n_words * j];
         for (std::size_t word = 0; word < n_words; word++) {
           intersect[id] += __builtin_popcountll(pheno_i[word] & pheno_j[word]);
         }
@@ -111,10 +129,10 @@ namespace amsim {
   }
 
   std::vector<double> PhenoArch::init_weights_(const std::vector<std::size_t> &intersect) const {
-    std::vector<double> cost_vec((n_pheno_ * (n_pheno_ + 1)) / 2);
+    std::vector<double> cost_vec((n_pheno_ * (n_pheno_ - 1)) / 2);
     std::size_t id = 0;
     for (std::size_t i = 0; i < n_pheno_; i++) {
-      for (std::size_t j = i; j < n_pheno_; j++) {
+      for (std::size_t j = i + 1; j < n_pheno_; j++) {
         cost_vec[id] = intersect[id] - gen_cor_[j * n_pheno_ + i] * std::sqrt(n_loc_[i] * n_loc_[j]);
         id++;
       }
@@ -123,29 +141,104 @@ namespace amsim {
   }
 
   void PhenoArch::optim_arch(double eps, std::size_t max_it) {
-    std::vector<uint64_t> mask = init_mask_();
+    std::vector<std::uint64_t> mask = init_mask_();
     std::vector<std::size_t> intersect = init_intersect_(mask);
     std::vector<double> weights = init_weights_(intersect);
 
     const std::size_t n_words = (n_loc_tot_ + 63) / 64;
     for (std::size_t it = 0; it < max_it; it++) {
       std::size_t pheno = it % n_pheno_;
-      uint64_t* ptr_pheno = &mask[n_words * pheno];
+      std::uint64_t* ptr_pheno = &mask[n_words * pheno];
 
+      double opt_add_delta = std::numeric_limits<double>::max();
+      double opt_del_delta = std::numeric_limits<double>::max();
+      std::size_t opt_add = 0;
+      std::size_t opt_del = 0;
+
+      // scan through loci and determine optimal addition and deletion
       for (std::size_t loc = 0; loc < n_loc_tot_; loc++) {
         std::size_t block = loc / 64;
         std::size_t offset = loc % 64;
 
-        ArchOp op = (ptr_pheno[block] & (1ull << offset))
-          ? ArchOp::ADDITION
-          : ArchOp::DELETION;
+        double delta = 0.0;
+        bool causal = ptr_pheno[block] & (1ull << offset);
 
         for (std::size_t pheno_adj = 0; pheno_adj < n_pheno_; pheno_adj++) {
           if (pheno == pheno_adj) continue;
-          uint64_t *ptr_pheno_adj = &mask[n_words * pheno_adj];
-          // intersection list depending on
+
+          std::uint64_t* ptr_pheno_adj = &mask[n_words * pheno_adj];
+          bool causal_adj = (ptr_pheno_adj[block] & (1ull << offset));
+
+          if (causal_adj) {
+            // convert triangular indices to linear index
+            std::size_t i = std::min(pheno, pheno_adj);
+            std::size_t j = std::max(pheno, pheno_adj);
+            std::size_t idx = i * n_pheno_ - (i * (i + 1)) / 2 + (j - i - 1);
+
+            std::size_t intersect_prev = intersect[idx];
+            std::size_t intersect_cur = intersect_prev + (causal ? -1 : 1);
+
+            double denom = std::sqrt(n_loc_[i] * n_loc_[j]);
+            double target = gen_cor_[j * n_pheno_ + i];
+
+            double cor_prev = intersect_prev / denom;
+            double cor_cur = intersect_cur / denom;
+
+            delta += (cor_cur - target) * (cor_cur - target)
+                   - (cor_prev - target) * (cor_prev - target);
+          }
+        }
+
+        if (causal && delta < opt_del_delta) {
+          opt_del = loc;
+          opt_del_delta = delta;
+        } else if (!causal && delta < opt_add_delta) {
+          opt_add = loc;
+          opt_add_delta = delta;
+        }
+      }
+
+      // apply the swap if it improves the cost
+      double total_delta = opt_add_delta + opt_del_delta;
+      if (total_delta < -eps) {
+        // perform deletion
+        std::size_t del_block = opt_del / 64;
+        std::size_t del_offset = opt_del % 64;
+        ptr_pheno[del_block] &= ~(1ull << del_offset);
+
+        // perform addition
+        std::size_t add_block = opt_add / 64;
+        std::size_t add_offset = opt_add % 64;
+        ptr_pheno[add_block] |= (1ull << add_offset);
+
+        // update intersections and weights for deletion
+        for (std::size_t pheno_adj = 0; pheno_adj < n_pheno_; pheno_adj++) {
+          if (pheno == pheno_adj) continue;
+
+          std::uint64_t* ptr_pheno_adj = &mask[n_words * pheno_adj];
+          if (ptr_pheno_adj[del_block] & (1ull << del_offset)) {
+            std::size_t i = std::min(pheno, pheno_adj);
+            std::size_t j = std::max(pheno, pheno_adj);
+            std::size_t idx = i * n_pheno_ - (i * (i + 1)) / 2 + (j - i - 1);
+            intersect[idx]--;
+          }
+        }
+
+        // update intersections and weights for addition
+        for (std::size_t pheno_adj = 0; pheno_adj < n_pheno_; pheno_adj++) {
+          if (pheno == pheno_adj) continue;
+
+          std::uint64_t *ptr_pheno_adj = &mask[n_words * pheno_adj];
+          if (ptr_pheno_adj[add_block] & (1ull << add_offset)) {
+            std::size_t i = std::min(pheno, pheno_adj);
+            std::size_t j = std::max(pheno, pheno_adj);
+            std::size_t idx = i * n_pheno_ - (i * (i + 1)) / 2 + (j - i - 1);
+            intersect[idx]++;
+          }
         }
       }
     }
+    std::cout << "Final iteration:\n";
+    print_correlations(intersect);
   }
 }

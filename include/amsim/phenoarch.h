@@ -13,11 +13,6 @@
 
 namespace amsim {
 
-  enum class ArchOp {
-    ADDITION = 1,
-    DELETION = -1
-  };
-
   class PhenoArch {
   public:
     PhenoArch(std::size_t n_pheno, std::size_t n_loc_total,
@@ -25,8 +20,8 @@ namespace amsim {
               std::vector<double> gen_cor, std::vector<double> env_cor,
               const rng::Xoshiro256ss &rng);
     void gen_env(double* ptr_env, std::size_t n_ind);
-    void optim_arch(double eps = 1e-12, std::size_t max_it = 3);
-
+    void optim_arch(double eps = 1e-12, std::size_t max_it = 1e5);
+    void print_correlations(const std::vector<std::size_t>& intersect) const;
     std::vector<double> env_chol() const noexcept { return env_chol_; }
     std::vector<double> gen_cor() const noexcept { return gen_cor_; }
 
@@ -38,12 +33,12 @@ namespace amsim {
     const std::vector<double> gen_cor_;
 
     std::vector<double> env_chol_;
-    std::vector<uint64_t> loc_mask_;
+    std::vector<std::uint64_t> loc_mask_;
 
     rng::NormalPolar rng_polar_;
     rng::UniformIntRange rng_unf_;
 
-    std::vector<uint64_t> init_mask_();
+    std::vector<std::uint64_t> init_mask_();
     std::vector<double> init_energy_() const;
     std::vector<double> init_weights_(const std::vector<std::size_t> &intersect) const;
     std::vector<std::size_t> init_intersect_(const std::vector<std::uint64_t> &mask) const;
