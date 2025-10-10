@@ -22,37 +22,20 @@ int main() {
 
   // specify column-major layout
   std::vector<double> gen_cor{
-    1.0, 0.2, 0.1,   // col 1
-    0.2, 1.0, 0.1,   // col 2
-    0.1, 0.1, 1.0    // col 3
+    1.0, 0.2, 0.3,   // col 1
+    0.2, 1.0, 0.4,   // col 2
+    0.3, 0.4, 1.0    // col 3
   };
 
   std::vector<double> env_cor{
-    1.0, 0.2, 0.1,
-    0.2, 1.0, 0.1,
-    0.1, 0.1, 1.0
+    1.0, 0.2, 0.1,   // col 1
+    0.2, 1.0, 0.1,   // col 2
+    0.1, 0.1, 1.0    // col 3
   };
 
   const amsim::rng::Xoshiro256ss rng = amsim::rng::seed_xoshiro(amsim::rng::auto_seed(seed));
 
   amsim::PhenoArch arch(n_pheno, 3000, n_loc, h2_gen, gen_cor, env_cor, rng);
 
-  std::vector<std::uint64_t> mask = arch.init_mask_();
-  std::vector<std::size_t> intersect = arch.init_intersect_(mask);
-
-  std::size_t id = 0;
-  for (std::size_t i = 0; i < n_pheno; i++) {
-    for (std::size_t j = i + 1 ; j < n_pheno; j++) {
-      std::cout << i << " " << j << ": " << intersect[id] << "\n";
-      id++;
-    }
-  }
-
-  // std::cout << std::setprecision(5);
-  // std::size_t cnt = 0;
-  // for (const double val : env_buffer) {
-  //   std::cout << val << "\t";
-  //   cnt = (cnt + 1) % n_pheno;
-  //   if (cnt == 0) std::cout << "\n";
-  // }
+  arch.optim_arch();
 }
