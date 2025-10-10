@@ -1,7 +1,3 @@
-//------------------------------------------------------------------------------
-// amsimcpp : phenobuf.h
-//------------------------------------------------------------------------------
-
 #ifndef AMSIMCPP_PHENOBUF_H
 #define AMSIMCPP_PHENOBUF_H
 
@@ -19,14 +15,10 @@ namespace amsim {
       if (occupied_[id])
         throw std::runtime_error("buffer slot already occupied");
       switch (type) {
-        case ComponentType::GENETIC:
-          return &buffer_[id * n_ind_];
-        case ComponentType::ENVIRONMENTAL:
-          return &buffer_[(n_pheno_ + id) * n_ind_];
-        case ComponentType::VERTICAL:
-          return &buffer_[(2 * n_pheno_ + id) * n_ind_];
-        case ComponentType::TOTAL:
-          return &buffer_[(3 * n_pheno_ + id) * n_ind_];
+        case ComponentType::GENETIC: return &buffer_[id * n_ind_];
+        case ComponentType::ENVIRONMENTAL: return &buffer_[(n_pheno_ + id) * n_ind_];
+        case ComponentType::VERTICAL: return &buffer_[(2 * n_pheno_ + id) * n_ind_];
+        case ComponentType::TOTAL: return &buffer_[(3 * n_pheno_ + id) * n_ind_];
       }
     }
 
@@ -34,14 +26,10 @@ namespace amsim {
       if (occupied_[id])
         throw std::runtime_error("buffer slot already occupied");
       switch (type) {
-        case ComponentType::GENETIC:
-          return &buffer_[id * n_ind_];
-        case ComponentType::ENVIRONMENTAL:
-          return &buffer_[(n_pheno_ + id) * n_ind_];
-        case ComponentType::VERTICAL:
-          return &buffer_[(2 * n_pheno_ + id) * n_ind_];
-        case ComponentType::TOTAL:
-          return &buffer_[(3 * n_pheno_ + id) * n_ind_];
+        case ComponentType::GENETIC: return &buffer_[id * n_ind_];
+        case ComponentType::ENVIRONMENTAL: return &buffer_[(n_pheno_ + id) * n_ind_];
+        case ComponentType::VERTICAL: return &buffer_[(2 * n_pheno_ + id) * n_ind_];
+        case ComponentType::TOTAL: return &buffer_[(3 * n_pheno_ + id) * n_ind_];
       }
     }
 
