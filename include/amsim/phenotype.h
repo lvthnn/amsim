@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <string>
 #include <vector>
+#include <array>
 #include <optional>
 
 #include <amsim/genome.h>
@@ -22,6 +23,7 @@ namespace amsim {
 
     inline const std::string name() const noexcept { return name_; }
     inline const std::vector<std::size_t> loci() const& noexcept { return loci_; }
+    inline std::size_t n_ind() const noexcept { return n_ind_; }
     inline double h2_gen() const noexcept { return h2_gen_; }
     inline double h2_vert() const noexcept { return h2_vert_; }
     inline double h2_env() const noexcept { return h2_env_; }
@@ -43,6 +45,24 @@ namespace amsim {
       return ptr_tot_[id];
     }
 
+    inline const double* operator()(ComponentType type) const {
+      switch (type) {
+        case ComponentType::GENETIC: return ptr_gen_;
+        case ComponentType::ENVIRONMENTAL: return ptr_env_;
+        case ComponentType::VERTICAL: return ptr_vert_;
+        case ComponentType::TOTAL: return ptr_tot_;
+      }
+      __builtin_unreachable();
+    }
+
+    inline double comp_mean(ComponentType type) const {
+      return comp_means_[type];
+    }
+
+    inline double comp_var(ComponentType type) const {
+      return comp_vars_[type];
+    }
+
     // @TODO: Rework this function. We need to access the mate matching of the
     //        generation and compute the sum of the two parental phenotypes
     //        weighted by some additional slop.
@@ -59,9 +79,12 @@ namespace amsim {
         ptr_tot_[ind] = ptr_gen_[ind] + ptr_env_[ind] + ptr_vert_[ind];
     }
 
-    void score_bitwise(Genome& genome) const;
-    void score_tiled64(Genome& genome) const;
-    void score(Genome& genome) const;
+    #if defined(USE_BLAS)
+      void score_tiled64(Genome& genome);
+    #endif
+      void score_bitwise(Genome& genome);
+    void score(Genome& genome);
+    void compute_stats();
 
   private:
     const std::string name_;
@@ -77,6 +100,10 @@ namespace amsim {
     double* ptr_env_;
     double* ptr_vert_;
     double* ptr_tot_;
+
+    // store component means and variances for fast computation
+    std::array<double, 4> comp_means_;
+    std::array<double, 4> comp_vars_;
   };
 }
 
