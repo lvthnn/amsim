@@ -18,9 +18,9 @@
 #include <amsim/phenotype.h>
 #include <amsim/componenttype.h>
 
-#if defined(__APPLE__) && defined(USE_BLAS)
+#if defined(__APPLE__)
   #include <Accelerate/Accelerate.h>
-#elif defined(__linux__) && defined(USE_BLAS)
+#else
   #include <cblas.h>
 #endif
 
@@ -40,14 +40,16 @@ namespace amsim {
       id_(utils::attach(buf, id)),
       n_ind_(buf.n_ind()),
       loci_(arch.pheno_mask(id_)),
-      loc_effects_(loci_.size(), std::sqrt(h2_gen / loci_.size())),
+      loc_effects_(loci_.size(), std::sqrt(h2_gen / static_cast<double>(loci_.size()))),
       h2_gen_(h2_gen),
       h2_env_(h2_env),
       h2_vert_(h2_vert),
       ptr_gen_(buf(id_, ComponentType::GENETIC)),
       ptr_env_(buf(id_, ComponentType::ENVIRONMENTAL)),
       ptr_vert_(buf(id_, ComponentType::VERTICAL)),
-      ptr_tot_(buf(id_, ComponentType::TOTAL)) {
+      ptr_tot_(buf(id_, ComponentType::TOTAL)),
+      comp_means_(),
+      comp_vars_() {
     if (h2_gen_ < 0 || h2_env_ < 0 || h2_vert_ < 0)
       throw std::runtime_error("phenotype component variances must be positive");
     if (h2_gen_ + h2_env_ + h2_vert_ != 1.0)
@@ -56,7 +58,7 @@ namespace amsim {
     buf.occupy(id_);
   }
 
-  void Phenotype::score_bitwise(Genome& genome) const {
+  void Phenotype::score_bitwise(Genome& genome) {
     if (genome.view() != HaploView::LOC_MAJOR)
       throw std::runtime_error("Phenotype::score: requires loc-major view.");
 
@@ -102,7 +104,7 @@ namespace amsim {
   }
  
   #if defined(USE_BLAS)
-  void Phenotype::score_tiled64(Genome& genome) const {
+  void Phenotype::score_tiled64(Genome& genome) {
     if (genome.H0().view() != HaploView::LOC_MAJOR)
       throw std::runtime_error("Phenotype::score_tiled64: require LOC_MAJOR view.");
 
@@ -160,13 +162,23 @@ namespace amsim {
   }
   #endif
 
-  void Phenotype::score(Genome& genome) const {
+  void Phenotype::score(Genome& genome) {
     #ifdef USE_BLAS
       score_tiled64(genome);
     #else
       score_bitwise(genome);
     #endif
+    score_tot();
+  }
 
-    // calculate the mean and the variance
+  void Phenotype::compute_stats() {
+    // compute means and variances of all the components
+    const std::vector<double> ones(n_ind_, 1.0);
+    for (ComponentType comp = ComponentType::GENETIC; comp != ComponentType::TOTAL; comp++) {
+      const double* ptr_ = (*this)(comp);
+      const double sum_sq = cblas_ddot(n_ind_, ptr_, 1, ptr_, 1);
+      comp_means_[comp] = (1.0 / static_cast<double>(n_ind_)) * cblas_ddot(n_ind_, ptr_, 1, ones.data(), 1);
+      comp_vars_[comp] = 1.0 / static_cast<double>(n_ind_) * sum_sq - comp_means_[comp] * comp_means_[comp];
+    }
   }
 }
