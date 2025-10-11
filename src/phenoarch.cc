@@ -50,10 +50,10 @@ namespace amsim {
     int clpk_out_;
 
     // @TODO: Rework this since we're integrating BLAS and LAPACK
-    #if defined(__APPLE__) && defined(USE_BLAS)
+    #if defined(__APPLE__)
       dpotrf_(&clpk_uplo_, &clpk_n_pheno_, env_chol_.data(), &clpk_lda_,
               &clpk_out_);
-    #elif defined(__linux__) && defined(USE_BLAS)
+    #else
       LAPACKE_dpotrf(&clpk_uplo_, &clpk_n_pheno_, env_chol_.data(), &clpk_lda_,
                      &clpk_out_);
     #endif
@@ -65,13 +65,9 @@ namespace amsim {
 
   void PhenoArch::gen_env(double *ptr_env, const std::size_t n_ind) {
     rng_polar_.fill(ptr_env, n_ind * n_pheno_);
-    #if defined(USE_BLAS)
-      cblas_dtrmm(CblasColMajor, CblasLeft, CblasLower, CblasNoTrans,
-                  CblasNonUnit, n_pheno_, n_ind, 1, env_chol_.data(), n_pheno_,
-                  ptr_env, n_pheno_);
-    #else
-      throw std::runtime_error("Not implemented");
-    #endif
+    cblas_dtrmm(CblasColMajor, CblasLeft, CblasLower, CblasNoTrans,
+                CblasNonUnit, n_pheno_, n_ind, 1, env_chol_.data(), n_pheno_,
+                ptr_env, n_pheno_);
   }
 
   void PhenoArch::print_correlations(const std::vector<std::size_t>& intersect) const {
