@@ -12,8 +12,6 @@ namespace amsim {
     PhenoBuf(const std::size_t n_ind, const std::size_t n_pheno);
 
     inline const double* operator()(std::size_t id, ComponentType type) const {
-      if (occupied_[id])
-        throw std::runtime_error("buffer slot already occupied");
       switch (type) {
         case ComponentType::GENETIC: return &buffer_[id * n_ind_];
         case ComponentType::ENVIRONMENTAL: return &buffer_[(n_pheno_ + id) * n_ind_];
@@ -23,8 +21,6 @@ namespace amsim {
     }
 
     inline double* operator()(std::size_t id, ComponentType type) {
-      if (occupied_[id])
-        throw std::runtime_error("buffer slot already occupied");
       switch (type) {
         case ComponentType::GENETIC: return &buffer_[id * n_ind_];
         case ComponentType::ENVIRONMENTAL: return &buffer_[(n_pheno_ + id) * n_ind_];
