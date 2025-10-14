@@ -5,6 +5,7 @@
 #include <cmath>
 #include <optional>
 #include <stdexcept>
+#include <iostream>
 
 #include <amsim/haplobuf.h>
 #include <amsim/genome.h>
@@ -143,12 +144,8 @@ namespace amsim {
         }
       }
 
-      cblas_dgemv(CblasRowMajor, CblasNoTrans,
-                  tile_size, n_causal_loc,
-                  1.0,
-                  Gd.data(), n_causal_loc,
-                  ones.data(), 1,
-                  0.0,
+      cblas_dgemv(CblasRowMajor, CblasNoTrans, tile_size, n_causal_loc,
+                  1.0, Gd.data(), n_causal_loc, ones.data(), 1, 0.0,
                   out.data(), 1);
 
       for (std::size_t k = 0; k < tile_size; ++k)
@@ -169,12 +166,13 @@ namespace amsim {
   void Phenotype::compute_stats() {
     // compute means and variances of all the components
     const std::vector<double> ones(n_ind_, 1.0);
-    for (ComponentType comp = ComponentType::GENETIC; comp != ComponentType::TOTAL; comp++) {
+    for (ComponentType comp = ComponentType::GENETIC; comp <= ComponentType::TOTAL; comp++) {
       const double* ptr_ = (*this)(comp);
       const double sum_sq = cblas_ddot(n_ind_, ptr_, 1, ptr_, 1);
       const double scale = (1.0 / static_cast<double>(n_ind_));
       comp_means_[comp] = scale * cblas_ddot(n_ind_, ptr_, 1, ones.data(), 1);
       comp_vars_[comp] = scale * sum_sq - comp_means_[comp] * comp_means_[comp];
+      if (comp == ComponentType::TOTAL) break;
     }
   }
 }
