@@ -16,7 +16,7 @@ int main() {
   std::mt19937 g(rd());
   std::uniform_real_distribution<double> maf_dist(0.0, 1.0);
 
-  std::size_t rng_seed = 123445188ull;
+  std::size_t rng_seed = 123442255188ull;
   amsim::rng::Xoshiro256ss rng = amsim::rng::seed_xoshiro(amsim::rng::auto_seed(rng_seed));
 
   // Parameters for genome
@@ -33,6 +33,7 @@ int main() {
   double h2_vert = 0.0;
   std::vector<std::size_t> v_n_loc(n_pheno, 1000);
   std::vector<double> v_h2_gen(n_pheno, h2_gen);
+  std::vector<double> v_h2_env(n_pheno, h2_env);
 
   // Genetic component correlation (@ panmixis)
   std::vector<double> gen_cor{
@@ -54,7 +55,7 @@ int main() {
   // Declare genome, phenotype buffer and architecture
   amsim::Genome    genome(n_ind, n_loc, v_mut, v_rec, v_maf, rng_seed);
   amsim::PhenoBuf  buf(n_ind, 3);
-  amsim::PhenoArch arch(n_pheno, n_loc, v_n_loc, v_h2_gen, gen_cor, env_cor, rng);
+  amsim::PhenoArch arch(n_pheno, n_loc, v_n_loc, v_h2_gen, v_h2_env, gen_cor, env_cor, rng);
 
   arch.optim_arch(1e4, 1e-12);
 
@@ -70,10 +71,10 @@ int main() {
   // typical simulation cycle: --------
   genome.compute_mafs();
   genome.compute_stats();
+  arch.gen_env(buf(0, amsim::ENVIRONMENTAL), n_ind);
   height.score(genome);
   weight.score(genome);
   bmi.score(genome);
-  arch.gen_env(buf(0, amsim::ENVIRONMENTAL), n_ind);
   // generate the environmental components using arch
   height.compute_stats();
   weight.compute_stats();
@@ -92,7 +93,7 @@ int main() {
   // fix this by implementing some wrapper class (?) or using std::reference_wrapper
   std::vector<amsim::Phenotype> phenotypes = {height, weight, bmi};
 
-  for (amsim::ComponentType type = amsim::ComponentType::GENETIC; type != amsim::ComponentType::TOTAL; type++) {
+  for (amsim::ComponentType type = amsim::ComponentType::GENETIC; type <= amsim::ComponentType::TOTAL; type++) {
     std::cout << "----------------------------------------\n";
     std::cout << "component type: " << type << "\n";
     std::cout << "height (mean):  " << height.comp_mean(type) << "\n";
@@ -101,6 +102,7 @@ int main() {
     std::cout << "height (var):   " << height.comp_var(type) << "\n";
     std::cout << "weight (var):   " << weight.comp_var(type) << "\n";
     std::cout << "bmi    (var):   " << bmi.comp_var(type) << "\n";
+    if (type == amsim::ComponentType::TOTAL) break;
   }
 
   amsim::Metric metric_gen_cor = amsim::metrics::comp_cor("gen_cor", n_pheno, amsim::ComponentType::GENETIC);
