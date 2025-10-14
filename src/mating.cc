@@ -40,7 +40,7 @@ namespace amsim {
   void AssortativeModel::setup_(std::vector<std::size_t> state) {
     for (std::size_t pheno = 0; pheno < n_pheno_; pheno++) {
       // use standardised total components -- i.e. subtract the comp_mean and
-      // comp_var
+      // comp_var - we can't do that since we have sex-segregated data...
       std::vector<double> ones(n_sex_, 1.0);
 
       const double* ptr_male_   = ptr_tot_[pheno];
@@ -51,8 +51,6 @@ namespace amsim {
       std::copy_n(ptr_male_, n_sex_, male_col_);
       for (std::size_t ind = 0; ind < n_sex_; ind++)
         female_col_[ind] = ptr_female_[state[ind]];
-
-      // standardise the phenotype values :D
     }
   }
 
