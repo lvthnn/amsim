@@ -1,7 +1,3 @@
-//------------------------------------------------------------------------------
-// amsimcpp : phenotype.cc
-//------------------------------------------------------------------------------
-
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -9,7 +5,6 @@
 #include <cmath>
 #include <optional>
 #include <stdexcept>
-#include <iostream>
 
 #include <amsim/haplobuf.h>
 #include <amsim/genome.h>
@@ -177,8 +172,9 @@ namespace amsim {
     for (ComponentType comp = ComponentType::GENETIC; comp != ComponentType::TOTAL; comp++) {
       const double* ptr_ = (*this)(comp);
       const double sum_sq = cblas_ddot(n_ind_, ptr_, 1, ptr_, 1);
-      comp_means_[comp] = (1.0 / static_cast<double>(n_ind_)) * cblas_ddot(n_ind_, ptr_, 1, ones.data(), 1);
-      comp_vars_[comp] = 1.0 / static_cast<double>(n_ind_) * sum_sq - comp_means_[comp] * comp_means_[comp];
+      const double scale = (1.0 / static_cast<double>(n_ind_));
+      comp_means_[comp] = scale * cblas_ddot(n_ind_, ptr_, 1, ones.data(), 1);
+      comp_vars_[comp] = scale * sum_sq - comp_means_[comp] * comp_means_[comp];
     }
   }
 }
