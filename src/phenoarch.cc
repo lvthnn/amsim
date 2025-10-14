@@ -26,12 +26,13 @@
 namespace amsim {
   PhenoArch::PhenoArch(std::size_t n_pheno, std::size_t n_loc_total,
                        std::vector<std::size_t> n_loc, std::vector<double> h2_gen,
-                       std::vector<double> gen_cor, std::vector<double> env_cor,
-                       const rng::Xoshiro256ss &rng)
+                       std::vector<double> h2_env, std::vector<double> gen_cor,
+                       std::vector<double> env_cor, const rng::Xoshiro256ss &rng)
     : n_pheno_(n_pheno),
       n_loc_tot_(n_loc_total),
       n_loc_(std::move(n_loc)),
       h2_gen_(std::move(h2_gen)),
+      h2_env_(std::move(h2_env)),
       gen_cor_(std::move(gen_cor)),
       env_chol_(std::move(env_cor)),
       rng_polar_(rng),
@@ -68,6 +69,9 @@ namespace amsim {
     cblas_dtrmm(CblasColMajor, CblasLeft, CblasLower, CblasNoTrans,
                 CblasNonUnit, n_pheno_, n_ind, 1, env_chol_.data(), n_pheno_,
                 ptr_env, n_pheno_);
+    // scale environmental components marginally
+    for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
+      cblas_dscal(n_ind, std::sqrt(h2_env_[pheno]), &ptr_env[pheno * n_ind], 1.0);
   }
 
   void PhenoArch::print_correlations(const std::vector<std::size_t>& intersect) const {
@@ -123,7 +127,7 @@ namespace amsim {
     return intersect;
   }
 
-  std::vector<double> PhenoArch::init_weights_(const std::vector<std::size_t> &intersect) const {
+  std::vector<double> PhenoArch::init_weights_() const {
     std::vector<double> weights((n_pheno_ * (n_pheno_ - 1)) / 2);
     std::size_t id = 0;
     for (std::size_t i = 0; i < n_pheno_; i++) {
@@ -139,7 +143,7 @@ namespace amsim {
     // @TODO: Make optimisation routine terminate for error < eps
     loc_mask_ = init_mask_();
     std::vector<std::size_t> intersect = init_intersect_(loc_mask_);
-    std::vector<double> weights = init_weights_(intersect);
+    std::vector<double> weights = init_weights_();
 
     const std::size_t n_words = (n_loc_tot_ + 63) / 64;
     for (std::size_t it = 0; it < max_it; it++) {
