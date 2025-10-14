@@ -2,7 +2,7 @@
 #define AMSIMCPP_PHENOBUF_H
 
 #include <cstddef>
-#include <cstdint>
+#include <vector>
 
 #include <amsim/componenttype.h>
 
@@ -12,21 +12,11 @@ namespace amsim {
     PhenoBuf(const std::size_t n_ind, const std::size_t n_pheno);
 
     inline const double* operator()(std::size_t id, ComponentType type) const {
-      switch (type) {
-        case ComponentType::GENETIC: return &buffer_[id * n_ind_];
-        case ComponentType::ENVIRONMENTAL: return &buffer_[(n_pheno_ + id) * n_ind_];
-        case ComponentType::VERTICAL: return &buffer_[(2 * n_pheno_ + id) * n_ind_];
-        case ComponentType::TOTAL: return &buffer_[(3 * n_pheno_ + id) * n_ind_];
-      }
+      return &buffer_[n_ind_ * static_cast<int>(type) * n_pheno_ + id];
     }
 
     inline double* operator()(std::size_t id, ComponentType type) {
-      switch (type) {
-        case ComponentType::GENETIC: return &buffer_[id * n_ind_];
-        case ComponentType::ENVIRONMENTAL: return &buffer_[(n_pheno_ + id) * n_ind_];
-        case ComponentType::VERTICAL: return &buffer_[(2 * n_pheno_ + id) * n_ind_];
-        case ComponentType::TOTAL: return &buffer_[(3 * n_pheno_ + id) * n_ind_];
-      }
+      return &buffer_[n_ind_ * static_cast<int>(type) * n_pheno_ + id];
     }
 
     inline std::size_t n_ind() const noexcept { return n_ind_; }
