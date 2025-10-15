@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <random>
 
+#include <amsim/rng.h>
 #include <amsim/phenotype.h>
 
 namespace amsim {
@@ -32,16 +33,19 @@ namespace amsim {
 
   class AssortativeModel : public MatingModel {
   public:
-    AssortativeModel(const std::vector<double*> &ptr_tot, std::vector<double> cor,
-                 const std::size_t n_itr, const std::size_t n_sex,
-                 double tmp_init = 1e-9, double tmp_decay = 0.99995);
+    AssortativeModel(const std::vector<Phenotype> &phenotypes,
+                     std::vector<double> cor, const std::size_t n_itr,
+                     const std::size_t n_sex, const rng::Xoshiro256ss &rng,
+                     double tmp_init = 1e-9, double tmp_decay = 0.99999999);
 
-    void update_vals(std::vector<std::vector<double> const*> ptr_tot);
+    void display_cor();
     std::vector<std::size_t> match() override;
+    void update(const std::vector<Phenotype> &phenotypes);
 
   private:
+    std::vector<const double*> ptr_tot_;
+
     const std::vector<double> cor_;
-    const std::vector<double*> ptr_tot_;
     const std::size_t n_pheno_;
     const std::size_t n_sex_;
     const std::size_t n_itr_;
@@ -50,11 +54,20 @@ namespace amsim {
 
     std::vector<double> male_;
     std::vector<double> female_;
-    std::vector<std::size_t> opt_state_;
+    std::vector<std::size_t> state_;
 
-    std::vector<double> cmp_cor_();
-    void setup_(std::vector<std::size_t> state);
-    double delta_(std::vector<std::size_t> cur, std::size_t i0, std::size_t i1);
+    void arrange_();
+
+    std::vector<double> compute_cor_();
+    std::vector<double> compute_delta_(std::size_t i0, std::size_t i1);
+
+    double compute_denergy_(const std::vector<double> &cur,
+                            const std::vector<double> &target,
+                            const std::vector<double> &delta);
+
+
+    rng::UniformIntRange swap_;
+    rng::UniformRange acc_;
   };
 }
 #endif
