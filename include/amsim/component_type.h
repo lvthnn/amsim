@@ -10,7 +10,7 @@ namespace amsim {
     TOTAL         = 3
   };
 
-  inline ComponentType operator++(ComponentType& type, int) {
+  inline ComponentType operator++(ComponentType &type, int) {
     type = (type == ComponentType::TOTAL) ? ComponentType::GENETIC : ComponentType(int(type) + 1);
     return type;
   }
