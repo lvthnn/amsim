@@ -9,6 +9,7 @@
 #include <amsim/phenotype.h>
 #include <amsim/metric.h>
 #include <amsim/utils.h>
+#include <amsim/mating.h>
 
 int main() {
   // Generate random MAFs and set up seeded Xoshiro device
@@ -36,17 +37,24 @@ int main() {
   std::vector<double> v_h2_env(n_pheno, h2_env);
 
   // Genetic component correlation (@ panmixis)
-  std::vector<double> gen_cor{
+  std::vector<double> gen_cor {
     1.0, 0.2, 0.3,   // col 1
     0.2, 1.0, 0.4,   // col 2
     0.3, 0.4, 1.0    // col 3
   };
 
   // Environmental component correlation
-  std::vector<double> env_cor{
+  std::vector<double> env_cor {
     1.0, 0.2, 0.1,   // col 1
     0.2, 1.0, 0.1,   // col 2
     0.1, 0.1, 1.0    // col 3
+  };
+
+  // Between-mate trait correlation
+  std::vector<double> mate_cor {
+    0.2, 0.2, 0.2,
+    0.2, 0.2, 0.2,
+    0.2, 0.2, 0.2
   };
 
   // Run the simulation
@@ -81,6 +89,11 @@ int main() {
   bmi.compute_stats();
 
   // perform mating
+  std::vector<amsim::Phenotype> phenotypes = {height, weight, bmi};
+
+  amsim::AssortativeModel model(phenotypes, mate_cor, 2 * n_ind, n_ind / 2, rng, 1e-9);
+  model.match();
+  model.display_cor();
 
   // stream metrics
 
@@ -91,22 +104,21 @@ int main() {
 
   // issue: phenotype vector copies phenotypes, copying uninitialised pointers -> unexpected behaviour
   // fix this by implementing some wrapper class (?) or using std::reference_wrapper
-  std::vector<amsim::Phenotype> phenotypes = {height, weight, bmi};
 
-  for (amsim::ComponentType type = amsim::ComponentType::GENETIC; type <= amsim::ComponentType::TOTAL; type++) {
-    std::cout << "----------------------------------------\n";
-    std::cout << "component type: " << type << "\n";
-    std::cout << "height (mean):  " << height.comp_mean(type) << "\n";
-    std::cout << "weight (mean):  " << weight.comp_mean(type) << "\n";
-    std::cout << "bmi    (mean):  " << bmi.comp_mean(type) << "\n";
-    std::cout << "height (var):   " << height.comp_var(type) << "\n";
-    std::cout << "weight (var):   " << weight.comp_var(type) << "\n";
-    std::cout << "bmi    (var):   " << bmi.comp_var(type) << "\n";
-    if (type == amsim::ComponentType::TOTAL) break;
-  }
+  // for (amsim::ComponentType type = amsim::ComponentType::GENETIC; type <= amsim::ComponentType::TOTAL; type++) {
+  //   std::cout << "----------------------------------------\n";
+  //   std::cout << "component type: " << type << "\n";
+  //   std::cout << "height (mean):  " << height.comp_mean(type) << "\n";
+  //   std::cout << "weight (mean):  " << weight.comp_mean(type) << "\n";
+  //   std::cout << "bmi    (mean):  " << bmi.comp_mean(type) << "\n";
+  //   std::cout << "height (var):   " << height.comp_var(type) << "\n";
+  //   std::cout << "weight (var):   " << weight.comp_var(type) << "\n";
+  //   std::cout << "bmi    (var):   " << bmi.comp_var(type) << "\n";
+  //   if (type == amsim::ComponentType::TOTAL) break;
+  // }
 
-  amsim::Metric metric_gen_cor = amsim::metrics::comp_cor("gen_cor", n_pheno, amsim::ComponentType::GENETIC);
-  metric_gen_cor.stream(phenotypes, genome);
+  // amsim::Metric metric_gen_cor = amsim::metrics::comp_cor("gen_cor", n_pheno, amsim::ComponentType::GENETIC);
+  // metric_gen_cor.stream(phenotypes, genome);
 
   // amsim::utils::time_step("Generated haplotypes", [&]{ genome.generate_haplotypes(); });
   // amsim::utils::time_step("Computed MAFs",        [&]{ genome.compute_mafs(); });
