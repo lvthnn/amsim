@@ -245,6 +245,24 @@ namespace amsim::rng {
 		}
 	};
 
+  // @TODO: Convert structs `UniformRange` and `UniformIntRange` into
+  //        generalised intervals [a, b].
+  struct UniformRange {
+    Xoshiro256ss rng;
+
+    explicit UniformRange(const Xoshiro256ss &rng_)
+      : rng(rng_) {}
+
+    inline void reseed(uint64_t seed) noexcept { rng = seed_xoshiro(seed); }
+
+    inline double sample(double a) noexcept { return a * u01_53(rng.next()); }
+    
+    inline void fill(double* out, std::size_t n, double a) noexcept {
+      for (std::size_t i = 0; i < n; ++i)
+        out[i] = a * u01_53(rng.next());
+    }
+  };
+
 	struct UniformIntRange {
 		Xoshiro256ss rng;
 

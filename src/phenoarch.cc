@@ -36,7 +36,7 @@ namespace amsim {
       gen_cor_(std::move(gen_cor)),
       env_chol_(std::move(env_cor)),
       rng_polar_(rng),
-      rng_unf_(rng)  {
+      rng_unf_(rng) {
     assert(env_cor.size() == n_pheno_ * n_pheno_);
     assert(h2_gen_.size() == n_pheno_ * n_pheno_);
     assert(n_loc_.size() == n_pheno_ * n_pheno_);
