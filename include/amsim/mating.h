@@ -33,14 +33,14 @@ namespace amsim {
 
   class AssortativeModel : public MatingModel {
   public:
-    AssortativeModel(const std::vector<Phenotype> &phenotypes,
+    AssortativeModel(const std::vector<std::reference_wrapper<Phenotype>> &phenotypes,
                      std::vector<double> cor, const std::size_t n_itr,
                      const std::size_t n_sex, const rng::Xoshiro256ss &rng,
                      double tmp_init = 1e-9, double tmp_decay = 0.99999999);
 
     void display_cor();
     std::vector<std::size_t> match() override;
-    void update(const std::vector<Phenotype> &phenotypes);
+    void update(const std::vector<std::reference_wrapper<Phenotype>> &phenotypes);
 
   private:
     std::vector<const double*> ptr_tot_;
