@@ -1,13 +1,7 @@
-//------------------------------------------------------------------------------
-// amsimcpp : phenoarch.h
-//------------------------------------------------------------------------------
-
 #include <cstddef>
 #include <cstdint>
 #include <cmath>
 #include <vector>
-#include <random>
-#include <numeric>
 #include <cassert>
 #include <iostream>
 #include <iomanip>

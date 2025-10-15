@@ -5,7 +5,6 @@
 #include <cmath>
 #include <optional>
 #include <stdexcept>
-#include <iostream>
 
 #include <amsim/haplobuf.h>
 #include <amsim/genome.h>
