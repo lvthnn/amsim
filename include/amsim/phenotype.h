@@ -11,7 +11,7 @@
 #include <amsim/genome.h>
 #include <amsim/phenobuf.h>
 #include <amsim/phenoarch.h>
-#include <amsim/componenttype.h>
+#include <amsim/component_type.h>
 
 namespace amsim {
 
@@ -105,6 +105,9 @@ namespace amsim {
     std::array<double, 4> comp_means_;
     std::array<double, 4> comp_vars_;
   };
+
+  using PhenotypeList = std::vector<std::reference_wrapper<Phenotype>>;
+
 }
 
 #endif // AMSIMCPP_PHENOTYPE_H

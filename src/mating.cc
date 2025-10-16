@@ -21,7 +21,7 @@ namespace amsim {
     return state_;
   }
 
-  AssortativeModel::AssortativeModel(const std::vector<std::reference_wrapper<Phenotype>> &phenotypes,
+  AssortativeModel::AssortativeModel(const PhenotypeList &phenotypes,
                                      std::vector<double> cor,
                                      const std::size_t n_itr,
                                      const std::size_t n_sex,
@@ -149,7 +149,7 @@ namespace amsim {
     return state_;
   }
 
-  void AssortativeModel::update(const std::vector<std::reference_wrapper<Phenotype>> &phenotypes) {
+  void AssortativeModel::update(const PhenotypeList &phenotypes) {
     std::vector<const double*> ptr_new;
     for (const auto &pheno : phenotypes)
       ptr_new.push_back(pheno(ComponentType::TOTAL));
