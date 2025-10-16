@@ -15,7 +15,7 @@ int main() {
   std::mt19937 g(rd());
   std::uniform_real_distribution<double> maf_dist(0.0, 1.0);
 
-  std::size_t rng_seed = 123442255188ull;
+  std::size_t rng_seed = 123442255188518518ull;
   amsim::rng::Xoshiro256ss rng = amsim::rng::seed_xoshiro(amsim::rng::auto_seed(rng_seed));
 
   // Parameters for genome
@@ -71,6 +71,8 @@ int main() {
   amsim::Phenotype weight(buf, arch, "weight", h2_gen, h2_env, h2_vert);
   amsim::Phenotype bmi(buf, arch, "bmi", h2_gen, h2_env, h2_vert);
 
+  amsim::PhenotypeList phenotypes = {height, weight, bmi};
+
   // initialise
   genome.generate_haplotypes();
 
@@ -87,10 +89,9 @@ int main() {
   bmi.compute_stats();
 
   // perform mating
-  std::vector<amsim::Phenotype> phenotypes = {height, weight, bmi};
 
-  amsim::AssortativeModel model(phenotypes, mate_cor, 2 * n_ind, n_ind / 2, rng, 1e-9);
-  model.match();
+  amsim::AssortativeModel model(phenotypes, mate_cor, 10 * n_ind, n_ind / 2, rng, 1e-9, 0.999999);
+  amsim::utils::time_step("Mate matching routine", [&](){ model.match(); });
   model.display_cor();
 
   // stream metrics
