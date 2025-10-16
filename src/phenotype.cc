@@ -11,7 +11,7 @@
 #include <amsim/phenobuf.h>
 #include <amsim/phenoarch.h>
 #include <amsim/phenotype.h>
-#include <amsim/componenttype.h>
+#include <amsim/component_type.h>
 
 #if defined(__APPLE__)
   #include <Accelerate/Accelerate.h>

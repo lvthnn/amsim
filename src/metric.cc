@@ -1,7 +1,7 @@
 #include <cmath>
 
 #include <amsim/metric.h>
-#include <amsim/componenttype.h>
+#include <amsim/component_type.h>
 
 #if defined(__APPLE__)
   #include <Accelerate/Accelerate.h>

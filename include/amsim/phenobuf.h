@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <vector>
 
-#include <amsim/componenttype.h>
+#include <amsim/component_type.h>
 
 namespace amsim {
   class PhenoBuf {
