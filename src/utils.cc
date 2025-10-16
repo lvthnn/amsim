@@ -1,8 +1,5 @@
 #include <cstddef>
 #include <cstdint>
-#include <chrono>
-#include <iostream>
-#include <stdexcept>
 
 namespace amsim::utils {
 
@@ -31,4 +28,16 @@ namespace amsim::utils {
       bitmatrix_swap(matrix, swap_width, swap_mask);
     }
   }
+
+  // function to generate UNLINKED recombination map with constant MAFs
+
+  // function to generate UNLINKED recombination map with random MAFs
+
+  // function to generate LINKED recombination map with otherwise constant MAFs
+
+  // function to generate LINKED recombination map with random MAFs
+
+  // function to generate phenotype effect vector with uniform effect sizes
+
+  // function to generate phenotype effect vector with random effect sizes
 }
