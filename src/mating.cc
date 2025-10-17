@@ -117,6 +117,7 @@ namespace amsim {
   }
 
   std::vector<std::size_t> AssortativeModel::match() {
+    if (n_itr_ == 0) return state_;
     const std::size_t dim = n_pheno_ * n_pheno_;
     double tmp_cur = tmp_init_;
 
