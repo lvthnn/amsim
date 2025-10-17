@@ -14,7 +14,7 @@ namespace amsim {
   public:
     Genome(size_t n_ind, size_t n_loc, std::vector<double> v_mut,
            std::vector<double> v_rec, std::vector<double> v_maf,
-           uint64_t rng_seed);
+           const rng::Xoshiro256ss &rng);
     inline std::vector<double>& v_lmean() noexcept { return v_lmean_; }
     inline std::vector<double>& v_lvar() noexcept { return v_lvar_; }
     inline std::vector<double>& v_lmaf() noexcept { return v_lmaf_; }
