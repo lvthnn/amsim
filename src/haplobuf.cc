@@ -12,34 +12,51 @@ namespace amsim {
       n_rows_((n_loc + 63) & ~std::size_t(63)),
       n_words_((n_ind + 63) / 64),
       view_(HaploView::LOC_MAJOR) {
-    data_.resize(n_rows_ * n_words_);
+    buf_.resize(n_rows_ * n_words_);
   }
 
   void HaploBuf::transpose() noexcept {
-    std::size_t ct, cb, r;
-    std::size_t n_tiles_row = n_rows_ / 64;
-    std::size_t n_tiles_col = n_words_;
-    std::uint64_t tile_cnt[64];
+    // Source geometry (pre-transpose)
+    const std::size_t src_rows  = n_rows_;
+    const std::size_t src_words = n_words_;
 
-    for (ct = 0; ct < n_tiles_row; ct++) {
-      for (cb = 0; cb < n_tiles_col; cb++) {
-        for (r = 0; r < 64; r++)
-          tile_cnt[r] = (*this)(ct * 64 + r, cb);
-        utils::bitmatrix_transpose(tile_cnt);
-        for (r = 0; r < 64; ++r)
-          (*this)(ct * 64 + r, cb) = tile_cnt[r];
+    // Destination geometry (post-transpose)
+    const std::size_t dst_rows   = (view_ == HaploView::LOC_MAJOR)
+      ? ((n_ind_ + 63) & ~std::size_t(63))
+      : ((n_loc_ + 63) & ~std::size_t(63));
+
+    const std::size_t dst_cols_w = (view_ == HaploView::LOC_MAJOR)
+      ? ((n_loc_ + 63) / 64)
+      : ((n_ind_ + 63) / 64);
+
+    // Allocate destination buffer
+    std::vector<std::uint64_t> out(dst_rows * dst_cols_w, 0);
+
+    // Tile counts: src_rows is multiple of 64 by construction
+    const std::size_t src_tile_rows = src_rows / 64;
+    const std::size_t src_tile_cols = src_words;
+
+    std::uint64_t tile[64];
+
+    for (std::size_t ct = 0; ct < src_tile_rows; ++ct) {
+      for (std::size_t cb = 0; cb < src_tile_cols; ++cb) {
+        for (std::size_t r = 0; r < 64; ++r)
+          tile[r] = (*this)(ct * 64 + r, cb);
+
+        utils::bitmatrix_transpose(tile);
+
+        for (std::size_t r = 0; r < 64; ++r) {
+          const std::size_t dst_row = cb * 64 + r;  // 64 rows per source word
+          const std::size_t dst_col = ct;           // word index becomes column index
+          out[dst_row * dst_cols_w + dst_col] = tile[r];
+        }
       }
     }
 
-    if (view_ == HaploView::IND_MAJOR) {
-      n_rows_  = (n_loc_ + 63) & ~std::size_t(63);
-      n_words_ = (n_ind_ + 63) / 64;
-      view_    = HaploView::LOC_MAJOR;
-    } else {
-      n_rows_  = (n_ind_ + 63) & ~std::size_t(63);
-      n_words_ = (n_loc_ + 63) / 64;
-      view_    = HaploView::IND_MAJOR;
-    }
+    buf_.swap(out);
+    n_rows_  = dst_rows;
+    n_words_ = dst_cols_w;
+    view_    = (view_ == HaploView::LOC_MAJOR) ? HaploView::IND_MAJOR : HaploView::LOC_MAJOR;
   }
 
 }

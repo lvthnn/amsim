@@ -22,19 +22,19 @@ namespace amsim {
     inline HaploView view() const noexcept { return view_; }
 
     inline std::uint64_t& operator()(std::size_t i, std::size_t j) noexcept {
-      return data_[i * n_words_ + j];
+      return buf_[i * n_words_ + j];
     }
 
     inline const std::uint64_t& operator()(std::size_t i, std::size_t j) const noexcept {
-      return data_[i * n_words_ + j];
+      return buf_[i * n_words_ + j];
     }
 
     inline const std::uint64_t* rowptr(std::size_t i) const noexcept {
-      return &data_[i * n_words_];
+      return &buf_[i * n_words_];
     }
 
     inline std::uint64_t* rowptr(std::size_t i) noexcept {
-      return &data_[i * n_words_];
+      return &buf_[i * n_words_];
     }
 
     void transpose() noexcept;
@@ -44,7 +44,7 @@ namespace amsim {
     const std::size_t n_loc_;
     std::size_t n_rows_;
     std::size_t n_words_;
-    std::vector<uint64_t> data_;
+    std::vector<uint64_t> buf_;
     HaploView view_;
   };
 }
