@@ -46,7 +46,7 @@ elseif (MSVC)
 endif()
 
 # Example program (optional)
-add_executable(demo examples/demo.cc)
+add_executable(demo examples/demo_new.cc)
 target_link_libraries(demo PRIVATE amsimcpp)
 
 add_executable(test_phenoarch examples/test_phenoarch.cc)
