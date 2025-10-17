@@ -7,9 +7,9 @@ namespace amsim {
     NEW        = 0,
     SIMULATION = 1,
     GENOME     = 2,
-    PHEOME     = 3,
+    PHENOME    = 3,
     MATING     = 4,
-    BUILT      = 5,
+    READY      = 5,
     FINISHED   = 6
   };
 
