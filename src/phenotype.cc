@@ -22,9 +22,9 @@
 namespace amsim {
   namespace utils {
     std::size_t attach(PhenoBuf &buf, std::optional<std::size_t> id) {
-      if (!id.has_value()) id = buf.unoccupied();
-      if (!id.has_value()) throw std::runtime_error("all phenotype buffer slots occupied");
-      return id.value();
+      if (!id) id = buf.unoccupied();
+      if (!id) throw std::runtime_error("all phenotype buffer slots occupied");
+      return *id;
     }
   }
 
