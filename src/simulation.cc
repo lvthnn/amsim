@@ -75,7 +75,7 @@ namespace amsim {
         }
         *streams_[metric] << metrics_[metric].header() << "\n";
       }
-      *streams_[metric] << std::to_string(gen) << "\t";
+      *streams_[metric] << std::to_string(gen + 1) << "\t";
       *streams_[metric] << metrics_[metric].stream(ctx) << "\n";
     }
   }
