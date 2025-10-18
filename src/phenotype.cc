@@ -5,6 +5,7 @@
 #include <cmath>
 #include <optional>
 #include <stdexcept>
+#include <iostream>
 
 #include <amsim/haplobuf.h>
 #include <amsim/genome.h>
@@ -98,7 +99,6 @@ namespace amsim {
       ptr_gen_[ind] -= global_centre;
   }
  
-  #if defined(USE_BLAS)
   void Phenotype::score_tiled64(Genome& genome) {
     if (genome.H0().view() != HaploView::LOC_MAJOR)
       throw std::runtime_error("Phenotype::score_tiled64: require LOC_MAJOR view.");
@@ -151,14 +151,9 @@ namespace amsim {
         ptr_gen_[tile_start + k] = out[k];
     }
   }
-  #endif
 
   void Phenotype::score(Genome& genome) {
-    #ifdef USE_BLAS
-      score_tiled64(genome);
-    #else
-      score_bitwise(genome);
-    #endif
+    score_tiled64(genome);
     score_tot();
   }
 
@@ -167,8 +162,10 @@ namespace amsim {
     const std::vector<double> ones(n_ind_, 1.0);
     for (ComponentType comp = ComponentType::GENETIC; comp <= ComponentType::TOTAL; comp++) {
       const double* ptr_ = (*this)(comp);
+
       const double sum_sq = cblas_ddot(n_ind_, ptr_, 1, ptr_, 1);
       const double scale = (1.0 / static_cast<double>(n_ind_));
+	
       comp_means_[comp] = scale * cblas_ddot(n_ind_, ptr_, 1, ones.data(), 1);
       comp_vars_[comp] = scale * sum_sq - comp_means_[comp] * comp_means_[comp];
       if (comp == ComponentType::TOTAL) break;
