@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <string>
 #include <iostream>
+#include <filesystem>
 
 #include <amsim/simulation_builder.h>
 #include <amsim/simulation.h>
@@ -25,7 +26,7 @@ namespace amsim {
                                                    std::uint64_t rng_seed) {
     n_gen_    = n_gen; 
     n_ind_    = n_ind;
-    out_dir_  = out_dir;
+    out_dir_  = std::filesystem::path(out_dir);
     rng_seed_ = rng_seed;
     status_++;
     return *this;
@@ -57,7 +58,7 @@ namespace amsim {
                                                 std::vector<double> gen_cor,
                                                 std::vector<double> env_cor) {
     if (status_ < SimulationStatus::PHENOME)
-      std::cerr << "Specify simulation and genome parameters before configuring"
+      std::cerr << "Specify simulation and genome parameters before configuring "
                    "mating model.\n";
 
     n_pheno_   = n_pheno;
@@ -109,31 +110,13 @@ namespace amsim {
 
   Simulation SimulationBuilder::build() {
     if (status_ < SimulationStatus::READY)
-      std::cerr << "Specify simulation, genome, phenome, and mating parameters \
-                    before building simulation.\n";
-
-    // create the seeded RNG device
-    const rng::Xoshiro256ss rng_(rng::seed_xoshiro(rng::auto_seed(rng_seed_)));
-
-    Genome    genome_(n_ind_, n_loc_, v_mut_, v_rec_, v_maf_, rng_);
-    PhenoBuf  buf_(n_ind_, n_pheno_); 
-    PhenoArch arch_(n_pheno_, n_loc_, v_n_loc_, v_h2_gen_, v_h2_env_, gen_cor_,
-                    env_cor_, rng_);
- 
-    utils::time_step("Optimising genetic architecture", [&](){ arch_.optim_arch(1e4); });
-
-    PhenotypeList phenotypes_(n_pheno_);
-    for (std::size_t el = 0; el < n_pheno_; el++) {
-      Phenotype pheno(buf_, arch_, v_name_[el], v_h2_gen_[el], v_h2_env_[el],
-                      v_h2_vert_[el]);
-      phenotypes_.push_back(pheno);
-    }
-
-    AssortativeModel model_(phenotypes_, mate_cor_, n_itr_, n_ind_ / 2, rng_,
-                            tmp_init_, tmp_decay_);
-
-    Simulation simulation(n_gen_, out_dir_, genome_, arch_, buf_, model_, metrics_);
-
+      std::cerr << "Specify simulation, genome, phenome, and mating parameters "
+                   "before building simulation.\n";
+		Simulation simulation(n_gen_, n_ind_, out_dir_, rng_seed_,
+													n_loc_, v_maf_, v_rec_, v_mut_,
+													n_pheno_, v_name_, v_n_loc_, v_h2_gen_, v_h2_env_, v_h2_vert_, gen_cor_, env_cor_,
+													mate_cor_, n_itr_, tmp_init_, tmp_decay_,
+													metrics_);
     return simulation;
   }
 }
