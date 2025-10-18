@@ -43,7 +43,7 @@ namespace amsim {
     rng::BW16 bw_;
     HaploBuf H0_;
     HaploBuf H1_;
-    uint64_t gam_word_(std::size_t ind, std::size_t word) noexcept;
+    uint64_t gam_word_(std::uint64_t ind_H0, std::uint64_t ind_H1) noexcept;
   };
 }
 
