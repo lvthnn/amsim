@@ -1,5 +1,5 @@
-#ifndef AMSIM_SIMULATION_BUILDER_H
-#define AMSIM_SIMULATION_BUILDER_H
+#ifndef AMSIMCPP_SIMULATION_BUILDER_H
+#define AMSIMCPP_SIMULATION_BUILDER_H
 
 #include <amsim/rng.h>
 #include <amsim/simulation.h>
@@ -51,7 +51,7 @@ namespace amsim {
     //-- SIMULATION PARAMETERS ----------------------------------------------//
     std::size_t              n_gen_;       // number of generations simulated
     std::size_t              n_ind_;       // number of individuals
-    std::string              out_dir_;     // name of folder to write data to
+    std::filesystem::path    out_dir_;     // name of folder to write data to
     std::uint64_t            rng_seed_;    // seed of xoshiro random device
     //-----------------------------------------------------------------------// 
 
@@ -87,4 +87,4 @@ namespace amsim {
 
 }
 
-#endif // AMSIM_SIMULATIONBUILDER_H
+#endif // AMSIMCPP_SIMULATION_BUILDER_H

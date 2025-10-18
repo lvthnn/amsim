@@ -1,5 +1,5 @@
-#ifndef AMSIM_SIMULATION_PROGRESS_H
-#define AMSIM_SIMULATION_PROGRESS_H
+#ifndef AMSIMCPP_SIMULATION_PROGRESS_H
+#define AMSIMCPP_SIMULATION_PROGRESS_H
 
 namespace amsim {
 
@@ -18,4 +18,4 @@ namespace amsim {
   }
 }
 
-#endif
+#endif // AMSIMCPP_SIMULATION_PROGRESS_H
