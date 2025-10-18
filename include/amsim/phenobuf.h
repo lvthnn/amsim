@@ -12,11 +12,11 @@ namespace amsim {
     PhenoBuf(const std::size_t n_ind, const std::size_t n_pheno);
 
     inline const double* operator()(std::size_t id, ComponentType type) const {
-      return &buffer_[n_ind_ * static_cast<int>(type) * n_pheno_ + id];
+      return &buf_[n_ind_ * (static_cast<int>(type) * n_pheno_ + id)];
     }
 
     inline double* operator()(std::size_t id, ComponentType type) {
-      return &buffer_[n_ind_ * static_cast<int>(type) * n_pheno_ + id];
+      return &buf_[n_ind_ * (static_cast<int>(type) * n_pheno_ + id)];
     }
 
     inline std::size_t n_ind() const noexcept { return n_ind_; }
@@ -28,7 +28,7 @@ namespace amsim {
   private:
     const std::size_t n_ind_;
     const std::size_t n_pheno_;
-    std::vector<double> buffer_;
+    std::vector<double> buf_;
     std::vector<bool> occupied_;
   };
 }

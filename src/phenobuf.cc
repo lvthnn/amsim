@@ -9,7 +9,7 @@ namespace amsim {
   PhenoBuf::PhenoBuf(const std::size_t n_ind, const std::size_t n_pheno)
     : n_ind_(n_ind),
       n_pheno_(n_pheno) {
-    buffer_.resize(4 * n_ind_ * n_pheno_);
+    buf_.resize(4 * n_ind_ * n_pheno_);
     occupied_.resize(n_pheno_, false);
   }
 
