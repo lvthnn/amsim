@@ -17,7 +17,9 @@ add_library(amsimcpp STATIC
   src/phenobuf.cc
   src/phenoarch.cc
   src/haplobuf.cc
-        src/metric.cc
+  src/metric.cc
+  src/simulation.cc
+  src/simulation_builder.cc
 )
 
 # Public headers for users of the lib
