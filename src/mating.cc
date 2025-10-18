@@ -61,8 +61,6 @@ namespace amsim {
       const double sumsq_f = scale * cblas_ddot(n_sex_, ptr_f, 1, ptr_f, 1);
       const double sd_m    = std::sqrt(sumsq_m - mean_m * mean_m);
       const double sd_f    = std::sqrt(sumsq_f - mean_f * mean_f);
-      // compute the sex-segregated means and standard deviations
-      // compute the sex-segregated means and standard deviations
 
       for (std::size_t ind = 0; ind < n_sex_; ind++) {
         male_[pheno * n_sex_ + ind]   = (ptr_m[ind] - mean_m) / sd_m;
@@ -110,10 +108,10 @@ namespace amsim {
   void AssortativeModel::display_cor() {
     std::vector<double> cor_mat = compute_cor_();
     for (std::size_t el = 0; el < cor_mat.size(); el++) {
-      if (el % n_pheno_ == 0) std::cout << "\n";
-      std::cout << cor_mat[el] << "\t";
+      if (el % n_pheno_ == 0) std::cerr << "\n";
+      std::cerr << cor_mat[el] << "\t";
     }
-    std::cout << "\n";
+    std::cerr << "\n";
   }
 
   std::vector<std::size_t> AssortativeModel::match() {
