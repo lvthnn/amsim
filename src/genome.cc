@@ -20,17 +20,19 @@ namespace amsim {
       H0_(n_ind, n_loc),
       H1_(n_ind, n_loc) {};
 
-  uint64_t Genome::gam_word_(std::size_t ind, std::size_t word) noexcept {
+  uint64_t Genome::gam_word_(std::uint64_t ind_H0, std::uint64_t ind_H1) noexcept {
     std::uint64_t par = bw_.sample();
-    bool par0 = bw_.coinflip();
-    par ^= par << 1;
-    par ^= par << 2;
-    par ^= par << 4;
-    par ^= par << 8;
-    par ^= par << 16;
-    par ^= par << 32;
-    if (par0) par = ~par;
-    return (par & H1_(ind, word)) | (~par & H0_(ind, word));
+		bool par0 = bw_.coinflip();
+    if (v_rec_[0] < 0.5) {
+      par ^= par << 1;
+      par ^= par << 2;
+      par ^= par << 4;
+      par ^= par << 8;
+      par ^= par << 16;
+      par ^= par << 32;
+      if (par0) par = ~par;
+    }
+    return (par & ind_H0) | (~par & ind_H1);
   }
 
 	void Genome::generate_haplotypes() noexcept {
@@ -108,21 +110,26 @@ namespace amsim {
 		if (H0_.view() == HaploView::LOC_MAJOR)
       throw std::runtime_error("Update in ind-major view.");
 
-    for (std::size_t el = 0; el < matching.size(); el++)
-      matching[el] -= 1;
-
     const std::size_t n_ind = H0_.n_ind();
     const std::size_t n_words = H0_.n_words();
     const std::size_t n_pairs = n_ind / 2;
-    bw_.set_prob(0.5);
+    bw_.set_prob(v_rec_[0]);
 
     for (std::size_t pair = 0; pair < n_pairs; pair++) {
+      std::size_t fpair = matching[pair] + n_pairs;
       for (std::size_t word = 0; word < n_words; word++) {
-        std::size_t fpair = pair + (n_ind / 2);
-        H0_(pair, word) = gam_word_(pair, word);
-        H1_(pair, word) = gam_word_(pair, word);
-        H0_(fpair, word) = gam_word_(fpair, word);
-        H1_(fpair, word) = gam_word_(fpair, word);
+        uint64_t male_H0 = H0_(pair, word);
+        uint64_t male_H1 = H1_(pair, word);
+        uint64_t female_H0 = H0_(fpair, word);
+        uint64_t female_H1 = H1_(fpair, word);
+
+        // male child
+        H0_(pair, word) = gam_word_(male_H0, male_H1);
+        H1_(pair, word) = gam_word_(female_H0, female_H1);
+      
+        // female child
+        H0_(fpair, word) = gam_word_(male_H0, male_H1);
+        H1_(fpair, word) = gam_word_(female_H0, female_H1);
       }
     }
 	}
