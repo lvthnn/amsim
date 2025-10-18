@@ -106,7 +106,7 @@ namespace amsim {
     std::array<double, 4> comp_vars_;
   };
 
-  using PhenotypeList = std::vector<std::reference_wrapper<Phenotype>>;
+  using PhenotypeList = std::vector<Phenotype>;
 
 }
 
