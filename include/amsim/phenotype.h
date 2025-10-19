@@ -79,10 +79,8 @@ namespace amsim {
         ptr_tot_[ind] = ptr_gen_[ind] + ptr_env_[ind] + ptr_vert_[ind];
     }
 
-    #if defined(USE_BLAS)
-      void score_tiled64(Genome& genome);
-    #endif
-      void score_bitwise(Genome& genome);
+    void score_bitwise(Genome& genome);
+    void score_tiled(Genome& genome);
     void score(Genome& genome);
     void compute_stats();
 
