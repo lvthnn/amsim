@@ -1,12 +1,12 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 project(amsimcpp LANGUAGES CXX VERSION 0.1.0)
 
 # C++ standard
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Release) # for optimisation and speedup
 
 # Library targets
 add_library(amsimcpp STATIC
@@ -20,6 +20,7 @@ add_library(amsimcpp STATIC
   src/metric.cc
   src/simulation.cc
   src/simulation_builder.cc
+  src/stats.cc
 )
 
 # Public headers for users of the lib
@@ -28,16 +29,25 @@ target_include_directories(amsimcpp
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
-# Link to BLAS
-option(USE_BLAS "Enable code acceleration using BLAS" OFF)
-
-if (APPLE AND USE_BLAS)
-  target_compile_definitions(amsimcpp PRIVATE ACCELERATE_NEW_LAPACK USE_BLAS)
-  target_link_libraries(amsimcpp PRIVATE "-framework Accelerate")
-elseif (UNIX AND USE_BLAS)
+if (APPLE)
+  find_library(ACCELERATE_FRAMEWORK Accelerate REQUIRED)
+  target_link_libraries(amsimcpp PUBLIC ${ACCELERATE_FRAMEWORK})
+  target_compile_definitions(amsimcpp PUBLIC ACCELERATE_NEW_LAPACK)
+else()
   find_package(BLAS REQUIRED)
-  target_compile_definitions(amsimcpp PRIVATE USE_BLAS)
-  target_link_libraries(PRIVATE BLAS::BLAS)
+  find_package(LAPACK REQUIRED)
+
+  if(TARGET BLAS::BLAS)
+    target_link_libraries(amsimcpp PUBLIC BLAS::BLAS)
+  else()
+    target_link_libraries(amsimcpp PUBLIC ${BLAS_LIBRARIES})
+  endif()
+
+  if(TARGET LAPACK::LAPACK)
+    target_link_libraries(amsimcpp PUBLIC LAPACK::LAPACK)
+  else()
+    target_link_libraries(amsimcpp PUBLIC ${LAPACK_LIBRARIES})
+  endif()
 endif()
 
 # Reasonable warnings (optional)
@@ -48,20 +58,11 @@ elseif (MSVC)
 endif()
 
 # Example program (optional)
-add_executable(demo examples/demo_new.cc)
-target_link_libraries(demo PRIVATE amsimcpp)
+add_executable(demo_simulation examples/demo_simulation.cc)
+add_executable(demo_stats      examples/demo_stats.cc)
 
-add_executable(test_phenoarch examples/test_phenoarch.cc)
-target_link_libraries(test_phenoarch PRIVATE amsimcpp)
-
-add_executable(benchmark_polar_m19937 examples/benchmark_polar_m19937.cc)
-target_link_libraries(benchmark_polar_m19937 PRIVATE amsimcpp)
-
-add_executable(unif_int_rng examples/unif_int_rng.cc)
-target_link_libraries(unif_int_rng PRIVATE amsimcpp)
-
-# Enable tests later (optional)
-enable_testing()
+target_link_libraries(demo_simulation PRIVATE amsimcpp)
+target_link_libraries(demo_stats PRIVATE amsimcpp)
 
 # Install rules (so other projects can find+link amsimcpp)
 include(GNUInstallDirs)
