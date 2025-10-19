@@ -4,9 +4,9 @@
 #include <algorithm>
 #include <iostream>
 
-#if defined(__APPLE__) && defined(USE_BLAS)
+#if defined(__APPLE__)
   #include <Accelerate/Accelerate.h>
-#elif defined(__linux__) && defined(USE_BLAS)
+#else
   #include <cblas.h>
 #endif
 

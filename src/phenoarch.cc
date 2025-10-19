@@ -12,7 +12,7 @@
 
 #if defined(__APPLE__)
   #include<Accelerate/Accelerate.h>
-#elif defined(USE_BLAS)
+#else
   #include<cblas.h>
   #include<lapacke.h>
 #endif
@@ -31,18 +31,16 @@ namespace amsim {
       env_chol_(std::move(env_cor)),
       rng_polar_(rng),
       rng_unf_(rng) {
-    assert(env_cor.size() == n_pheno_ * n_pheno_);
-    assert(h2_gen_.size() == n_pheno_ * n_pheno_);
-    assert(n_loc_.size() == n_pheno_ * n_pheno_);
+    assert(n_loc_.size() == n_pheno_);
+    assert(h2_gen_.size() == n_pheno_);
     assert(gen_cor_.size() == n_pheno_ * n_pheno_);
-
-    env_chol_.resize(n_pheno_ * n_pheno_);
+    assert(env_chol_.size() == n_pheno_ * n_pheno_);
 
     // cast to LAPACK-legible form
     char clpk_uplo_ = 'L';
-    int clpk_n_pheno_ = static_cast<int>(n_pheno_);
-    int clpk_lda_ = 3;
-    int clpk_out_;
+    int  clpk_n_pheno_ = static_cast<int>(n_pheno_);
+    int  clpk_lda_ = 3;
+    int  clpk_out_;
 
     // @TODO: Rework this since we're integrating BLAS and LAPACK
     #if defined(__APPLE__)
@@ -63,7 +61,7 @@ namespace amsim {
     cblas_dtrmm(CblasColMajor, CblasLeft, CblasLower, CblasNoTrans,
                 CblasNonUnit, n_pheno_, n_ind, 1, env_chol_.data(), n_pheno_,
                 ptr_env, n_pheno_);
-    // scale environmental components marginally
+    // scale environmental components along margins 
     for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
       cblas_dscal(n_ind, std::sqrt(h2_env_[pheno]), &ptr_env[pheno * n_ind], 1.0);
   }

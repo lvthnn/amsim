@@ -99,9 +99,9 @@ namespace amsim {
       ptr_gen_[ind] -= global_centre;
   }
  
-  void Phenotype::score_tiled64(Genome& genome) {
+  void Phenotype::score_tiled(Genome& genome) {
     if (genome.H0().view() != HaploView::LOC_MAJOR)
-      throw std::runtime_error("Phenotype::score_tiled64: require LOC_MAJOR view.");
+      throw std::runtime_error("Phenotype::score: require LOC_MAJOR view.");
 
     HaploBuf& H0 = genome.H0();
     HaploBuf& H1 = genome.H1();
@@ -153,7 +153,7 @@ namespace amsim {
   }
 
   void Phenotype::score(Genome& genome) {
-    score_tiled64(genome);
+    score_tiled(genome);
     score_tot();
   }
 
