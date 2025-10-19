@@ -1,5 +1,4 @@
 #include <cmath>
-#include <iostream>
 
 #include <amsim/metric.h>
 #include <amsim/component_type.h>
@@ -65,7 +64,6 @@ namespace amsim {
             double* buf_cur = &std_buf[pheno * n_ind];
             double mean_cur = ctx.phenotypes[pheno].comp_mean(type);
             double prec_cur = 1.0 / std::sqrt(ctx.phenotypes[pheno].comp_var(type));
-
             cblas_dcopy(n_ind, ctx.phenotypes[pheno](type), 1, buf_cur, 1);
             cblas_daxpy(n_ind, -mean_cur, ones.data(), 1, buf_cur, 1);
             cblas_dscal(n_ind, prec_cur, buf_cur, 1);
@@ -143,7 +141,7 @@ namespace amsim {
     }
 
     Metric comp_var(const std::size_t n_pheno, ComponentType type) {
-      std::string name = "i_hate_this";
+      std::string name = "implement_name_comp_var";
       return make_metric(phenome::f_comp_var(type), name, n_pheno, 1);
     }
 
