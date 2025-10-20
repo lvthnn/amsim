@@ -1,15 +1,14 @@
 #ifndef AMSIMCPP_HAPLOBUF_H
 #define AMSIMCPP_HAPLOBUF_H
 
+#pragma once
 #include <cstddef>
 #include <cstdint>
 #include <vector>
 
+#include <amsim/haploview.h>
+
 namespace amsim {
-  enum class HaploView : bool {
-    IND_MAJOR,
-    LOC_MAJOR
-  };
 
   class HaploBuf {
   public:

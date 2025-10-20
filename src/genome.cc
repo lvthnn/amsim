@@ -3,8 +3,9 @@
 #include <vector>
 #include <stdexcept>
 
-#include <amsim/genome.h>
 #include <amsim/rng.h>
+#include <amsim/haploview.h>
+#include <amsim/genome.h>
 
 namespace amsim {
 	Genome::Genome(std::size_t n_ind, std::size_t n_loc,
@@ -41,7 +42,7 @@ namespace amsim {
 
     for (std::size_t loc = 0; loc < n_loc; loc++) {
       bw_.set_prob(v_maf_[loc]);
-      std::uint64_t* word0 = H0_.rowptr(loc); 
+      std::uint64_t* word0 = H0_.rowptr(loc);
       std::uint64_t* word1 = H1_.rowptr(loc);
 
       for (std::size_t word = 0; word < n_words; word++) {
@@ -126,7 +127,7 @@ namespace amsim {
         // male child
         H0_(pair, word) = gam_word_(male_H0, male_H1);
         H1_(pair, word) = gam_word_(female_H0, female_H1);
-      
+
         // female child
         H0_(fpair, word) = gam_word_(male_H0, male_H1);
         H1_(fpair, word) = gam_word_(female_H0, female_H1);
