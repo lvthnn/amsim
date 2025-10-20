@@ -1,5 +1,4 @@
 #include <cmath>
-#include <numeric>
 #include <optional>
 
 #if defined(__APPLE__)
@@ -43,10 +42,10 @@ namespace amsim::stats {
       x      = *xi;
       delta  = x - mean;
       mean   += delta / (i + 1);
-      delta2 = x - mean; 
+      delta2 = x - mean;
       m2     += delta * delta2;
     }
-  
+
     double denom = population ? static_cast<double>(N) : static_cast<double>(N - 1);
     return m2 / denom;
   }
@@ -78,7 +77,7 @@ namespace amsim::stats {
 
     for (int i = 0; i < N; i++, xi += incX, eta += incY)
       cor += 1.0 / denom * (*xi - *centre_X) * (*eta - *centre_Y);
-    
+
     return cor;
   }
 

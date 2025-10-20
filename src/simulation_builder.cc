@@ -24,7 +24,7 @@ namespace amsim {
                                                    std::size_t n_ind,
                                                    std::string out_dir,
                                                    std::uint64_t rng_seed) {
-    n_gen_    = n_gen; 
+    n_gen_    = n_gen;
     n_ind_    = n_ind;
     out_dir_  = std::filesystem::path(out_dir);
     rng_seed_ = rng_seed;
@@ -85,7 +85,7 @@ namespace amsim {
 
     if (type == MatingType::RANDOM) {
       n_itr_     = 0;
-      tmp_init_  = 0; 
+      tmp_init_  = 0;
       tmp_decay_ = 0;
       mate_cor_  = std::vector<double>(n_pheno_ * n_pheno_, 0.0);
     }
@@ -93,7 +93,7 @@ namespace amsim {
     if (!n_itr || !tmp_init || !tmp_decay || !mate_cor)
       std::cerr << "Specify all of n_itr, tmp_init, tmp_decay, and mate_cor "
                    "for assortative mating models.\n";
-    
+
     n_itr_     = *n_itr;
     tmp_init_  = *tmp_init;
     tmp_decay_ = *tmp_decay;
