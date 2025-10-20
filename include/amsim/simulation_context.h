@@ -1,6 +1,7 @@
 #ifndef AMSIMCPP_SIMULATION_CONTEXT_H
 #define AMSIMCPP_SIMULATION_CONTEXT_H
 
+#pragma once
 #include <functional>
 
 #include <amsim/genome.h>

@@ -1,6 +1,7 @@
 #ifndef AMSIMCPP_PHENOARCH_H
 #define AMSIMCPP_PHENOARCH_H
 
+#pragma once
 #include <cstddef>
 #include <cstdint>
 #include <vector>
