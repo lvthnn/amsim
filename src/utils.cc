@@ -1,7 +1,5 @@
 #include <cstddef>
 #include <cstdint>
-#include <numeric>
-#include <algorithm>
 
 namespace amsim::utils {
 
@@ -29,16 +27,6 @@ namespace amsim::utils {
       swap_mask = swap_mask ^ (swap_mask >> swap_width);
       bitmatrix_swap(matrix, swap_width, swap_mask);
     }
-  }
-
-  template <typename T>
-  std::vector<std::size_t> order(const std::vector<T>& v) {
-    std::vector<std::size_t> idx(v.size());
-    std::iota(idx.begin(), idx.end(), 0);
-
-    std::stable_sort(idx.begin(), idx.end(), [&v](std::size_t i0, std::size_t i1) { return v[i0] < v[i1]; });
-
-    return idx;
   }
 
   // function to generate UNLINKED recombination map with constant MAFs
