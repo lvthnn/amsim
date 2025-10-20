@@ -53,13 +53,8 @@ namespace amsim {
     const double tmp_init_;
     const double tmp_decay_;
 
-    std::vector<double> cor_S_;
-    std::vector<double> cor_U_;
-    std::vector<double> cor_VT_;
-
     std::vector<double> male_;
     std::vector<double> female_;
-    std::vector<std::size_t> state_;
 
     void arrange_();
 
@@ -73,6 +68,12 @@ namespace amsim {
     rng::NormalPolar fuzz_;
     rng::UniformIntRange swap_;
     rng::UniformRange acc_;
+
+  public:
+    std::vector<double> cor_S;
+    std::vector<double> cor_U;
+    std::vector<double> cor_VT;
+    std::vector<std::size_t> state;
   };
 }
 #endif

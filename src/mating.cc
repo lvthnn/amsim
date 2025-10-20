@@ -18,10 +18,10 @@
 
 namespace amsim {
   std::vector<std::size_t> MatingModel::rand_state_() {
-    std::vector<std::size_t> state_(n_sex_);
-    std::iota(state_.begin(), state_.end(), 0);
-    std::shuffle(state_.begin(), state_.end(), g_);
-    return state_;
+    std::vector<std::size_t> state(n_sex_);
+    std::iota(state.begin(), state.end(), 0);
+    std::shuffle(state.begin(), state.end(), g_);
+    return state;
   }
 
   AssortativeModel::AssortativeModel(const PhenotypeList&     phenotypes,
@@ -45,13 +45,13 @@ namespace amsim {
       n_itr_(n_itr),
       tmp_init_(tmp_init),
       tmp_decay_(tmp_decay),
-      cor_S_(n_pheno_),
-      cor_U_(n_pheno_ * n_pheno_),
-      cor_VT_(n_pheno_ * n_pheno_),
-      state_(n_sex_),
       fuzz_(rng),
       swap_(rng),
-      acc_(rng) {
+      acc_(rng),
+      cor_S(n_pheno_),
+      cor_U(n_pheno_ * n_pheno_),
+      cor_VT(n_pheno_ * n_pheno_),
+      state(n_sex_) {
     // copy since dgesvd from LAPACK destroys original matrix
     std::vector<double> cor_copy_ = cor_;
 
@@ -64,12 +64,12 @@ namespace amsim {
     // perform workspace query
     #if defined(__APPLE__)
       dgesvd_(&clpk_job, &clpk_job, &clpk_n_pheno_, &clpk_n_pheno_, cor_copy_.data(),
-              &clpk_n_pheno_, cor_S_.data(), cor_U_.data(), &clpk_n_pheno_,
-              cor_VT_.data(), &clpk_n_pheno_, &clpk_wkopt, &clpk_lwork, &clpk_info);
+              &clpk_n_pheno_, cor_S.data(), cor_U.data(), &clpk_n_pheno_,
+              cor_VT.data(), &clpk_n_pheno_, &clpk_wkopt, &clpk_lwork, &clpk_info);
     #else
       LAPACK_dgesvd(&clpk_job, &clpk_job, &clpk_n_pheno_, &clpk_n_pheno_, cor_copy_.data(),
-                    &clpk_n_pheno_, cor_S_.data(), cor_U_.data(), &clpk_n_pheno_,
-                    cor_VT_.data(), &clpk_n_pheno_, &clpk_wkopt, &clpk_lwork, &clpk_info);
+                    &clpk_n_pheno_, cor_S.data(), cor_U.data(), &clpk_n_pheno_,
+                    cor_VT.data(), &clpk_n_pheno_, &clpk_wkopt, &clpk_lwork, &clpk_info);
     #endif
 
     // allocate workspace buffer
@@ -79,12 +79,12 @@ namespace amsim {
     // perform SDV computation
     #if defined(__APPLE__)
       dgesvd_(&clpk_job, &clpk_job, &clpk_n_pheno_, &clpk_n_pheno_, cor_copy_.data(),
-              &clpk_n_pheno_, cor_S_.data(), cor_U_.data(), &clpk_n_pheno_,
-              cor_VT_.data(), &clpk_n_pheno_, clpk_work.data(), &clpk_lwork, &clpk_info);
+              &clpk_n_pheno_, cor_S.data(), cor_U.data(), &clpk_n_pheno_,
+              cor_VT.data(), &clpk_n_pheno_, clpk_work.data(), &clpk_lwork, &clpk_info);
     #else
       LAPACK_dgesvd(&clpk_job, &clpk_job, &clpk_n_pheno_, &clpk_n_pheno_, cor_copy_.data(),
-                    &clpk_n_pheno_, cor_S_.data(), cor_U_.data(), &clpk_n_pheno_,
-                    cor_VT_.data(), &clpk_n_pheno_, clpk_work.data(), &clpk_lwork, &clpk_info);
+                    &clpk_n_pheno_, cor_S.data(), cor_U.data(), &clpk_n_pheno_,
+                    cor_VT.data(), &clpk_n_pheno_, clpk_work.data(), &clpk_lwork, &clpk_info);
     #endif
 
     male_.resize(n_sex_ * n_pheno_);
@@ -108,7 +108,7 @@ namespace amsim {
 
       for (std::size_t ind = 0; ind < n_sex_; ind++) {
         male_[pheno * n_sex_ + ind]   = (ptr_m[ind] - mean_m) / sd_m;
-        female_[pheno * n_sex_ + ind] = (ptr_f[state_[ind]] - mean_f) / sd_f;
+        female_[pheno * n_sex_ + ind] = (ptr_f[state[ind]] - mean_f) / sd_f;
       }
     }
   }
@@ -162,7 +162,7 @@ namespace amsim {
 
   void AssortativeModel::init_state() {
     // compute dominant latent phenotypes
-    double latent_cor   = cor_S_[0];
+    double latent_cor   = cor_S[0];
     double latent_noise = std::sqrt(1.0 - latent_cor * latent_cor);
     std::vector<double> latent_male(n_sex_);
     std::vector<double> latent_female(n_sex_);
@@ -170,10 +170,10 @@ namespace amsim {
     int lda_tot = 2 * n_sex_;
 
     cblas_dgemv(CblasColMajor, CblasNoTrans, n_sex_, n_pheno_, 1.0, ptr_tot_[0], lda_tot,
-                cor_U_.data(), 1, 0.0, latent_male.data(), 1);
+                cor_U.data(), 1, 0.0, latent_male.data(), 1);
 
     cblas_dgemv(CblasColMajor, CblasNoTrans, n_sex_, n_pheno_, 1.0, ptr_tot_[0] + n_sex_,
-                lda_tot, cor_VT_.data(), n_pheno_, 0.0, latent_female.data(), 1);
+                lda_tot, cor_VT.data(), n_pheno_, 0.0, latent_female.data(), 1);
 
     // add noise to get correlation to equal latent_cor
     std::vector<double> latent_fuzz(n_sex_);
@@ -187,7 +187,7 @@ namespace amsim {
 
     // assemble the initial state
     for (std::size_t rank = 0; rank < n_sex_; ++rank)
-      state_[idx_male[rank]] = idx_female[rank];
+      state[idx_male[rank]] = idx_female[rank];
 
     std::cerr << "matching before:\n";
     arrange_();
@@ -195,7 +195,7 @@ namespace amsim {
   }
 
   std::vector<std::size_t> AssortativeModel::match() {
-    if (n_itr_ == 0) return state_;
+    if (n_itr_ == 0) return state;
     const std::size_t dim = n_pheno_ * n_pheno_;
     double tmp_cur = tmp_init_;
 
@@ -214,7 +214,7 @@ namespace amsim {
       double u        = acc_.sample(1.0);
 
       if (u < acc_prob) {
-        std::swap(state_[i0], state_[i1]);
+        std::swap(state[i0], state[i1]);
 
         for (std::size_t pheno = 0; pheno < n_pheno_; pheno++)
           std::swap(female_[pheno * n_sex_ + i0], female_[pheno * n_sex_ + i1]);
@@ -225,7 +225,7 @@ namespace amsim {
       tmp_cur *= tmp_decay_;
     }
 
-    return state_;
+    return state;
   }
 
   void AssortativeModel::update(const PhenotypeList &phenotypes) {
