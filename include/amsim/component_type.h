@@ -1,6 +1,9 @@
 #ifndef AMSIMCPP_COMPONENTTYPE_H
 #define AMSIMCPP_COMPONENTTYPE_H
 
+#pragma once
+#include <string>
+
 namespace amsim {
 
   enum ComponentType {
@@ -15,6 +18,19 @@ namespace amsim {
     return type;
   }
 
+  inline std::string to_string(ComponentType type) {
+    switch(type) {
+      case GENETIC:       return "gen";
+      case ENVIRONMENTAL: return "env";
+      case VERTICAL:      return "vert";
+      case TOTAL:         return "tot";
+    }
+    __builtin_unreachable();
+  }
+
+  inline std::ostream& operator<<(std::ostream& os, ComponentType type) {
+    return os << to_string(type);
+  }
 }
 
 #endif //AMSIMCPP_COMPONENTTYPE_H
