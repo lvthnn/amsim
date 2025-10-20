@@ -53,7 +53,13 @@ namespace amsim {
     }
 
     Metric pheno_h2(const std::size_t n_pheno);
+    Metric latent_h2(const std::size_t n_pheno);
+    Metric latent_comp_cor(const std::size_t n_pheno, ComponentType type);
+    Metric latent_comp_xcor(const std::size_t n_pheno, ComponentType type);
+    Metric latent_comp_var(const std::size_t n_pheno, ComponentType type);
     Metric comp_cor(const std::size_t n_pheno, ComponentType type);
+    Metric comp_xcor(const std::size_t n_pheno, ComponentType type);
+    Metric comp_var(const std::size_t n_pheno, ComponentType type);
 
     inline Metric loc_maf(const std::size_t n_loc) {
       return make_metric(genome::floc_maf, "loc_mafs", n_loc);
