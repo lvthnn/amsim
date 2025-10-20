@@ -63,10 +63,25 @@ namespace amsim::stats {
     for (int i = 0; i < N; i++, xi += incX, eta += incY) *eta = *xi / *scale;
   }
 
+  void standardise(const int N, const double *X, const int incX,
+                   double *Y, const int incY,
+                   std::optional<double> centre_val,
+                   std::optional<double> scale_val) {
+    // First centre
+    double c = centre_val.value_or(mean(N, X, incX));
+    centre(N, X, incX, Y, incY, c);
+
+    // Then scale in-place
+    double s = scale_val.value_or(std::sqrt(var(N, Y, incY, true)));
+    if (s > 0.0) {
+      cblas_dscal(N, 1.0 / s, Y, incY);
+    }
+  }
+
   double cor(const int N, const double *X, const int incX, const double *Y,
-                 const int incY, std::optional<double> centre_X,
-                 std::optional<double> scale_X, std::optional<double> centre_Y,
-                 std::optional<double> scale_Y) {
+             const int incY, std::optional<double> centre_X,
+             std::optional<double> scale_X, std::optional<double> centre_Y,
+             std::optional<double> scale_Y) {
     if (!centre_X) centre_X = mean(N, X, incX);
     if (!centre_Y) centre_Y = mean(N, Y, incY);
     if (!scale_X)  scale_X  = var(N, X, incX);
