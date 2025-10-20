@@ -1,3 +1,4 @@
+#include "amsim/component_type.h"
 #include <cstddef>
 #include <vector>
 
@@ -26,7 +27,16 @@ int main() {
           .mating(amsim::MatingType::ASSORTATIVE, 2e6, 0.5, 0.9999,
                   std::vector<double>{0.4, 0.3,  // [ 0.4  0.2
                                       0.2, 0.5}) //   0.3  0.5 ]
-          .metrics(std::vector<amsim::Metric>{ amsim::metrics::pheno_h2(2) });
+          .metrics(std::vector<amsim::Metric>{
+            amsim::metrics::pheno_h2(2),
+            amsim::metrics::latent_h2(2),
+            amsim::metrics::comp_xcor(2, amsim::ComponentType::GENETIC),
+            amsim::metrics::comp_xcor(2, amsim::ComponentType::ENVIRONMENTAL),
+            amsim::metrics::comp_xcor(2, amsim::ComponentType::TOTAL),
+            amsim::metrics::comp_cor(2, amsim::ComponentType::GENETIC),
+            amsim::metrics::comp_cor(2, amsim::ComponentType::ENVIRONMENTAL),
+            amsim::metrics::comp_cor(2, amsim::ComponentType::TOTAL)
+          });
 
   amsim::Simulation simulation = builder.build();
 
