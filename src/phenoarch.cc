@@ -10,7 +10,7 @@
 #include <amsim/phenoarch.h>
 #include <amsim/rng.h>
 
-#if defined(__APPLE__)
+#ifdef __APPLE__
   #include<Accelerate/Accelerate.h>
 #else
   #include<cblas.h>
@@ -61,7 +61,7 @@ namespace amsim {
     cblas_dtrmm(CblasColMajor, CblasLeft, CblasLower, CblasNoTrans,
                 CblasNonUnit, n_pheno_, n_ind, 1, env_chol_.data(), n_pheno_,
                 ptr_env, n_pheno_);
-    // scale environmental components along margins 
+    // scale environmental components along margins
     for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
       cblas_dscal(n_ind, std::sqrt(h2_env_[pheno]), &ptr_env[pheno * n_ind], 1.0);
   }

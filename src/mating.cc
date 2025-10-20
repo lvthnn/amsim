@@ -5,7 +5,7 @@
 #include <iostream>
 #include <iomanip>
 
-#if defined(__APPLE__)
+#ifdef __APPLE__
   #include <Accelerate/Accelerate.h>
 #else
   #include <cblas.h>

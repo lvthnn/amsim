@@ -5,7 +5,6 @@
 #include <cmath>
 #include <optional>
 #include <stdexcept>
-#include <iostream>
 
 #include <amsim/haplobuf.h>
 #include <amsim/genome.h>
@@ -14,7 +13,7 @@
 #include <amsim/phenotype.h>
 #include <amsim/component_type.h>
 
-#if defined(__APPLE__)
+#if __APPLE__
   #include <Accelerate/Accelerate.h>
 #else
   #include <cblas.h>
@@ -64,18 +63,18 @@ namespace amsim {
     std::size_t n_ind = H0.n_ind();
 
     double global_centre = 0.0;
-  
+
     for (std::size_t el = 0; el < loci_.size(); el++) {
       const std::size_t loc = loci_[el];
       const double loc_sd = std::sqrt(genome.v_lvar(loc));
       const double loc_effect = loc_effects_[el] / loc_sd;
       const double loc_centre = loc_effects_[el] * genome.v_lmean(loc) / loc_sd;
-      
+
       global_centre += loc_centre;
 
       // if the locus is monomorphic, skip it
       if (genome.v_lvar(loc) == 0) continue;
-      
+
       for (std::size_t word = 0; word < n_words; word++) {
         std::uint64_t HET = H0(loc, word) ^ H1(loc, word);
         std::uint64_t HOM = H0(loc, word) & H1(loc, word);
@@ -95,10 +94,10 @@ namespace amsim {
       }
     }
 
-    for (std::size_t ind = 0; ind < n_ind; ind++) 
+    for (std::size_t ind = 0; ind < n_ind; ind++)
       ptr_gen_[ind] -= global_centre;
   }
- 
+
   void Phenotype::score_tiled(Genome& genome) {
     if (genome.H0().view() != HaploView::LOC_MAJOR)
       throw std::runtime_error("Phenotype::score: require LOC_MAJOR view.");
@@ -165,7 +164,7 @@ namespace amsim {
 
       const double sum_sq = cblas_ddot(n_ind_, ptr_, 1, ptr_, 1);
       const double scale = (1.0 / static_cast<double>(n_ind_));
-	
+
       comp_means_[comp] = scale * cblas_ddot(n_ind_, ptr_, 1, ones.data(), 1);
       comp_vars_[comp] = scale * sum_sq - comp_means_[comp] * comp_means_[comp];
       if (comp == ComponentType::TOTAL) break;
