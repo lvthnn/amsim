@@ -19,7 +19,7 @@ namespace amsim {
     const std::size_t n_cols;
     const bool named;
     const std::vector<std::string> names;
-    
+
     std::string header();
     std::string stream(const SimulationContext &ctx);
 
