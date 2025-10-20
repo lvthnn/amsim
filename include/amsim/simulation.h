@@ -1,10 +1,10 @@
 #ifndef AMSIMCPP_SIMULATION_H
 #define AMSIMCPP_SIMULATION_H
 
+#pragma once
 #include <vector>
 #include <fstream>
 #include <filesystem>
-#include <iostream>
 
 #include <amsim/genome.h>
 #include <amsim/phenobuf.h>
@@ -20,30 +20,31 @@ namespace amsim {
   class Simulation {
   public:
     Simulation(// SIMULATION PARAMETERS
-							 std::size_t n_gen,
-							 std::size_t n_ind,
-							 std::filesystem::path out_dir,
-							 std::uint64_t rng_seed,
+							 std::size_t              n_gen,
+							 std::size_t              n_ind,
+							 std::filesystem::path    out_dir,
+							 std::uint64_t            rng_seed,
 							 // GENOME PARAMETERS
-							 std::size_t n_loc,
-							 std::vector<double> v_maf,
-							 std::vector<double> v_rec,
-							 std::vector<double> v_mut,
+							 std::size_t              n_loc,
+							 std::vector<double>      v_maf,
+							 std::vector<double>      v_rec,
+							 std::vector<double>      v_mut,
 							 // PHENOME PARAMETERS
-							 std::size_t n_pheno,
+							 std::size_t              n_pheno,
 							 std::vector<std::string> v_name,
 							 std::vector<std::size_t> v_n_loc,
-							 std::vector<double> v_h2_gen,
-							 std::vector<double> v_h2_env,
-						   std::vector<double> v_h2_vert,
-							 std::vector<double> gen_cor,
-							 std::vector<double> env_cor,
+							 std::vector<double>      v_h2_gen,
+							 std::vector<double>      v_h2_env,
+						   std::vector<double>      v_h2_vert,
+							 std::vector<double>      gen_cor,
+							 std::vector<double>      env_cor,
 							 // MATING MODEL PARAMETERS
-               std::vector<double> mate_cor,
-							 std::size_t n_itr,
-							 double tmp_init,
-							 double tmp_decay,
-							 std::vector<Metric> metrics);
+               std::vector<double>      mate_cor,
+							 std::size_t              n_itr,
+							 double                   tmp_init,
+							 double                   tmp_decay,
+							 std::vector<Metric>      metrics,
+							 bool                     require_latent);
 
     Simulation(Simulation&& other) noexcept
       : n_gen(other.n_gen),
@@ -59,7 +60,7 @@ namespace amsim {
         streams_(std::move(other.streams_)),
         ctx(genome_, arch_, buf_, phenotypes_, model_)  // Rebind to new members!
     {}
-    
+
     Simulation(const Simulation&) = delete;
     Simulation& operator=(const Simulation&) = delete;
     Simulation& operator=(Simulation&&) = delete;  // Can't assign due to const members

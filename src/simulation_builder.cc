@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -45,7 +46,6 @@ namespace amsim {
     v_rec_ = std::move(v_rec);
     v_mut_ = std::move(v_mut);
     status_++;
-
     return *this;
   }
 
@@ -70,7 +70,6 @@ namespace amsim {
     gen_cor_   = std::move(gen_cor);
     env_cor_   = std::move(env_cor);
     status_++;
-
     return *this;
   }
 
@@ -99,12 +98,12 @@ namespace amsim {
     tmp_decay_ = *tmp_decay;
     mate_cor_  = *mate_cor;
     status_++;
-
     return *this;
   }
 
   SimulationBuilder& SimulationBuilder::metrics(std::vector<Metric> metrics) {
-    metrics_ = std::move(metrics);
+    metrics_        = std::move(metrics);
+    require_lat_ = std::any_of(metrics_.begin(), metrics_.end(), [](const Metric& m) { return m.require_lat; });
     return *this;
   }
 
@@ -116,7 +115,7 @@ namespace amsim {
 													n_loc_, v_maf_, v_rec_, v_mut_,
 													n_pheno_, v_name_, v_n_loc_, v_h2_gen_, v_h2_env_, v_h2_vert_, gen_cor_, env_cor_,
 													mate_cor_, n_itr_, tmp_init_, tmp_decay_,
-													metrics_);
+													metrics_, require_lat_);
     return simulation;
   }
 }

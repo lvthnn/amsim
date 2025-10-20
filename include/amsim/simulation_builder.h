@@ -13,7 +13,7 @@
 #include <amsim/metric.h>
 
 namespace amsim {
-  
+
   class SimulationBuilder {
   public:
     SimulationBuilder();
@@ -46,23 +46,23 @@ namespace amsim {
   private:
     //-- TRACK SIMULATION PROGRESS ------------------------------------------//
     SimulationStatus         status_;      // simulation progress
-    //-----------------------------------------------------------------------// 
+    //-----------------------------------------------------------------------//
 
     //-- SIMULATION PARAMETERS ----------------------------------------------//
     std::size_t              n_gen_;       // number of generations simulated
     std::size_t              n_ind_;       // number of individuals
     std::filesystem::path    out_dir_;     // name of folder to write data to
     std::uint64_t            rng_seed_;    // seed of xoshiro random device
-    //-----------------------------------------------------------------------// 
+    //-----------------------------------------------------------------------//
 
-    //-- GENOME PARAMETERS --------------------------------------------------// 
+    //-- GENOME PARAMETERS --------------------------------------------------//
     std::size_t              n_loc_;       // number of loci to simulate
     std::vector<double>      v_maf_;       // locus mafs
     std::vector<double>      v_rec_;       // recombination map
     std::vector<double>      v_mut_;       // mutation map
-    //-----------------------------------------------------------------------// 
+    //-----------------------------------------------------------------------//
 
-    //-- PHENOTYPE PARAMETERS -----------------------------------------------// 
+    //-- PHENOTYPE PARAMETERS -----------------------------------------------//
     std::size_t              n_pheno_;     // number of phenotypes
     std::vector<std::string> v_name_;      // phenotype names
     std::vector<std::size_t> v_n_loc_;     // number of loci per phenotype
@@ -71,17 +71,18 @@ namespace amsim {
     std::vector<double>      v_h2_vert_;   // vertical component variance
     std::vector<double>      gen_cor_;     // genetic component corr.
     std::vector<double>      env_cor_;     // environmental component corr.
-    //-----------------------------------------------------------------------// 
+    //-----------------------------------------------------------------------//
 
     //-- MATING MODEL PARAMETERS --------------------------------------------//
     std::size_t              n_itr_;       // number of optimisation steps
     double                   tmp_init_;    // initial annealing temperature
     double                   tmp_decay_;   // annealing temperature decay
     std::vector<double>      mate_cor_;    // mate correlation matrix
-    //-----------------------------------------------------------------------// 
+    //-----------------------------------------------------------------------//
 
     //-- METRIC PARMETERS ---------------------------------------------------//
     std::vector<Metric>      metrics_;
+    bool                     require_lat_ = false;
     //-----------------------------------------------------------------------//
   };
 

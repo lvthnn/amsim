@@ -12,13 +12,15 @@ namespace amsim {
   public:
     Metric(MetricFunc f, const std::string &name,
            const std::size_t n_rows, const std::size_t n_cols = 1,
-           std::optional<std::vector<std::string>> el_names = std::nullopt);
+           std::optional<std::vector<std::string>> el_names = std::nullopt,
+           const bool require_lat = false);
 
     const std::string name;
     const std::size_t n_rows;
     const std::size_t n_cols;
     const bool named;
     const std::vector<std::string> names;
+    const bool require_lat;
 
     std::string header();
     std::string stream(const SimulationContext &ctx);

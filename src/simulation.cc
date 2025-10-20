@@ -29,7 +29,8 @@ namespace amsim {
                           std::size_t              n_itr,
                           double                   tmp_init,
                           double                   tmp_decay,
-                          std::vector<Metric>      metrics)
+                          std::vector<Metric>      metrics,
+                          bool                     require_latent)
 		: n_gen(n_gen),
 			out_dir(out_dir),
 			status_(SimulationStatus::READY),
@@ -38,10 +39,10 @@ namespace amsim {
       arch_([&](){
         PhenoArch arch(n_pheno, n_loc, v_n_loc, v_h2_gen, v_h2_env,
                       gen_cor, env_cor, rng_);
-        arch.optim_arch(1e4);
+        arch.optim_arch(1e6);
         return arch;
       }()),
-      buf_(n_ind, n_pheno),
+      buf_(n_ind, n_pheno, require_latent),
       phenotypes_([&](){
         PhenotypeList phenotypes;
         phenotypes.reserve(n_pheno);
@@ -99,6 +100,9 @@ namespace amsim {
         pheno.compute_stats();
       }
 
+      if (ctx.buf.require_lat)
+        ctx.buf.score_latent(ctx.model.cor_U, ctx.model.cor_VT);
+
       ctx.model.init_state();
       ctx.model.update(ctx.phenotypes);
       std::vector<std::size_t> opt_matching = ctx.model.match();
@@ -114,6 +118,5 @@ namespace amsim {
       ctx.genome.transpose();
     }
     std::cerr << "All generations complete\n";
-
   }
 }
