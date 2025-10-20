@@ -6,8 +6,9 @@
 #include <cstdint>
 #include <vector>
 
-#include <amsim/haplobuf.h>
 #include <amsim/rng.h>
+#include <amsim/haploview.h>
+#include <amsim/haplobuf.h>
 
 namespace amsim {
   class Genome {
@@ -31,7 +32,7 @@ namespace amsim {
     void compute_mafs();
     void compute_stats();
     void update(std::vector<std::size_t> matching);
-    
+
   private:
     const std::vector<double> v_mut_;
     const std::vector<double> v_rec_;
