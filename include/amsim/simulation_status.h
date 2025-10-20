@@ -5,16 +5,16 @@ namespace amsim {
 
   enum class SimulationStatus {
     NEW        = 0,
-    SIMULATION = 1,
-    GENOME     = 2,
-    PHENOME    = 3,
-    MATING     = 4,
-    READY      = 5,
-    FINISHED   = 6
+    GENOME     = 1,
+    PHENOME    = 2,
+    MATING     = 3,
+    READY      = 4,
+    FINISHED   = 5
   };
 
-  inline SimulationStatus operator++(SimulationStatus &status, int) {
-    return SimulationStatus(int(status) + 1);
+  inline SimulationStatus operator++(SimulationStatus& status, int) {
+    status = SimulationStatus(int(status) + 1);
+    return status;
   }
 }
 
