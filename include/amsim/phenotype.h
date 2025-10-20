@@ -99,10 +99,6 @@ namespace amsim {
     double* ptr_vert_;
     double* ptr_tot_;
 
-    std::vector<double> latent_male_;
-    std::vector<double> latent_female_;
-    void score_latent_();
-
     // store component means and variances for fast computation
     std::array<double, 4> comp_means_;
     std::array<double, 4> comp_vars_;
