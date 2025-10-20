@@ -36,9 +36,10 @@ namespace amsim {
     AssortativeModel(const PhenotypeList &phenotypes,
                      std::vector<double> cor, const std::size_t n_itr,
                      const std::size_t n_sex, const rng::Xoshiro256ss &rng,
-                     double tmp_init = 1e-9, double tmp_decay = 0.99999999);
+                     double tmp_init = 1e-2, double tmp_decay = 0.99999);
 
     void display_cor();
+    void init_state();
     std::vector<std::size_t> match() override;
     void update(const PhenotypeList &phenotypes);
 
@@ -51,6 +52,10 @@ namespace amsim {
     const std::size_t n_itr_;
     const double tmp_init_;
     const double tmp_decay_;
+
+    std::vector<double> cor_S_;
+    std::vector<double> cor_U_;
+    std::vector<double> cor_VT_;
 
     std::vector<double> male_;
     std::vector<double> female_;
@@ -65,6 +70,7 @@ namespace amsim {
                             const std::vector<double> &target,
                             const std::vector<double> &delta);
 
+    rng::NormalPolar fuzz_;
     rng::UniformIntRange swap_;
     rng::UniformRange acc_;
   };
