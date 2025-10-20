@@ -60,9 +60,11 @@ endif()
 # Example program (optional)
 add_executable(demo_simulation examples/demo_simulation.cc)
 add_executable(demo_stats      examples/demo_stats.cc)
+add_executable(demo_mating     examples/demo_mating.cc)
 
 target_link_libraries(demo_simulation PRIVATE amsimcpp)
 target_link_libraries(demo_stats PRIVATE amsimcpp)
+target_link_libraries(demo_mating PRIVATE amsimcpp)
 
 # Install rules (so other projects can find+link amsimcpp)
 include(GNUInstallDirs)
