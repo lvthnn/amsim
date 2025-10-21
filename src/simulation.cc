@@ -39,7 +39,7 @@ namespace amsim {
       arch_([&](){
         PhenoArch arch(n_pheno, n_loc, v_n_loc, v_h2_gen, v_h2_env,
                       gen_cor, env_cor, rng_);
-        arch.optim_arch(1e6);
+        arch.optim_arch(1e5);
         return arch;
       }()),
       buf_(n_ind, n_pheno, require_latent),
@@ -85,6 +85,7 @@ namespace amsim {
 
 
   void Simulation::run() {
+    std::cerr << "starting sim\n";
     ctx.genome.generate_haplotypes();
     ctx.genome.compute_mafs();
     ctx.genome.compute_stats();
@@ -93,15 +94,17 @@ namespace amsim {
       ctx.genome.compute_mafs();
       ctx.genome.compute_stats();
 
-      ctx.arch.gen_env(ctx.buf(0, ComponentType::ENVIRONMENTAL), ctx.buf.n_ind());
+      ctx.arch.gen_env(ctx.buf(ComponentType::ENVIRONMENTAL), ctx.n_ind);
 
       for (Phenotype& pheno : ctx.phenotypes) {
         pheno.score(ctx.genome);
         pheno.compute_stats();
       }
 
-      if (ctx.buf.require_lat)
+      std::cerr << "latent scoring\n";
+      if (ctx.buf.has_lat())
         ctx.buf.score_latent(ctx.model.cor_U, ctx.model.cor_VT);
+      std::cerr << "done\n";
 
       ctx.model.init_state();
       ctx.model.update(ctx.phenotypes);
