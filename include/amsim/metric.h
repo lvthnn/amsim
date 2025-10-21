@@ -4,6 +4,7 @@
 #pragma once
 #include <string>
 #include <optional>
+#include <vector>
 
 #include <amsim/simulation_context.h>
 
@@ -12,8 +13,8 @@ namespace amsim {
   public:
     Metric(MetricFunc f, const std::string &name,
            const std::size_t n_rows, const std::size_t n_cols = 1,
-           std::optional<std::vector<std::string>> el_names = std::nullopt,
-           const bool require_lat = false);
+           const bool require_lat = false,
+           std::optional<std::vector<std::string>> el_names = std::nullopt);
 
     const std::string name;
     const std::size_t n_rows;
@@ -34,6 +35,7 @@ namespace amsim {
     Metric make_metric(MetricFunc f, const std::string& name,
                        const std::size_t n_rows,
                        const std::size_t n_cols = 1,
+                       const bool require_lat = false,
                        std::optional<std::vector<std::string>> el_names = std::nullopt);
 
     namespace genome {
@@ -51,7 +53,7 @@ namespace amsim {
     }
 
     namespace phenome {
-      MetricFunc fcomp_cor(ComponentType type);
+      MetricFunc f_comp_cor(ComponentType type);
     }
 
     Metric pheno_h2(const std::size_t n_pheno);
