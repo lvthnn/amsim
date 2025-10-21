@@ -19,8 +19,19 @@ namespace amsim {
         arch(arch_),
         buf(buf_),
         phenotypes(phenotypes_),
-        model(model_) {};
+        model(model_),
+        n_ind(genome_.n_ind()),
+        n_sex(genome_.n_ind() / 2),
+        n_loc(genome_.n_loc()),
+        n_pheno(phenotypes_.size()) {};
 
+    // general data
+    const std::size_t n_ind;
+    const std::size_t n_sex;
+    const std::size_t n_loc;
+    const std::size_t n_pheno;
+
+    // deep level data
     Genome           &genome;
     PhenoArch        &arch;
     PhenoBuf         &buf;
