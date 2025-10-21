@@ -1,16 +1,23 @@
 from pathlib import Path
 from time import time_ns
-from typing import Self
+from typing import Self, List
 
 from amsim._core import _SimulationBuilder, _Simulation, MatingType
 from amsim._core import _Metric
+
+from amsim.utils import broadcast_values
 
 class SimulationBuilder:
     def __init__(self):
         self._builder = _SimulationBuilder()
 
-    def simulation(self, n_generations : int, n_individuals : int,
-                   output_dir : str | Path,  random_seed : int | None) -> Self:
+    def simulation(
+        self,
+        n_generations : int,
+        n_individuals : int,
+        output_dir : str | Path,
+        random_seed : int | None
+    ) -> Self:
         if random_seed is None:
             random_seed = int(time_ns()) & 0xFFFFFFFFF
 
@@ -20,12 +27,13 @@ class SimulationBuilder:
                                  random_seed=random_seed)
         return self
 
-    def genome(self, n_loci: int, locus_mafs: list[float],
-               locus_recombination: list[float], locus_mutation: list[float]) -> Self:
+    def genome(self, n_loci: int, locus_mafs: float | List[float],
+               locus_recombination: float | List[float],
+               locus_mutation: float | List[float]) -> Self:
         self._builder.genome(n_loci=n_loci,
-                             locus_mafs=locus_mafs,
-                             locus_recombination=locus_recombination,
-                             locus_mutation=locus_mutation)
+                             locus_mafs=broadcast_values(locus_mafs, n_loci),
+                             locus_recombination=broadcast_values(locus_recombination, n_loci),
+                             locus_mutation=broadcast_values(locus_mutation, n_loci))
         return self
 
     def phenome(self, n_phenotypes: int, names: list[str], loci: list[int],
