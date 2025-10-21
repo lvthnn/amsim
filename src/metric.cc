@@ -248,14 +248,30 @@ namespace amsim {
 
     }
 
+
+
+    Metric pheno_h2(const std::size_t n_pheno) {
+      return make_metric(phenome::f_pheno_h2, "h2", n_pheno);
+    }
+
     Metric comp_mean(const std::size_t n_pheno, ComponentType type) {
       std::string name = to_string(type) + "_mean";
       return make_metric(phenome::f_comp_mean(type), name, n_pheno, 1);
     }
 
+    Metric comp_var(const std::size_t n_pheno, ComponentType type) {
+      std::string name = to_string(type) + "_var";
+      return make_metric(phenome::f_comp_var(type), name, n_pheno, 1);
+    }
 
-    Metric pheno_h2(const std::size_t n_pheno) {
-      return make_metric(phenome::f_pheno_h2, "h2", n_pheno);
+    Metric comp_cor(const std::size_t n_pheno, ComponentType type) {
+      std::string name = to_string(type) + "_cor";
+      return make_metric(phenome::f_comp_cor(type), name, n_pheno, n_pheno);
+    }
+
+    Metric comp_xcor(const std::size_t n_pheno, ComponentType type) {
+      std::string name = to_string(type) + "_xcor";
+      return make_metric(phenome::f_comp_xcor(type), name, n_pheno, n_pheno);
     }
 
     Metric latent_h2(const std::size_t n_pheno) {
@@ -270,21 +286,6 @@ namespace amsim {
     Metric latent_comp_xcor(const std::size_t n_pheno, ComponentType type) {
       std::string name = "latent_" + to_string(type) + "_xcor";
       return make_metric(phenome::f_comp_xcor(type), name, n_pheno, n_pheno, true);
-    }
-
-    Metric comp_cor(const std::size_t n_pheno, ComponentType type) {
-      std::string name = to_string(type) + "_cor";
-      return make_metric(phenome::f_comp_cor(type), name, n_pheno, n_pheno);
-    }
-
-    Metric comp_xcor(const std::size_t n_pheno, ComponentType type) {
-      std::string name = to_string(type) + "_xcor";
-      return make_metric(phenome::f_comp_xcor(type), name, n_pheno, n_pheno);
-    }
-
-    Metric comp_var(const std::size_t n_pheno, ComponentType type) {
-      std::string name = to_string(type) + "_var";
-      return make_metric(phenome::f_comp_var(type), name, n_pheno, 1);
     }
   }
 }
