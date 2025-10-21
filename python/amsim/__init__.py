@@ -1,4 +1,9 @@
 from amsim._core import _SimulationBuilder, _Simulation
-from amsim import results
+from amsim._core import MatingType, ComponentType
+from amsim import metrics
 
-__all__ = ['_SimulationBuilder', '_Simulation']
+__all__ = ['MatingType',
+           'ComponentType',
+           'metrics',
+           '_SimulationBuilder',
+           '_Simulation']
