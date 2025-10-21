@@ -2,6 +2,7 @@
 #include <vector>
 #include <algorithm>
 #include <optional>
+#include <iostream>
 
 #ifdef __APPLE__
   #include <Accelerate/Accelerate.h>
@@ -13,8 +14,7 @@
 
 namespace amsim {
   PhenoBuf::PhenoBuf(const std::size_t n_ind, const std::size_t n_pheno, bool require_lat)
-    : require_lat(require_lat),
-      n_ind_(n_ind),
+    : n_ind_(n_ind),
       n_pheno_(n_pheno) {
     buf_.resize(4 * n_ind_ * n_pheno_);
     if (require_lat)
@@ -36,22 +36,27 @@ namespace amsim {
   }
 
   void PhenoBuf::score_latent(const std::vector<double>& U, const std::vector<double>& VT) {
-      const std::size_t n_sex  = n_ind_ / 2;
-      const double* buf_male   = (*this)(ComponentType::TOTAL);
-      const double* buf_female = buf_male + n_sex;
-      const int     lda_buf    = 2 * n_sex;
+      const std::size_t n_sex   = n_ind_ / 2;
+      const int         lda_buf = 2 * n_sex;
 
+      std::cerr << "is this slow?\n";
       // compute latent score for each component
-      // this just computes the total component
+      for (ComponentType type : { ComponentType::GENETIC, ComponentType::ENVIRONMENTAL,
+                                  ComponentType::VERTICAL, ComponentType::TOTAL }) {
+        const double* buf_male   = (*this)(type);
+        const double* buf_female = buf_male + n_sex;
+        double* buf_lat    = (*this).latent(type);
 
-      cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
-                  n_sex, n_pheno_, n_pheno_,
-                  1.0, buf_male, lda_buf, U.data(), n_pheno_,
-                  0.0, buf_lat_.data(), n_ind_);
+        cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
+                    n_sex, n_pheno_, n_pheno_,
+                    1.0, buf_male, lda_buf, U.data(), n_pheno_,
+                    0.0, buf_lat, n_ind_);
 
-      cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans,
-                  n_sex, n_pheno_, n_pheno_,
-                  1.0, buf_female, lda_buf, VT.data(), n_pheno_,
-                  0.0, buf_lat_.data() + n_sex, n_ind_);
+        cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans,
+                    n_sex, n_pheno_, n_pheno_,
+                    1.0, buf_female, lda_buf, VT.data(), n_pheno_,
+                    0.0, buf_lat + n_sex, n_ind_);
+      }
+      std::cerr << "done!\n";
   }
 }
