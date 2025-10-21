@@ -59,7 +59,7 @@ if (BUILD_PYTHON)
   set(PYBIND11_FINDPYTHON ON)
   find_package(pybind11 REQUIRED)
 
-  pybind11_add_module(_core python/bindings/python_bindings.cpp)
+  pybind11_add_module(_core python/bindings/python_bindings.cc)
   target_link_libraries(_core PRIVATE amsimcpp)
   target_include_directories(_core PRIVATE include)
 endif()
