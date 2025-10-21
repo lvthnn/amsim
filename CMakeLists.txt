@@ -29,6 +29,7 @@ target_include_directories(amsimcpp
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
+# Resolve OS-dependent BLAS / LAPACK imports
 if (APPLE)
   find_library(ACCELERATE_FRAMEWORK Accelerate REQUIRED)
   target_link_libraries(amsimcpp PUBLIC ${ACCELERATE_FRAMEWORK})
@@ -51,14 +52,26 @@ else()
   endif()
 endif()
 
-# Reasonable warnings (optional)
+# Python bindings
+option(BUILD_PYTHON "Build Python bindings for amsimpy" OFF)
+
+if (BUILD_PYTHON)
+  set(PYBIND11_FINDPYTHON ON)
+  find_package(pybind11 REQUIRED)
+
+  pybind11_add_module(_core python/bindings/python_bindings.cpp)
+  target_link_libraries(_core PRIVATE amsimcpp)
+  target_include_directories(_core PRIVATE include)
+endif()
+
+# Reasonable warnings
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
   target_compile_options(amsimcpp PRIVATE -Wall -Wextra -Wpedantic)
 elseif (MSVC)
   target_compile_options(amsimcpp PRIVATE /W4)
 endif()
 
-# Example program (optional)
+# Example programs
 add_executable(demo_simulation examples/demo_simulation.cc)
 add_executable(demo_stats      examples/demo_stats.cc)
 
