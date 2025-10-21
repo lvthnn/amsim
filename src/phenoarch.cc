@@ -39,7 +39,7 @@ namespace amsim {
     // cast to LAPACK-legible form
     char clpk_uplo_ = 'L';
     int  clpk_n_pheno_ = static_cast<int>(n_pheno_);
-    int  clpk_lda_ = 3;
+    int  clpk_lda_ = static_cast<int>(n_pheno_);
     int  clpk_out_;
 
     // @TODO: Rework this since we're integrating BLAS and LAPACK
@@ -58,12 +58,13 @@ namespace amsim {
 
   void PhenoArch::gen_env(double *ptr_env, const std::size_t n_ind) {
     rng_polar_.fill(ptr_env, n_ind * n_pheno_);
-    cblas_dtrmm(CblasColMajor, CblasLeft, CblasLower, CblasNoTrans,
-                CblasNonUnit, n_pheno_, n_ind, 1, env_chol_.data(), n_pheno_,
-                ptr_env, n_pheno_);
+    cblas_dtrmm(CblasColMajor, CblasRight, CblasLower, CblasTrans,
+                CblasNonUnit, n_ind, n_pheno_, 1.0, env_chol_.data(), n_pheno_,
+                ptr_env, n_ind);
+
     // scale environmental components along margins
     for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
-      cblas_dscal(n_ind, std::sqrt(h2_env_[pheno]), &ptr_env[pheno * n_ind], 1.0);
+      cblas_dscal(n_ind, std::sqrt(h2_env_[pheno]), &ptr_env[pheno * n_ind], 1);
   }
 
   void PhenoArch::print_correlations(const std::vector<std::size_t>& intersect) const {
