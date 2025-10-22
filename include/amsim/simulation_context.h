@@ -15,15 +15,15 @@ namespace amsim {
   struct SimulationContext {
     SimulationContext(Genome &genome_, PhenoArch &arch_, PhenoBuf &buf_,
                       PhenotypeList &phenotypes_, AssortativeModel &model_)
-      : genome(genome_),
+      : n_ind(genome_.n_ind()),
+        n_sex(genome_.n_ind() / 2),
+        n_loc(genome_.n_loc()),
+        n_pheno(phenotypes_.size()),
+        genome(genome_),
         arch(arch_),
         buf(buf_),
         phenotypes(phenotypes_),
-        model(model_),
-        n_ind(genome_.n_ind()),
-        n_sex(genome_.n_ind() / 2),
-        n_loc(genome_.n_loc()),
-        n_pheno(phenotypes_.size()) {};
+        model(model_) {};
 
     // general data
     const std::size_t n_ind;
