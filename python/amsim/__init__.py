@@ -1,9 +1,7 @@
-from amsim._core import _SimulationBuilder, _Simulation
 from amsim._core import MatingType, ComponentType
+from amsim.simulation import Simulation, SimulationBuilder
+
 from amsim import metrics
 
-__all__ = ['MatingType',
-           'ComponentType',
-           'metrics',
-           '_SimulationBuilder',
-           '_Simulation']
+__all__ = ['MatingType', 'ComponentType', 'SimulationBuilder', 'Simulation',
+           'metrics']
