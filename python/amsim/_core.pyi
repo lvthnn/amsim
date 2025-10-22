@@ -1,8 +1,10 @@
 """Type stubs for C++ _core module"""
 
+
 class MatingType:
     RANDOM: MatingType
     ASSORTATIVE: MatingType
+
 
 class ComponentType:
     GENETIC: ComponentType
@@ -10,8 +12,10 @@ class ComponentType:
     VERTICAL: ComponentType
     TOTAL: ComponentType
 
+
 class _Metric:
     def __init__(self) -> None: ...
+
 
 def _loc_maf(n_loci: int) -> _Metric: ...
 def _loc_mean(n_loci: int) -> _Metric: ...
@@ -32,40 +36,40 @@ class _SimulationBuilder:
         self,
         n_generations: int,
         n_individuals: int,
-        output_dir:    str,
-        random_seed:   int
+        output_dir: str,
+        random_seed: int
     ) -> _SimulationBuilder: ...
 
     def genome(
         self,
-        n_loci:              int,
-        locus_mafs:          list[float],
+        n_loci: int,
+        locus_mafs: list[float],
         locus_recombination: list[float],
-        locus_mutation:      list[float]
+        locus_mutation: list[float]
     ) -> _SimulationBuilder: ...
 
     def phenome(
         self,
-        n_phenotypes:      int,
-        names:             list[str],
-        loci:              list[int],
-        h2_genetic:        list[float],
-        h2_environmental:  list[float],
-        h2_vertical:       list[float],
-        genetic_cor:       list[float],
+        n_phenotypes: int,
+        names: list[str],
+        loci: list[int],
+        h2_genetic: list[float],
+        h2_environmental: list[float],
+        h2_vertical: list[float],
+        genetic_cor: list[float],
         environmental_cor: list[float]
     ) -> _SimulationBuilder: ...
 
     def mating(
         self,
-        mating_type:  MatingType,
+        mating_type: MatingType,
         n_iterations: int | None,
-        temp_init:    float | None,
-        temp_decay:   float | None,
-        mate_cor:     list[float]
+        temp_init: float | None,
+        temp_decay: float | None,
+        mate_cor: list[float]
     ) -> _SimulationBuilder: ...
 
-    def metric(
+    def metrics(
         self,
         metrics: list[_Metric]
     ) -> _SimulationBuilder: ...
