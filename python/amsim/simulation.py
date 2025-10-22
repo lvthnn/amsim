@@ -17,7 +17,7 @@ def _run_single_simulation(args: tuple[dict, int]):
 
     from amsim import SimulationBuilder
 
-    output_rep = Path(params['simulation']['output_dir']) / f'rep_{rep_id:03d}'
+    output_rep = Path(params['simulation']['output_dir']) / f'rep_{(rep_id + 1):03d}'
     output_rep.mkdir(parents=True, exist_ok=True)
 
     builder = SimulationBuilder()
@@ -196,16 +196,10 @@ class SimulationBuilder:
         return self
 
     def metrics(self, metric_specs: list[MetricSpec]) -> Self:
-        # implement pickling support for metrics so we can pass the metrics
-        # like so
-        self._params['metrics'] = {
-            'metric_specs': metric_specs 
-        }
+        self._params['metrics'] = { 'metric_specs': metric_specs }
         metrics = build_metrics(metric_specs)
         self._builder.metrics(metrics=metrics)
         return self
 
     def build(self) -> Simulation:
-        # build should 
-        simulation: _Simulation = self._builder.build()
-        return Simulation(self._params, simulation)
+        return Simulation(self._params, self._builder.build())
