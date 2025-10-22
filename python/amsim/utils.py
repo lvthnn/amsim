@@ -1,8 +1,10 @@
-from typing import Union, List
+from typing import TypeVar
 
 import numpy as np
 
-def broadcast_values(value: Union[float, List[float]], n_elems: int) -> List[float]:
+T = TypeVar('T', int, float)
+
+def broadcast_values(values: T | list[T], n_elems: int) -> list[T]:
     """
     Broadcast a single value or validate list length
 
@@ -18,16 +20,14 @@ def broadcast_values(value: Union[float, List[float]], n_elems: int) -> List[flo
     list of float
         List of length `n_elems`
     """
-    if isinstance(value, (int, float)):
-        return [float(value)] * n_elems
-    elif isinstance(value, list):
-        if len(value) != n_elems:
-            raise ValueError(f'expected {n_elems} values; got {len(value)}')
-        return value 
+    if isinstance(values, list):
+        if len(values) != n_elems:
+            raise ValueError(f'expected {n_elems} values; got {len(values)}')
+        return values 
     else:
-        raise TypeError(f'expected float or list, got {type(value)}')
+        return [values] * n_elems
 
-def column_major(matrix: Union[List[List[float]], np.ndarray]) -> List[float]:
+def column_major(matrix: list[list[T]] | np.ndarray) -> list[T]:
     """
     Convert a row-major order matrix to column-major
 
@@ -41,10 +41,10 @@ def column_major(matrix: Union[List[List[float]], np.ndarray]) -> List[float]:
     list of float
         Flattened matrix in column-major (FORTRAN) order
     """
-    arr = np.asarray(matrix, dtype=float)
+    arr = np.asarray(matrix)
     return arr.flatten(order='F').tolist()
 
-def check_cor(matrix: Union[List[List[float]], np.ndarray]) -> bool:
+def check_cor(matrix: list[list[T]] | np.ndarray) -> bool:
     """
     Check whether a matrix is a valid correlation matrix
 
@@ -54,4 +54,7 @@ def check_cor(matrix: Union[List[List[float]], np.ndarray]) -> bool:
         2D matrix in row-major order to check
     """
     eigenvalues = np.linalg.eigvalsh(matrix)
-    return np.all(eigenvalues >= 0).item()
+    matrix_np = np.asarray(matrix)
+    val = np.all(matrix_np >= 0).item() and np.all(matrix_np <= 1).item()
+    psd = np.all(eigenvalues >= 0).item()
+    return val and psd
