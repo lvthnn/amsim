@@ -54,32 +54,32 @@ namespace amsim {
       }()),
       model_(phenotypes_, mate_cor, n_itr, n_ind / 2, rng_, tmp_init, tmp_decay),
 		  metrics_(std::move(metrics)),
-      ctx(genome_, arch_, buf_, phenotypes_, model_) {
-    streams_.resize(metrics_.size());
-    if (!std::filesystem::exists(out_dir))
-      std::filesystem::create_directory(out_dir);
-    for (std::size_t metric = 0; metric < metrics_.size(); metric++) {
-      auto stream = std::make_unique<std::ofstream>(out_dir / (metrics_[metric].name + ".tsv"));
-      if (!stream->is_open())
-        throw std::runtime_error("could not open metric stream");
-      streams_.push_back(std::move(stream));
-    }
-  };
+      ctx(genome_, arch_, buf_, phenotypes_, model_) { };
 
   void Simulation::stream_(std::size_t gen) {
-    for (std::size_t metric = 0; metric < metrics_.size(); metric++) {
-      if (!streams_[metric]) streams_.resize(metrics_.size());
-      if (!streams_[metric] || !streams_[metric]->is_open()) {
-        streams_[metric] = std::make_unique<std::ofstream>(
-          out_dir / (metrics_[metric].name + ".tsv")
-        );
-        if (!streams_[metric]->is_open()) {
-          throw std::runtime_error("Could not open metric file: " + metrics_[metric].name);
-        }
-        *streams_[metric] << metrics_[metric].header() << "\n";
+    if (gen == 0) {
+      streams_.reserve(metrics_.size());
+
+      for (std::size_t metric = 0; metric < metrics_.size(); ++metric) {
+        auto stream = std::make_unique<std::ofstream>(
+            out_dir / (metrics_[metric].name + ".tsv"));
+        if (!stream->is_open())
+          throw std::runtime_error("could not open metric stream: " + metrics_[metric].name);
+        *stream << metrics_[metric].header() << "\n";
+        streams_.emplace_back(std::move(stream));
       }
-      *streams_[metric] << std::to_string(gen + 1) << "\t";
-      *streams_[metric] << metrics_[metric].stream(ctx) << "\n";
+    }
+    for (std::size_t metric = 0; metric < metrics_.size(); ++metric) {
+    if (!streams_[metric] || !streams_[metric]->is_open()) {
+      streams_[metric] = std::make_unique<std::ofstream>(
+          out_dir / (metrics_[metric].name + ".tsv"));
+      if (!streams_[metric]->is_open())
+        throw std::runtime_error("could not open metric file: " + metrics_[metric].name);
+      *streams_[metric] << metrics_[metric].header() << "\n";
+    }
+
+    *streams_[metric] << (gen + 1) << "\t"
+                      << metrics_[metric].stream(ctx) << "\n";
     }
   }
 
