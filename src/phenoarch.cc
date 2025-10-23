@@ -68,18 +68,18 @@ namespace amsim {
   }
 
   void PhenoArch::print_correlations(const std::vector<std::size_t>& intersect) const {
-    std::cout << "Phenotype correlations:\n";
-    std::cout << std::fixed << std::setprecision(4);
+    std::cerr << "Phenotype correlations:\n";
+    std::cerr << std::fixed << std::setprecision(4);
 
     std::size_t id = 0;
     for (std::size_t i = 0; i < n_pheno_; i++) {
       for (std::size_t j = i + 1; j < n_pheno_; j++) {
         const double actual_cor = intersect[id] / std::sqrt(n_loc_[i] * n_loc_[j]);
-        std::cout << "  Pheno " << i << " vs " << j << ": " << actual_cor << "\n";
+        std::cerr << "  Pheno " << i << " vs " << j << ": " << actual_cor << "\n";
         id++;
       }
     }
-    std::cout << "\n";
+    std::cerr << "\n";
   }
 
   std::vector<std::uint64_t> PhenoArch::init_mask_() {

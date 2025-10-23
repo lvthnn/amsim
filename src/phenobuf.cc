@@ -2,7 +2,6 @@
 #include <vector>
 #include <algorithm>
 #include <optional>
-#include <iostream>
 
 #ifdef __APPLE__
   #include <Accelerate/Accelerate.h>
@@ -39,7 +38,6 @@ namespace amsim {
       const std::size_t n_sex   = n_ind_ / 2;
       const int         lda_buf = 2 * n_sex;
 
-      std::cerr << "is this slow?\n";
       // compute latent score for each component
       for (ComponentType type : { ComponentType::GENETIC, ComponentType::ENVIRONMENTAL,
                                   ComponentType::VERTICAL, ComponentType::TOTAL }) {
@@ -57,6 +55,5 @@ namespace amsim {
                     1.0, buf_female, lda_buf, VT.data(), n_pheno_,
                     0.0, buf_lat + n_sex, n_ind_);
       }
-      std::cerr << "done!\n";
   }
 }

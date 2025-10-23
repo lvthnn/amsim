@@ -188,10 +188,6 @@ namespace amsim {
     // assemble the initial state
     for (std::size_t rank = 0; rank < n_sex_; ++rank)
       state[idx_male[rank]] = idx_female[rank];
-
-    std::cerr << "matching before:\n";
-    arrange_();
-    display_cor();
   }
 
   std::vector<std::size_t> AssortativeModel::match() {
