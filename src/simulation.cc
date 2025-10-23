@@ -54,7 +54,10 @@ namespace amsim {
       }()),
       model_(phenotypes_, mate_cor, n_itr, n_ind / 2, rng_, tmp_init, tmp_decay),
 		  metrics_(std::move(metrics)),
-      ctx(genome_, arch_, buf_, phenotypes_, model_) { };
+      ctx(genome_, arch_, buf_, phenotypes_, model_) {
+    if (!std::filesystem::exists(out_dir))
+      std::filesystem::create_directory(out_dir);
+  };
 
   void Simulation::stream_(std::size_t gen) {
     if (gen == 0) {
@@ -63,12 +66,15 @@ namespace amsim {
       for (std::size_t metric = 0; metric < metrics_.size(); ++metric) {
         auto stream = std::make_unique<std::ofstream>(
             out_dir / (metrics_[metric].name + ".tsv"));
-        if (!stream->is_open())
+        if (!stream->is_open()) {
           throw std::runtime_error("could not open metric stream: " + metrics_[metric].name);
+          std::cout << out_dir / (metrics_[metric].name + ".tsv") << "\n";
+        }
         *stream << metrics_[metric].header() << "\n";
         streams_.emplace_back(std::move(stream));
       }
     }
+
     for (std::size_t metric = 0; metric < metrics_.size(); ++metric) {
     if (!streams_[metric] || !streams_[metric]->is_open()) {
       streams_[metric] = std::make_unique<std::ofstream>(
@@ -85,7 +91,6 @@ namespace amsim {
 
 
   void Simulation::run() {
-    std::cerr << "starting sim\n";
     ctx.genome.generate_haplotypes();
     ctx.genome.compute_mafs();
     ctx.genome.compute_stats();
@@ -101,18 +106,12 @@ namespace amsim {
         pheno.compute_stats();
       }
 
-      std::cerr << "latent scoring\n";
       if (ctx.buf.has_lat())
         ctx.buf.score_latent(ctx.model.cor_U, ctx.model.cor_VT);
-      std::cerr << "done\n";
 
       ctx.model.init_state();
       ctx.model.update(ctx.phenotypes);
       std::vector<std::size_t> opt_matching = ctx.model.match();
-
-      std::cerr << "matching after:\n";
-      std::cerr << std::setprecision(8);
-      ctx.model.display_cor();
 
       stream_(gen);
 
@@ -120,6 +119,5 @@ namespace amsim {
       ctx.genome.update(opt_matching);
       ctx.genome.transpose();
     }
-    std::cerr << "All generations complete\n";
   }
 }
