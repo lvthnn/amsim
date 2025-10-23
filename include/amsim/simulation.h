@@ -58,12 +58,12 @@ namespace amsim {
         model_(std::move(other.model_)),
         metrics_(std::move(other.metrics_)),
         streams_(std::move(other.streams_)),
-        ctx(genome_, arch_, buf_, phenotypes_, model_)  // Rebind to new members!
+        ctx(genome_, arch_, buf_, phenotypes_, model_)
     {}
 
     Simulation(const Simulation&) = delete;
     Simulation& operator=(const Simulation&) = delete;
-    Simulation& operator=(Simulation&&) = delete;  // Can't assign due to const members
+    Simulation& operator=(Simulation&&) = delete;
 
     const std::size_t n_gen;
     const std::filesystem::path out_dir;
