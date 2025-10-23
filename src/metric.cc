@@ -53,7 +53,6 @@ namespace amsim {
     }
 
     namespace phenome {
-      // rework this metric to use statistics header
       MetricFunc f_comp_cor(ComponentType type) {
         return [type](const SimulationContext &ctx) -> std::vector<double> {
           const std::size_t n_pheno = ctx.n_pheno;
@@ -248,43 +247,41 @@ namespace amsim {
 
     }
 
-
-
     Metric pheno_h2(const std::size_t n_pheno) {
-      return make_metric(phenome::f_pheno_h2, "h2", n_pheno);
+      return make_metric(phenome::f_pheno_h2, "pheno_h2", n_pheno);
     }
 
-    Metric comp_mean(const std::size_t n_pheno, ComponentType type) {
-      std::string name = to_string(type) + "_mean";
+    Metric pheno_comp_mean(const std::size_t n_pheno, ComponentType type) {
+      std::string name = "pheno_" + to_string(type) + "_mean";
       return make_metric(phenome::f_comp_mean(type), name, n_pheno, 1);
     }
 
-    Metric comp_var(const std::size_t n_pheno, ComponentType type) {
-      std::string name = to_string(type) + "_var";
+    Metric pheno_comp_var(const std::size_t n_pheno, ComponentType type) {
+      std::string name = "pheno_" + to_string(type) + "_var";
       return make_metric(phenome::f_comp_var(type), name, n_pheno, 1);
     }
 
-    Metric comp_cor(const std::size_t n_pheno, ComponentType type) {
-      std::string name = to_string(type) + "_cor";
+    Metric pheno_comp_cor(const std::size_t n_pheno, ComponentType type) {
+      std::string name = "pheno_" + to_string(type) + "_cor";
       return make_metric(phenome::f_comp_cor(type), name, n_pheno, n_pheno);
     }
 
-    Metric comp_xcor(const std::size_t n_pheno, ComponentType type) {
+    Metric pheno_comp_xcor(const std::size_t n_pheno, ComponentType type) {
       std::string name = to_string(type) + "_xcor";
       return make_metric(phenome::f_comp_xcor(type), name, n_pheno, n_pheno);
     }
 
-    Metric latent_h2(const std::size_t n_pheno) {
-      return make_metric(phenome::f_latent_h2, "latent_h2", 2, n_pheno, true);
+    Metric pheno_latent_h2(const std::size_t n_pheno) {
+      return make_metric(phenome::f_latent_h2, "pheno_latent_h2", 2, n_pheno, true);
     }
 
-    Metric latent_comp_cor(const std::size_t n_pheno, ComponentType type) {
-      std::string name = "latent_" + to_string(type) + "_cor";
+    Metric pheno_latent_comp_cor(const std::size_t n_pheno, ComponentType type) {
+      std::string name = "pheno_latent_" + to_string(type) + "_cor";
       return make_metric(phenome::f_comp_cor(type), name, n_pheno, n_pheno, true);
     }
 
-    Metric latent_comp_xcor(const std::size_t n_pheno, ComponentType type) {
-      std::string name = "latent_" + to_string(type) + "_xcor";
+    Metric pheno_latent_comp_xcor(const std::size_t n_pheno, ComponentType type) {
+      std::string name = "pheno_latent_" + to_string(type) + "_xcor";
       return make_metric(phenome::f_comp_xcor(type), name, n_pheno, n_pheno, true);
     }
   }
