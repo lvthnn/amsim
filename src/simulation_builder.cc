@@ -102,8 +102,9 @@ namespace amsim {
   }
 
   SimulationBuilder& SimulationBuilder::metrics(std::vector<Metric> metrics) {
-    metrics_        = std::move(metrics);
-    require_lat_ = std::any_of(metrics_.begin(), metrics_.end(), [](const Metric& m) { return m.require_lat; });
+    metrics_     = std::move(metrics);
+    require_lat_ = std::any_of(metrics_.begin(), metrics_.end(),
+                               [](const Metric& m) { return m.require_lat; });
     return *this;
   }
 
@@ -113,9 +114,9 @@ namespace amsim {
                    "before building simulation.\n";
 		Simulation simulation(n_gen_, n_ind_, out_dir_, rng_seed_,
 													n_loc_, v_maf_, v_rec_, v_mut_,
-													n_pheno_, v_name_, v_n_loc_, v_h2_gen_, v_h2_env_, v_h2_vert_, gen_cor_, env_cor_,
-													mate_cor_, n_itr_, tmp_init_, tmp_decay_,
-													metrics_, require_lat_);
+													n_pheno_, v_name_, v_n_loc_, v_h2_gen_, v_h2_env_,
+                          v_h2_vert_, gen_cor_, env_cor_, mate_cor_, n_itr_,
+                          tmp_init_, tmp_decay_, metrics_, require_lat_);
     return simulation;
   }
 }
