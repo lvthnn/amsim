@@ -83,7 +83,7 @@ class SimulationResults:
             )
 
             df = (
-                df.drop(columns="variable")
+                df.drop(columns='variable')
                   .pivot(index = ['it', 'name'], columns='stat', values='value')
             )[['mean', 'median', 'std', 'sem', 'q025', 'q975', 'lci', 'uci']]
 

@@ -67,11 +67,9 @@ namespace amsim::stats {
                    double *Y, const int incY,
                    std::optional<double> centre_val,
                    std::optional<double> scale_val) {
-    // First centre
     double c = centre_val.value_or(mean(N, X, incX));
     centre(N, X, incX, Y, incY, c);
 
-    // Then scale in-place
     double s = scale_val.value_or(std::sqrt(var(N, Y, incY, true)));
     if (s > 0.0) {
       cblas_dscal(N, 1.0 / s, Y, incY);
