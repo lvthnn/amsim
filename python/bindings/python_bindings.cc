@@ -23,7 +23,8 @@ PYBIND11_MODULE(_core, m) {
     .export_values();
 
   // metrics used by builder
-  py::class_<amsim::Metric>(m, "_Metric");
+  py::class_<amsim::Metric>(m, "_Metric")
+    .def_readonly("name", &amsim::Metric::name);
 
   m.def("_loc_maf", &amsim::metrics::loc_maf,
         py::arg("n_loci"),
@@ -41,36 +42,36 @@ PYBIND11_MODULE(_core, m) {
         py::arg("n_phenotypes"),
         "Create heritability metric"); 
 
-  m.def("_pheno_comp_mean", &amsim::metrics::comp_mean,
+  m.def("_pheno_comp_mean", &amsim::metrics::pheno_comp_mean,
         py::arg("n_phenotypes"),
         py::arg("component_type"),
         "Create component mean metric");
 
-  m.def("_pheno_comp_var", &amsim::metrics::comp_var,
+  m.def("_pheno_comp_var", &amsim::metrics::pheno_comp_var,
         py::arg("n_phenotypes"),
         py::arg("component_type"),
         "Create component variance metric");
 
-  m.def("_pheno_comp_cor", &amsim::metrics::comp_cor,
+  m.def("_pheno_comp_cor", &amsim::metrics::pheno_comp_cor,
         py::arg("n_phenotypes"),
         py::arg("component_type"),
         "Create component correlation matrix metric");
 
-  m.def("_pheno_comp_xcor", &amsim::metrics::comp_xcor,
+  m.def("_pheno_comp_xcor", &amsim::metrics::pheno_comp_xcor,
         py::arg("n_phenotypes"),
         py::arg("component_type"),
         "Create between-mate component correlation matrix metric");
 
-  m.def("_pheno_latent_h2", &amsim::metrics::latent_h2,
+  m.def("_pheno_latent_h2", &amsim::metrics::pheno_latent_h2,
         py::arg("n_phenotypes"),
         "Create latent phenotype heritability metric");
 
-  m.def("_pheno_latent_comp_cor", &amsim::metrics::latent_comp_cor,
+  m.def("_pheno_latent_comp_cor", &amsim::metrics::pheno_latent_comp_cor,
         py::arg("n_phenotypes"),
         py::arg("component_type"),
         "Create latent component correlation matrix metric");
 
-  m.def("_pheno_latent_comp_xcor", &amsim::metrics::latent_comp_xcor,
+  m.def("_pheno_latent_comp_xcor", &amsim::metrics::pheno_latent_comp_xcor,
         py::arg("n_phenotypes"),
         py::arg("component_type"),
         "Create between-mate latent component correlation matrix metric");
