@@ -3,6 +3,7 @@ from time import time_ns
 from pathlib import Path
 from typing import Self
 from multiprocessing import Pool
+from configparser import ConfigParser
 
 import numpy as np
 
@@ -26,7 +27,7 @@ def _run_single_simulation(args: tuple[dict, int]):
         n_generations=params['simulation']['n_generations'],
         n_individuals=params['simulation']['n_individuals'],
         output_dir=output_rep,
-        random_seed=params['simulation']['random_seed']
+        random_seed=None
     ).genome(
         n_loci=params['genome']['n_loci'],
         locus_mafs=params['genome']['locus_mafs'],
@@ -53,22 +54,34 @@ def _run_single_simulation(args: tuple[dict, int]):
 
     simulation = builder.build()
     simulation.run()
+
     return output_rep
 
 
 class Simulation:
-    def __init__(self, params: dict, simulation: _Simulation):
+    def __init__(self, params: dict, simulation: _Simulation) -> None:
         self._params = params
         self._simulation = simulation
         self._results = None
 
-    def run(self, n_replicates: int = 1, n_threads: int = 1):
+    def run(self, n_replicates: int = 1, n_threads: int = 1) -> None:
+        params = self._params.copy()
+        params['metrics'] = {
+            spec._name: spec._args for spec in params['metrics']['metric_specs']
+        }
+        config = ConfigParser()
+        config_path = Path(f'{params['simulation']['output_dir']}/params.cfg')
+        config.read_dict(params)
+
+        with open(config_path, 'w') as config_file:
+            config.write(config_file)
+        
         if n_replicates == 1:
             self._simulation.run()
         else:
             self._run_replicates(n_replicates, n_threads)
 
-    def _run_replicates(self, n_replicates: int, n_threads: int):
+    def _run_replicates(self, n_replicates: int, n_threads: int) -> None:
         output_dirs = []
         args = [(self._params, rep) for rep in range(n_replicates)]
 
@@ -79,7 +92,7 @@ class Simulation:
 
 
 class SimulationBuilder:
-    def __init__(self):
+    def __init__(self) -> None:
         self._params = dict()
         self._builder = _SimulationBuilder()
 
@@ -111,7 +124,6 @@ class SimulationBuilder:
             output_dir=output_dir,
             random_seed=random_seed
         )
-
         return self
 
     def genome(
