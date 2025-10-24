@@ -18,6 +18,7 @@ add_library(amsimcpp STATIC
   src/phenoarch.cc
   src/haplobuf.cc
   src/metric.cc
+  src/metricspec.cc
   src/simulation.cc
   src/simulation_builder.cc
   src/stats.cc
