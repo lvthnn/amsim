@@ -23,58 +23,45 @@ PYBIND11_MODULE(_core, m) {
     .export_values();
 
   // metrics used by builder
-  py::class_<amsim::Metric>(m, "_Metric")
-    .def_readonly("name", &amsim::Metric::name);
+  py::class_<amsim::MetricSpec>(m, "_MetricSpec");
 
-  m.def("_loc_maf", &amsim::metrics::loc_maf,
-        py::arg("n_loci"),
-        "Create locus MAF metric");
-
-  m.def("_loc_mean", &amsim::metrics::loc_mean,
-        py::arg("n_loci"),
-        "Create locus mean metric");
-
-  m.def("_loc_var", &amsim::metrics::loc_var,
-        py::arg("n_loci"),
-        "Create locus variance metric");
-
-  m.def("_pheno_h2", &amsim::metrics::pheno_h2,
-        py::arg("n_phenotypes"),
-        "Create heritability metric"); 
-
-  m.def("_pheno_comp_mean", &amsim::metrics::pheno_comp_mean,
-        py::arg("n_phenotypes"),
+  m.def("_pheno_h2", &amsim::pheno_h2,
+        "Create phenotype heritability metric");
+  
+  m.def("_pheno_comp_cor", &amsim::pheno_comp_cor,
         py::arg("component_type"),
-        "Create component mean metric");
+        "Create phenotype component correlation matrix metric");
 
-  m.def("_pheno_comp_var", &amsim::metrics::pheno_comp_var,
-        py::arg("n_phenotypes"),
+  m.def("_pheno_comp_xcor", &amsim::pheno_comp_xcor,
         py::arg("component_type"),
-        "Create component variance metric");
+        "Create phenotype component mate correlation matrix metric");
 
-  m.def("_pheno_comp_cor", &amsim::metrics::pheno_comp_cor,
-        py::arg("n_phenotypes"),
+  m.def("_pheno_comp_mean", &amsim::pheno_comp_mean,
         py::arg("component_type"),
-        "Create component correlation matrix metric");
+        "Create phenotype component mean metric");
 
-  m.def("_pheno_comp_xcor", &amsim::metrics::pheno_comp_xcor,
-        py::arg("n_phenotypes"),
+  m.def("_pheno_comp_var", &amsim::pheno_comp_mean,
         py::arg("component_type"),
-        "Create between-mate component correlation matrix metric");
+        "Create phenotype component variance metric");
 
-  m.def("_pheno_latent_h2", &amsim::metrics::pheno_latent_h2,
-        py::arg("n_phenotypes"),
+  m.def("_pheno_latent_h2", &amsim::pheno_latent_h2,
         "Create latent phenotype heritability metric");
 
-  m.def("_pheno_latent_comp_cor", &amsim::metrics::pheno_latent_comp_cor,
-        py::arg("n_phenotypes"),
+  m.def("_pheno_latent_comp_cor", &amsim::pheno_latent_comp_cor,
         py::arg("component_type"),
-        "Create latent component correlation matrix metric");
+        "Create latent phenotype component correlation matrix metric");
 
-  m.def("_pheno_latent_comp_xcor", &amsim::metrics::pheno_latent_comp_xcor,
-        py::arg("n_phenotypes"),
+  m.def("_pheno_latent_comp_xcor", &amsim::pheno_latent_comp_xcor,
         py::arg("component_type"),
-        "Create between-mate latent component correlation matrix metric");
+        "Create latent phenotype component mate correlation matrix metric");
+
+  m.def("_pheno_latent_comp_mean", &amsim::pheno_latent_comp_mean,
+        py::arg("component_type"),
+        "Create latent phenotype component mean metric");
+
+  m.def("_pheno_latent_comp_var", &amsim::pheno_latent_comp_var,
+        py::arg("component_type"),
+        "Create latent phenotype component variance metric");
 
   // simulation builder and simulation classes
   py::class_<amsim::SimulationBuilder>(m, "_SimulationBuilder")
@@ -138,7 +125,26 @@ PYBIND11_MODULE(_core, m) {
          py::arg("h2_vertical"),
          py::arg("genetic_cor"),
          py::arg("environmental_cor"),
-         py::return_value_policy::reference_internal)
+         py::return_value_policy::reference_internal,
+         R"doc(
+             Configure phenome parameters
+
+             Parameters
+             ----------
+             n_phenotypes : int
+                 Number of phenotypes to simulate
+             names : list of str
+                 Names of phenotypes to simulate
+             loci : list of int
+                 Number of loci per phenotype 
+             h2_genetic : list of float
+                 Variances (heritability) of genetic components
+             h2_environmental : list of float
+                 Variances of environmental components
+             h2_vertical : list of float
+                 Variances of vertical components
+             genetic_cor : list of list of float
+         )doc")
     .def("mating", &amsim::SimulationBuilder::mating,
          py::arg("mating_type"),
          py::arg("n_iterations"),
@@ -147,7 +153,7 @@ PYBIND11_MODULE(_core, m) {
          py::arg("mate_cor"),
          py::return_value_policy::reference_internal)
     .def("metrics", &amsim::SimulationBuilder::metrics,
-         py::arg("metrics"),
+         py::arg("metric_specs"),
          py::return_value_policy::reference_internal)
     .def("build", &amsim::SimulationBuilder::build);
 
