@@ -42,7 +42,7 @@ class SimulationResults:
     def _summarise(self) -> None:
         self._summarised: dict[str, pd.DataFrame] = {}
         for name, data in self._results.items():
-            exclude = ['rep', 'it']
+            exclude = ['rep', 'gen']
             cols = data.columns.difference(exclude)
 
             def q025(x):
@@ -65,7 +65,7 @@ class SimulationResults:
 
             df = (
                 data
-                .groupby(['it'])[cols]
+                .groupby(['gen'])[cols]
                 .agg(['mean', 'median', 'std', 'sem', q025, q975, lci, uci])
                 .reset_index()
             )
@@ -73,7 +73,7 @@ class SimulationResults:
             df.columns = ['_'.join(col).strip('_') for col in df.columns]
 
             df = df.melt(
-                id_vars='it',
+                id_vars='gen',
                 var_name='variable',
                 value_name='value'
             )
@@ -84,7 +84,8 @@ class SimulationResults:
 
             df = (
                 df.drop(columns='variable')
-                  .pivot(index = ['it', 'name'], columns='stat', values='value')
+                  .pivot(index = ['gen', 'name'], columns='stat', values='value')
+                  .sort_values(['name', 'gen'])
             )[['mean', 'median', 'std', 'sem', 'q025', 'q975', 'lci', 'uci']]
 
             self._results[name] = df
