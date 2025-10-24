@@ -14,23 +14,19 @@
 namespace amsim {
   Metric::Metric(MetricFunc f, const std::string &name,
                  const std::size_t n_rows, const std::size_t n_cols,
-                 const bool require_lat,
-                 std::optional<std::vector<std::string>> names)
+                 std::vector<std::string> labels, const bool require_lat)
     : name(name),
       n_rows(n_rows),
       n_cols(n_cols),
-      named((names)),
-      names((named) ? std::move(*names) : std::vector<std::string>{}),
       require_lat(require_lat),
-      f_(std::move(f)) {
-    buf_.resize(n_rows * n_cols);
-  }
+      f_(std::move(f)),
+      buf_(n_rows * n_cols),
+      labels_(std::move(labels)) { }
 
   std::string Metric::header() {
-    std::string header = "it\t";
+    std::string header = "gen\t";
     for (std::size_t el = 0; el < buf_.size(); el++) {
-      std::string el_name = named ? names[el] : std::to_string(el);
-      header += name + "::" + el_name;
+      header += (!labels_.empty()) ? labels_[el] : std::to_string(el);
       if (el < buf_.size() - 1) header += "\t";
     }
     return header;
@@ -47,19 +43,31 @@ namespace amsim {
   namespace metrics {
     Metric make_metric(MetricFunc f, const std::string &name,
                        const std::size_t n_rows, const std::size_t n_cols,
-                       const bool require_lat,
-                       std::optional<std::vector<std::string>> el_names) {
-      return Metric{std::move(f), name, n_rows, n_cols, require_lat, el_names};
+                       const std::vector<std::string> labels,
+                       const bool require_lat) {
+      return Metric{std::move(f), name, n_rows, n_cols, labels, require_lat};
     }
 
     namespace phenome {
+      std::vector<double> f_pheno_h2(const SimulationContext &ctx) {
+        const std::size_t n_pheno = ctx.n_pheno;
+        std::vector<double> pheno_h2(n_pheno);
+
+        for (std::size_t pheno = 0; pheno < n_pheno; pheno++) {
+          const Phenotype& pheno_cur = ctx.phenotypes[pheno];
+          pheno_h2[pheno] = pheno_cur.comp_var(ComponentType::GENETIC) /
+                            pheno_cur.comp_var(ComponentType::TOTAL);
+        }
+
+        return pheno_h2;
+      }
+
       MetricFunc f_comp_cor(ComponentType type) {
         return [type](const SimulationContext &ctx) -> std::vector<double> {
           const std::size_t n_pheno = ctx.n_pheno;
           const std::size_t n_ind   = ctx.n_ind;
-          std::vector<double> cor_buf(n_pheno * n_pheno);
-          std::vector<double> std_buf(n_pheno * n_ind);
-          const std::vector<double> ones(n_ind, 1.0);
+          std::vector<double> cor_buf(n_pheno * n_pheno, 0.0);
+          std::vector<double> std_buf(n_pheno * n_ind, 0.0);
 
           for (std::size_t pheno = 0; pheno < n_pheno; pheno++) {
             if (ctx.phenotypes[pheno].comp_var(type) == 0)
@@ -138,20 +146,6 @@ namespace amsim {
         };
       }
 
-      // phenotype heritabilities
-      std::vector<double> f_pheno_h2(const SimulationContext &ctx) {
-        const std::size_t n_pheno = ctx.n_pheno;
-        std::vector<double> pheno_h2(n_pheno);
-
-        for (std::size_t pheno = 0; pheno < n_pheno; pheno++) {
-          const Phenotype& pheno_cur = ctx.phenotypes[pheno];
-          pheno_h2[pheno] = pheno_cur.comp_var(ComponentType::GENETIC) /
-                            pheno_cur.comp_var(ComponentType::TOTAL);
-        }
-
-        return pheno_h2;
-      }
-
       // latent phenotype heritability
       std::vector<double> f_latent_h2(const SimulationContext &ctx) {
         const std::size_t n_pheno = ctx.n_pheno;
@@ -185,7 +179,8 @@ namespace amsim {
 
           std::vector<double> cor_buf(n_pheno * n_pheno);
 
-          stats::cor(n_ind, n_pheno, latent_comp, n_ind, latent_comp, n_ind);
+          stats::cor(n_ind, n_pheno, latent_comp, n_ind, cor_buf.data(),
+                     n_pheno);
 
           return cor_buf;
         };
@@ -226,6 +221,24 @@ namespace amsim {
         };
       }
 
+      MetricFunc f_latent_comp_mean(ComponentType type) {
+        return [type](const SimulationContext &ctx) -> std::vector<double> {
+          const std::size_t n_pheno = ctx.n_pheno;
+          const std::size_t n_sex   = ctx.n_sex;
+          const std::size_t n_ind   = 2 * n_sex;
+          const double* latent_all = ctx.buf.latent(type);
+
+          std::vector<double> mean_buf(n_pheno);
+
+          for (std::size_t dim = 0; dim < n_pheno; ++dim) {
+            const double* latent_dim = latent_all + dim * n_ind;
+            mean_buf[dim] = stats::mean(n_ind, latent_dim, 1);
+          }
+
+          return mean_buf;
+        };
+      }
+
       // latent phenotype component variance
       MetricFunc f_latent_comp_var(ComponentType type) {
         return [type](const SimulationContext &ctx) -> std::vector<double> {
@@ -245,44 +258,6 @@ namespace amsim {
         };
       }
 
-    }
-
-    Metric pheno_h2(const std::size_t n_pheno) {
-      return make_metric(phenome::f_pheno_h2, "pheno_h2", n_pheno);
-    }
-
-    Metric pheno_comp_mean(const std::size_t n_pheno, ComponentType type) {
-      std::string name = "pheno_" + to_string(type) + "_mean";
-      return make_metric(phenome::f_comp_mean(type), name, n_pheno, 1);
-    }
-
-    Metric pheno_comp_var(const std::size_t n_pheno, ComponentType type) {
-      std::string name = "pheno_" + to_string(type) + "_var";
-      return make_metric(phenome::f_comp_var(type), name, n_pheno, 1);
-    }
-
-    Metric pheno_comp_cor(const std::size_t n_pheno, ComponentType type) {
-      std::string name = "pheno_" + to_string(type) + "_cor";
-      return make_metric(phenome::f_comp_cor(type), name, n_pheno, n_pheno);
-    }
-
-    Metric pheno_comp_xcor(const std::size_t n_pheno, ComponentType type) {
-      std::string name = to_string(type) + "_xcor";
-      return make_metric(phenome::f_comp_xcor(type), name, n_pheno, n_pheno);
-    }
-
-    Metric pheno_latent_h2(const std::size_t n_pheno) {
-      return make_metric(phenome::f_latent_h2, "pheno_latent_h2", 2, n_pheno, true);
-    }
-
-    Metric pheno_latent_comp_cor(const std::size_t n_pheno, ComponentType type) {
-      std::string name = "pheno_latent_" + to_string(type) + "_cor";
-      return make_metric(phenome::f_comp_cor(type), name, n_pheno, n_pheno, true);
-    }
-
-    Metric pheno_latent_comp_xcor(const std::size_t n_pheno, ComponentType type) {
-      std::string name = "pheno_latent_" + to_string(type) + "_xcor";
-      return make_metric(phenome::f_comp_xcor(type), name, n_pheno, n_pheno, true);
     }
   }
 }
