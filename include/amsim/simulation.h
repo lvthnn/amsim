@@ -11,8 +11,8 @@
 #include <amsim/phenoarch.h>
 #include <amsim/phenobuf.h>
 #include <amsim/mating.h>
-#include <amsim/metric.h>
-
+#include <amsim/metricspec.h>
+#include <amsim/mating.h>
 #include <amsim/simulation_status.h>
 
 namespace amsim {
@@ -43,7 +43,7 @@ namespace amsim {
 							 std::size_t              n_itr,
 							 double                   tmp_init,
 							 double                   tmp_decay,
-							 std::vector<Metric>      metrics,
+							 std::vector<MetricSpec>  specs,
 							 bool                     require_latent);
 
     Simulation(Simulation&& other) noexcept
@@ -56,9 +56,9 @@ namespace amsim {
         buf_(std::move(other.buf_)),
         phenotypes_(std::move(other.phenotypes_)),
         model_(std::move(other.model_)),
+        ctx_(genome_, arch_, buf_, phenotypes_, model_),
         metrics_(std::move(other.metrics_)),
-        streams_(std::move(other.streams_)),
-        ctx(genome_, arch_, buf_, phenotypes_, model_)
+        streams_(std::move(other.streams_))
     {}
 
     Simulation(const Simulation&) = delete;
@@ -78,13 +78,11 @@ namespace amsim {
     PhenoBuf            buf_;
     PhenotypeList       phenotypes_;
     AssortativeModel    model_;
+    SimulationContext   ctx_;
     std::vector<Metric> metrics_;
 
     std::vector<std::unique_ptr<std::ofstream>> streams_;
     void stream_(std::size_t gen);
-
-  public:
-    SimulationContext ctx;
   };
 
 }

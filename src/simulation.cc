@@ -3,34 +3,35 @@
 #include <iostream>
 
 #include <amsim/simulation.h>
+#include <amsim/metric.h>
 
 namespace amsim {
   Simulation::Simulation(// SIMULATION PARAMETERS
-                          std::size_t              n_gen,
-                          std::size_t              n_ind,
-                          std::filesystem::path    out_dir,
-                          std::uint64_t            rng_seed,
-                          // GENOME PARAMETERS
-                          std::size_t              n_loc,
-                          std::vector<double>      v_maf,
-                          std::vector<double>      v_rec,
-                          std::vector<double>      v_mut,
-                          // PHENOME PARAMETERS
-                          std::size_t              n_pheno,
-                          std::vector<std::string> v_name,
-                          std::vector<std::size_t> v_n_loc,
-                          std::vector<double>      v_h2_gen,
-                          std::vector<double>      v_h2_env,
-                          std::vector<double>      v_h2_vert,
-                          std::vector<double>      gen_cor,
-                          std::vector<double>      env_cor,
-                          // MATING MODEL PARAMETERS
-                          std::vector<double>      mate_cor,
-                          std::size_t              n_itr,
-                          double                   tmp_init,
-                          double                   tmp_decay,
-                          std::vector<Metric>      metrics,
-                          bool                     require_latent)
+                         std::size_t              n_gen,
+                         std::size_t              n_ind,
+                         std::filesystem::path    out_dir,
+                         std::uint64_t            rng_seed,
+                         // GENOME PARAMETERS
+                         std::size_t              n_loc,
+                         std::vector<double>      v_maf,
+                         std::vector<double>      v_rec,
+                         std::vector<double>      v_mut,
+                         // PHENOME PARAMETERS
+                         std::size_t              n_pheno,
+                         std::vector<std::string> v_name,
+                         std::vector<std::size_t> v_n_loc,
+                         std::vector<double>      v_h2_gen,
+                         std::vector<double>      v_h2_env,
+                         std::vector<double>      v_h2_vert,
+                         std::vector<double>      gen_cor,
+                         std::vector<double>      env_cor,
+                         // MATING MODEL PARAMETERS
+                         std::vector<double>      mate_cor,
+                         std::size_t              n_itr,
+                         double                   tmp_init,
+                         double                   tmp_decay,
+                         std::vector<MetricSpec>  specs,
+                         bool                     require_latent)
 		: n_gen(n_gen),
 			out_dir(out_dir),
 			status_(SimulationStatus::READY),
@@ -39,7 +40,7 @@ namespace amsim {
       arch_([&](){
         PhenoArch arch(n_pheno, n_loc, v_n_loc, v_h2_gen, v_h2_env,
                       gen_cor, env_cor, rng_);
-        arch.optim_arch(1e5);
+        arch.optim_arch(1e4);
         return arch;
       }()),
       buf_(n_ind, n_pheno, require_latent),
@@ -53,10 +54,17 @@ namespace amsim {
         return phenotypes;
       }()),
       model_(phenotypes_, mate_cor, n_itr, n_ind / 2, rng_, tmp_init, tmp_decay),
-		  metrics_(std::move(metrics)),
-      ctx(genome_, arch_, buf_, phenotypes_, model_) {
+      ctx_(genome_, arch_, buf_, phenotypes_, model_),
+      metrics_([&](){
+        std::vector<Metric> metrics;
+        metrics.reserve(specs.size());
+        for (const MetricSpec& spec : specs)
+          metrics.push_back(spec.setup(ctx_));
+        return metrics;
+      }()) {
     if (!std::filesystem::exists(out_dir))
       std::filesystem::create_directory(out_dir);
+    std::cerr << "done!\n";
   };
 
   void Simulation::stream_(std::size_t gen) {
@@ -76,48 +84,57 @@ namespace amsim {
     }
 
     for (std::size_t metric = 0; metric < metrics_.size(); ++metric) {
-    if (!streams_[metric] || !streams_[metric]->is_open()) {
-      streams_[metric] = std::make_unique<std::ofstream>(
-          out_dir / (metrics_[metric].name + ".tsv"));
-      if (!streams_[metric]->is_open())
-        throw std::runtime_error("could not open metric file: " + metrics_[metric].name);
-      *streams_[metric] << metrics_[metric].header() << "\n";
-    }
+      if (!streams_[metric] || !streams_[metric]->is_open()) {
+        streams_[metric] = std::make_unique<std::ofstream>(
+            out_dir / (metrics_[metric].name + ".tsv"));
+        if (!streams_[metric]->is_open())
+          throw std::runtime_error("could not open metric file: " +
+                                   metrics_[metric].name);
+        *streams_[metric] << metrics_[metric].header() << "\n";
+      }
 
-    *streams_[metric] << (gen + 1) << "\t"
-                      << metrics_[metric].stream(ctx) << "\n";
+      *streams_[metric] << (gen + 1) << "\t"
+                        << metrics_[metric].stream(ctx_) << "\n";
     }
   }
 
 
   void Simulation::run() {
-    ctx.genome.generate_haplotypes();
-    ctx.genome.compute_mafs();
-    ctx.genome.compute_stats();
+    std::cerr << "generating initial haplotypes\n";
+    ctx_.genome.generate_haplotypes();
+    ctx_.genome.compute_mafs();
+    ctx_.genome.compute_stats();
 
     for (std::size_t gen = 0; gen < n_gen; gen++) {
-      ctx.genome.compute_mafs();
-      ctx.genome.compute_stats();
+      std::cerr << "generation " << gen << "\n";
+      std::cerr << "computing mafs and stats\n";
+      ctx_.genome.compute_mafs();
+      ctx_.genome.compute_stats();
 
-      ctx.arch.gen_env(ctx.buf(ComponentType::ENVIRONMENTAL), ctx.n_ind);
+      std::cerr << "generating env\n";
+      ctx_.arch.gen_env(ctx_.buf(ComponentType::ENVIRONMENTAL), ctx_.n_ind);
 
-      for (Phenotype& pheno : ctx.phenotypes) {
-        pheno.score(ctx.genome);
+      std::cerr << "scoring phenotypes\n";
+      for (Phenotype& pheno : ctx_.phenotypes) {
+        pheno.score(ctx_.genome);
         pheno.compute_stats();
       }
 
-      if (ctx.buf.has_lat())
-        ctx.buf.score_latent(ctx.model.cor_U, ctx.model.cor_VT);
+      if (ctx_.buf.has_lat())
+        ctx_.buf.score_latent(ctx_.model.cor_U, ctx_.model.cor_VT);
 
-      ctx.model.init_state();
-      ctx.model.update(ctx.phenotypes);
-      std::vector<std::size_t> opt_matching = ctx.model.match();
+      std::cerr << "mating\n";
+      ctx_.model.init_state();
+      ctx_.model.update(ctx_.phenotypes);
+      std::vector<std::size_t> opt_matching = ctx_.model.match();
 
+      std::cerr << "streaming\n";
       stream_(gen);
 
-      ctx.genome.transpose();
-      ctx.genome.update(opt_matching);
-      ctx.genome.transpose();
+      std::cerr << "updating\n";
+      ctx_.genome.transpose();
+      ctx_.genome.update(opt_matching);
+      ctx_.genome.transpose();
     }
   }
 }

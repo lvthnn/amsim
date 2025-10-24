@@ -11,6 +11,7 @@
 #include <amsim/phenoarch.h>
 #include <amsim/mating.h>
 #include <amsim/metric.h>
+#include <amsim/metricspec.h>
 
 namespace amsim {
 
@@ -18,10 +19,13 @@ namespace amsim {
   public:
     SimulationBuilder();
 
-    SimulationBuilder& simulation(std::size_t n_gen, std::size_t n_ind,
-                                  std::string out_dir, std::uint64_t rng_seed);
+    SimulationBuilder& simulation(std::size_t n_gen,
+                                  std::size_t n_ind,
+                                  std::string out_dir,
+                                  std::uint64_t rng_seed);
 
-    SimulationBuilder& genome(std::size_t n_loc, std::vector<double> v_maf,
+    SimulationBuilder& genome(std::size_t n_loc,
+                              std::vector<double> v_maf,
                               std::vector<double> v_rec,
                               std::vector<double> v_mut);
 
@@ -34,12 +38,13 @@ namespace amsim {
                                std::vector<double> gen_cor,
                                std::vector<double> env_cor);
 
-    SimulationBuilder& mating(MatingType type, std::optional<std::size_t> n_itr,
+    SimulationBuilder& mating(MatingType type,
+                              std::optional<std::size_t> n_itr,
                               std::optional<double> tmp_init,
                               std::optional<double> tmp_decay,
                               std::optional<std::vector<double>> mate_cor);
 
-    SimulationBuilder& metrics(std::vector<Metric> metrics);
+    SimulationBuilder& metrics(std::vector<MetricSpec> metric_specs);
 
     Simulation build();
 
@@ -81,7 +86,7 @@ namespace amsim {
     //-----------------------------------------------------------------------//
 
     //-- METRIC PARMETERS ---------------------------------------------------//
-    std::vector<Metric>      metrics_;
+    std::vector<MetricSpec>  specs_;
     bool                     require_lat_ = false;
     //-----------------------------------------------------------------------//
   };

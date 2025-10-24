@@ -16,6 +16,7 @@
 #include <amsim/phenotype.h>
 #include <amsim/mating.h>
 #include <amsim/metric.h>
+#include <amsim/metricspec.h>
 
 namespace amsim {
   SimulationBuilder::SimulationBuilder()
@@ -101,10 +102,11 @@ namespace amsim {
     return *this;
   }
 
-  SimulationBuilder& SimulationBuilder::metrics(std::vector<Metric> metrics) {
-    metrics_     = std::move(metrics);
-    require_lat_ = std::any_of(metrics_.begin(), metrics_.end(),
-                               [](const Metric& m) { return m.require_lat; });
+  SimulationBuilder& SimulationBuilder::metrics(std::vector<MetricSpec> specs) {
+    specs_ = std::move(specs);
+    require_lat_ = std::any_of(specs_.begin(), specs_.end(),
+                               [](const MetricSpec &s){ return s.require_lat; });
+    status_++;
     return *this;
   }
 
@@ -116,7 +118,7 @@ namespace amsim {
 													n_loc_, v_maf_, v_rec_, v_mut_,
 													n_pheno_, v_name_, v_n_loc_, v_h2_gen_, v_h2_env_,
                           v_h2_vert_, gen_cor_, env_cor_, mate_cor_, n_itr_,
-                          tmp_init_, tmp_decay_, metrics_, require_lat_);
+                          tmp_init_, tmp_decay_, specs_, require_lat_);
     return simulation;
   }
 }

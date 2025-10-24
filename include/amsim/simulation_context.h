@@ -19,6 +19,13 @@ namespace amsim {
         n_sex(genome_.n_ind() / 2),
         n_loc(genome_.n_loc()),
         n_pheno(phenotypes_.size()),
+        pheno_names([&](){
+          std::vector<std::string> names;
+          names.resize(phenotypes_.size());
+          for (std::size_t pheno = 0; pheno < phenotypes_.size(); pheno++)
+            names[pheno] = phenotypes_[pheno].name();
+          return names;
+        }()),
         genome(genome_),
         arch(arch_),
         buf(buf_),
@@ -30,6 +37,7 @@ namespace amsim {
     const std::size_t n_sex;
     const std::size_t n_loc;
     const std::size_t n_pheno;
+    const std::vector<std::string> pheno_names;
 
     // deep level data
     Genome           &genome;
