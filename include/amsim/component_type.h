@@ -20,10 +20,10 @@ namespace amsim {
 
   inline std::string to_string(ComponentType type) {
     switch(type) {
-      case GENETIC:       return "gen";
-      case ENVIRONMENTAL: return "env";
-      case VERTICAL:      return "vert";
-      case TOTAL:         return "tot";
+      case ComponentType::GENETIC:       return "gen";
+      case ComponentType::ENVIRONMENTAL: return "env";
+      case ComponentType::VERTICAL:      return "vert";
+      case ComponentType::TOTAL:         return "tot";
     }
     __builtin_unreachable();
   }
