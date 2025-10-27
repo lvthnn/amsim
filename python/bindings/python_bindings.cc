@@ -40,7 +40,7 @@ PYBIND11_MODULE(_core, m) {
         py::arg("component_type"),
         "Create phenotype component mean metric");
 
-  m.def("_pheno_comp_var", &amsim::pheno_comp_mean,
+  m.def("_pheno_comp_var", &amsim::pheno_comp_var,
         py::arg("component_type"),
         "Create phenotype component variance metric");
 
