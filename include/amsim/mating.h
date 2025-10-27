@@ -7,14 +7,10 @@
 #include <random>
 
 #include <amsim/rng.h>
+#include <amsim/mating_type.h>
 #include <amsim/phenotype.h>
 
 namespace amsim {
-  enum class MatingType {
-    RANDOM,
-    ASSORTATIVE
-  };
-
   class MatingModel {
   public:
     explicit MatingModel(MatingType type, std::size_t n_sex)
@@ -76,4 +72,4 @@ namespace amsim {
     std::vector<std::size_t> state;
   };
 }
-#endif
+#endif // AMSIMCPP_MATING_H

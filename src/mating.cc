@@ -14,6 +14,7 @@
 
 #include <amsim/rng.h>
 #include <amsim/utils.h>
+#include <amsim/mating_type.h>
 #include <amsim/mating.h>
 
 namespace amsim {
