@@ -4,6 +4,7 @@
 #include <string>
 #include <functional>
 #include <optional>
+#include <iostream>
 
 #include <amsim/metric.h>
 #include <amsim/simulation_context.h>
@@ -19,8 +20,7 @@ namespace amsim {
       : require_lat(require_lat_),
         name_(std::move(name)),
         func_(std::move(func)),
-        setup_(std::move(setup)) {
-    }
+        setup_(std::move(setup)) { }
 
     inline Metric setup(SimulationContext& ctx) const { return setup_(ctx); };
     
