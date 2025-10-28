@@ -9,18 +9,18 @@ if __name__ == '__main__':
     # configure the simulation
     simulation = Simulation().simulation(
         n_generations=10,
-        n_individuals=256000,
+        n_individuals=32000,
         output_dir=result_dir,
         random_seed=12345671284124888
     ).genome(
-        n_loci=20000,
+        n_loci=8000,
         locus_mafs=0.5,
         locus_recombination=0.5,
         locus_mutation=1e-8
     ).phenome(
         n_phenotypes=5,
         names=['y1', 'y2', 'y3', 'y4', 'y5'],
-        loci=4000,
+        loci=2000,
         h2_genetic=0.5,
         h2_environmental=0.5,
         h2_vertical=0.0,
@@ -66,4 +66,4 @@ if __name__ == '__main__':
         ]
     )
 
-    simulation.run(n_replicates=10, n_threads=10)
+    simulation.run(n_replicates=10, n_workers=10)
