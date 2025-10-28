@@ -102,8 +102,6 @@ namespace amsim {
     // store component means and variances for fast computation
     std::array<double, 4> comp_means_;
     std::array<double, 4> comp_vars_;
-    std::array<double, 4> latent_comp_means_;
-    std::array<double, 4> latent_comp_vars_;
   };
 
   using PhenotypeList = std::vector<Phenotype>;
