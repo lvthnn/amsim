@@ -1,0 +1,18 @@
+Package: amsimr
+Title: Assortative mating simulations in R
+Version: 0.0.0.9000
+Authors@R: 
+    person("Kári", "Hlynsson", , "kari.hlynsson@gmail.com", role = c("aut", "cre"))
+Description: Simulate forward-time genomic and phenotypic population data under
+    assortative mating.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+LinkingTo: 
+    Rcpp
+Imports: 
+    Rcpp
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
