@@ -10,18 +10,18 @@ set(CMAKE_BUILD_TYPE Release) # for optimisation and speedup
 
 # Library targets
 add_library(amsimcpp STATIC
-  src/genome.cc
-  src/phenotype.cc
-  src/utils.cc
-  src/mating.cc
-  src/phenobuf.cc
-  src/phenoarch.cc
-  src/haplobuf.cc
-  src/metric.cc
-  src/metricspec.cc
-  src/simulation.cc
-  src/simulation_builder.cc
-  src/stats.cc
+  src/genome.cpp
+  src/phenotype.cpp
+  src/utils.cpp
+  src/mating.cpp
+  src/phenobuf.cpp
+  src/phenoarch.cpp
+  src/haplobuf.cpp
+  src/metric.cpp
+  src/metricspec.cpp
+  src/simulation.cpp
+  src/simulation_builder.cpp
+  src/stats.cpp
 )
 
 # Public headers for users of the lib
@@ -60,7 +60,7 @@ if (BUILD_PYTHON)
   set(PYBIND11_FINDPYTHON ON)
   find_package(pybind11 REQUIRED)
 
-  pybind11_add_module(_core python/bindings/python_bindings.cc)
+  pybind11_add_module(_core python/bindings/python_bindings.cpp)
   target_link_libraries(_core PRIVATE amsimcpp)
   target_include_directories(_core PRIVATE include)
 endif()
@@ -73,8 +73,8 @@ elseif (MSVC)
 endif()
 
 # Example programs
-add_executable(demo_simulation examples/demo_simulation.cc)
-add_executable(demo_stats      examples/demo_stats.cc)
+add_executable(demo_simulation examples/demo_simulation.cpp)
+add_executable(demo_stats      examples/demo_stats.cp)
 
 target_link_libraries(demo_simulation PRIVATE amsimcpp)
 target_link_libraries(demo_stats PRIVATE amsimcpp)

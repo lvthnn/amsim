@@ -20,8 +20,14 @@ int main() {
   amsim::utils::time_step("cor", [&]() { amsim::stats::cor(n_elem, yo.data(), 1, ones.data(), 1); });
 
   // test matrix correlation
-  std::vector<double> X{1, 2, 3, 1, 2, 3, 1, 2, 3};
-  std::vector<double> Y{1, 3, 2, 1, 3, 2, 1, 3, 2};
+  std::vector<double> X{1, 2, 3,
+                        1, 2, 3,
+                        1, 2, 3};
+
+  std::vector<double> Y{1, 3, 2,
+                        1, 3, 2,
+                        1, 3, 2};
+
 	std::vector<double> R(9);
 
 	amsim::utils::time_step("matrix cor", [&]() {
