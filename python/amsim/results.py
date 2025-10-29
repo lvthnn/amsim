@@ -88,4 +88,6 @@ class SimulationResults:
                   .sort_values(['name', 'gen'])
             )[['mean', 'median', 'std', 'sem', 'q025', 'q975', 'lci', 'uci']]
 
+            df.reset_index(inplace=True)
+
             self._results[name] = df
