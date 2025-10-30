@@ -45,3 +45,31 @@
     .Call(`_amsimr__builder_new`)
 }
 
+.builder_simulation <- function(sexp_builder, n_generations, n_individuals, output_dir, random_seed) {
+    invisible(.Call(`_amsimr__builder_simulation`, sexp_builder, n_generations, n_individuals, output_dir, random_seed))
+}
+
+.builder_genome <- function(sexp_builder, n_loci, locus_mafs, locus_recombination, locus_mutation) {
+    invisible(.Call(`_amsimr__builder_genome`, sexp_builder, n_loci, locus_mafs, locus_recombination, locus_mutation))
+}
+
+.builder_phenome <- function(sexp_builder, n_phenotypes, names, loci, h2_genetic, h2_environmental, h2_vertical, genetic_cor, environmental_cor) {
+    invisible(.Call(`_amsimr__builder_phenome`, sexp_builder, n_phenotypes, names, loci, h2_genetic, h2_environmental, h2_vertical, genetic_cor, environmental_cor))
+}
+
+.builder_mating <- function(sexp_builder, mating_type, n_iterations, temp_init, temp_decay, mate_cor) {
+    invisible(.Call(`_amsimr__builder_mating`, sexp_builder, mating_type, n_iterations, temp_init, temp_decay, mate_cor))
+}
+
+.builder_metrics <- function(sexp_builder, metrics) {
+    invisible(.Call(`_amsimr__builder_metrics`, sexp_builder, metrics))
+}
+
+.builder_build <- function(sexp_builder) {
+    .Call(`_amsimr__builder_build`, sexp_builder)
+}
+
+.simulation_run <- function(sexp_simulation) {
+    invisible(.Call(`_amsimr__simulation_run`, sexp_simulation))
+}
+
