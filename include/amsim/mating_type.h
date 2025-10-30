@@ -3,11 +3,8 @@
 
 namespace amsim {
 
-  enum class MatingType {
-    RANDOM,
-    ASSORTATIVE
-  };
+enum class MatingType { RANDOM, ASSORTATIVE };
 
 }
 
-#endif // AMSIMCPP_MATING_TYPE_H
+#endif  // AMSIMCPP_MATING_TYPE_H

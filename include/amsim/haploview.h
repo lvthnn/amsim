@@ -3,10 +3,7 @@
 
 namespace amsim {
 
-  enum class HaploView : bool {
-    LOC_MAJOR,
-    IND_MAJOR
-  };
+enum class HaploView : bool { LOC_MAJOR, IND_MAJOR };
 
 }
 
