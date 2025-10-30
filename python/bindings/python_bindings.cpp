@@ -71,6 +71,7 @@ PYBIND11_MODULE(_core, m) {
          py::arg("n_individuals"),
          py::arg("output_dir"),
          py::arg("random_seed"),
+         py::arg("rep_id"),
          py::return_value_policy::reference_internal,
          R"doc(
              Configure simulation parameters
@@ -85,6 +86,8 @@ PYBIND11_MODULE(_core, m) {
                 Directory for output files
              random_seed : int
                 Random seed for reproducibility
+             rep_id : int or None
+                Simulation replicate ID used to perturb random seed
 
              Returns
              -------
