@@ -74,7 +74,7 @@ endif()
 
 # Example programs
 add_executable(demo_simulation examples/demo_simulation.cpp)
-add_executable(demo_stats      examples/demo_stats.cp)
+add_executable(demo_stats      examples/demo_stats.cpp)
 
 target_link_libraries(demo_simulation PRIVATE amsimcpp)
 target_link_libraries(demo_stats PRIVATE amsimcpp)
