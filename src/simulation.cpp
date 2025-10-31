@@ -32,7 +32,10 @@ Simulation::Simulation(
     bool require_latent,
     std::optional<std::uint64_t> rep_id)
     : n_gen(n_gen),
-      out_dir(out_dir),
+      out_dir([&]() {
+        if (rep_id) out_dir = out_dir / (std::format("rep_{:03d}", *rep_id));
+        return out_dir;
+      }()),
       status_(SimulationStatus::READY),
       rng_([&]() {
         if (rep_id) {
@@ -71,13 +74,7 @@ Simulation::Simulation(
         return phenotypes;
       }()),
       model_(
-          phenotypes_,
-          mate_cor,
-          n_itr,
-          n_ind / 2,
-          rng_,
-          tmp_init,
-          tmp_decay),
+          phenotypes_, mate_cor, n_itr, n_ind / 2, rng_, tmp_init, tmp_decay),
       ctx_(genome_, arch_, buf_, phenotypes_, model_),
       metrics_([&]() {
         std::vector<Metric> metrics;
@@ -166,4 +163,5 @@ void Simulation::run() {
     ctx_.genome.transpose();
   }
 }
+
 }  // namespace amsim

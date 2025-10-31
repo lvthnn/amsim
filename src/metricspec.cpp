@@ -11,7 +11,8 @@ namespace amsim {
 namespace labels {
 
 std::vector<std::string> label_matrix(
-    std::vector<std::string> names, bool cross = false) {
+    std::vector<std::string> names,
+    bool cross = false) {
   std::size_t n = names.size();
   std::vector<std::string> labels(n * n);
   for (std::size_t i = 0; i < names.size(); i++)
