@@ -6,7 +6,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-# set(CMAKE_BUILD_TYPE Debug)
 
 # Add debugging options depending on CMAKE_BUILD_TYPE
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -79,12 +78,34 @@ elseif (MSVC)
   target_compile_options(amsimcpp PRIVATE /W4)
 endif()
 
+# Use GoogleTest
+include(FetchContent)
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(
+  googletest
+  GIT_REPOSITORY https://github.com/google/googletest.git
+  GIT_TAG v1.17.0
+)
+FetchContent_MakeAvailable(googletest)
+
+enable_testing()
+
 # Example programs
 add_executable(demo_simulation examples/demo_simulation.cpp)
 add_executable(demo_manual examples/demo_manual.cpp)
 
 target_link_libraries(demo_simulation PRIVATE amsimcpp)
 target_link_libraries(demo_manual PRIVATE amsimcpp)
+
+# Link unit tests
+add_executable(stats_test tests/stats_test.cpp)
+
+target_link_libraries(stats_test PRIVATE GTest::gtest_main amsimcpp)
+
+include(GoogleTest)
+gtest_discover_tests(stats_test)
+
 
 # Install rules (so other projects can find+link amsimcpp)
 include(GNUInstallDirs)
