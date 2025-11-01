@@ -103,15 +103,15 @@ double cor(
     std::optional<double> scale_Y) {
   if (!centre_X) centre_X = mean(N, X, incX);
   if (!centre_Y) centre_Y = mean(N, Y, incY);
-  if (!scale_X) scale_X = var(N, X, incX);
-  if (!scale_Y) scale_Y = var(N, Y, incY);
+  if (!scale_X) scale_X = std::sqrt(var(N, X, incX));
+  if (!scale_Y) scale_Y = std::sqrt(var(N, Y, incY));
   double cor = 0.0;
   double denom =
-      1.0 / (static_cast<double>(N) * std::sqrt(*scale_X * *scale_Y));
+      1.0 / (static_cast<double>(N) * *scale_X * *scale_Y);
   const double *xi = X, *eta = Y;
 
   for (int i = 0; i < N; i++, xi += incX, eta += incY)
-    cor += 1.0 / denom * (*xi - *centre_X) * (*eta - *centre_Y);
+    cor += denom * (*xi - *centre_X) * (*eta - *centre_Y);
 
   return cor;
 }
