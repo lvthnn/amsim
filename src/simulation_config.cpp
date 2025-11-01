@@ -1,6 +1,7 @@
 #include <amsim/simulation_config.h>
 
 #include <filesystem>
+#include <iostream>
 
 namespace amsim {
 
@@ -12,6 +13,7 @@ SimulationConfig& SimulationConfig::simulation(
   n_gen = n_gen_;
   n_ind = n_ind_;
   out_dir = std::filesystem::path(out_dir_);
+  std::cout << out_dir << "\n";
   rng_seed = rng_seed_;
   return *this;
 }
@@ -65,13 +67,13 @@ SimulationConfig& SimulationConfig::mating(
   }
 
   if (n_itr_) n_itr = *n_itr_;
-  if (temp_init_) temp_init = *temp_init;
-  if (temp_decay_) temp_decay = *temp_decay;
-  if (!mate_cor) {
+  if (temp_init_) temp_init = *temp_init_;
+  if (temp_decay_) temp_decay = *temp_decay_;
+  if (!mate_cor_) {
     throw std::runtime_error("need mate correlation for assortative model");
   }
 
-  mate_cor_ = std::move(*mate_cor_);
+  mate_cor = std::move(*mate_cor_);
 
   return *this;
 }
@@ -79,7 +81,7 @@ SimulationConfig& SimulationConfig::mating(
 SimulationConfig& SimulationConfig::metrics(std::vector<MetricSpec> specs_) {
   specs = std::move(specs_);
   require_lat =
-      std::any_of(specs_.begin(), specs_.end(), [](const MetricSpec& s) {
+      std::any_of(specs.begin(), specs.end(), [](const MetricSpec& s) {
         return s.require_lat;
       });
   return *this;

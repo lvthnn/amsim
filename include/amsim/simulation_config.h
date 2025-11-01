@@ -10,7 +10,6 @@
 #include <amsim/phenobuf.h>
 #include <amsim/phenotype.h>
 #include <amsim/rng.h>
-#include <amsim/simulation.h>
 #include <amsim/simulation_status.h>
 
 #include <filesystem>
@@ -18,7 +17,7 @@
 namespace amsim {
 
 struct SimulationConfig {
-  SimulationConfig();
+  SimulationConfig() = default;
 
   SimulationConfig& simulation(
       std::size_t n_gen_,
@@ -71,10 +70,10 @@ struct SimulationConfig {
   std::vector<double> env_cor;
 
   MatingType type;
-  std::optional<std::size_t> n_itr;
-  std::optional<double> temp_init;
-  std::optional<double> temp_decay;
-  std::optional<std::vector<double>> mate_cor;
+  std::size_t n_itr;
+  double temp_init;
+  double temp_decay;
+  std::vector<double> mate_cor;
 
   std::vector<MetricSpec> specs;
   bool require_lat;
