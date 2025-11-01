@@ -5,9 +5,9 @@
 #include <atomic>
 #include <filesystem>
 #include <iostream>
-#include <mutex>
 #include <stdexcept>
 #include <thread>
+#include <format>
 
 namespace amsim {
 
