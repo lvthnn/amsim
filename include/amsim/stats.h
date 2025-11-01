@@ -23,7 +23,7 @@ void centre(
     const int incX,
     double* Y,
     const int incY,
-    std::optional<double> centre);
+    std::optional<double> centre = std::nullopt);
 
 // Scale a vector to unit variance.
 void scale(
@@ -32,7 +32,7 @@ void scale(
     const int incX,
     double* Y,
     const int incY,
-    std::optional<double> scale);
+    std::optional<double> scale = std::nullopt);
 
 // Standardise a vector.
 void standardise(
@@ -41,8 +41,8 @@ void standardise(
     const int incX,
     double* Y,
     const int incY,
-    std::optional<double> centre,
-    std::optional<double> scale);
+    std::optional<double> centre = std::nullopt,
+    std::optional<double> scale = std::nullopt);
 
 // Compute the correlation between two vectors
 double cor(
