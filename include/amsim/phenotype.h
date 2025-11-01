@@ -74,9 +74,6 @@ class Phenotype {
 
   inline double comp_var(ComponentType type) const { return comp_vars_[type]; }
 
-  // @TODO: Rework this function. We need to access the mate matching of the
-  //        generation and compute the sum of the two parental phenotypes
-  //        weighted by some additional slop.
   inline void transmit_vert(std::vector<std::size_t> matching) {
     if (h2_vert_ == 0.0) return;
     const double scale = std::sqrt(h2_vert_);

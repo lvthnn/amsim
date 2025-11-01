@@ -35,8 +35,8 @@ class AssortativeModel : public MatingModel {
       const std::size_t n_itr,
       const std::size_t n_sex,
       const rng::Xoshiro256ss& rng,
-      double tmp_init = 1e-2,
-      double tmp_decay = 0.99999);
+      double temp_init = 1e-2,
+      double temp_decay = 0.99999);
 
   void display_cor();
   void init_state();
@@ -50,8 +50,8 @@ class AssortativeModel : public MatingModel {
   const std::size_t n_pheno_;
   const std::size_t n_sex_;
   const std::size_t n_itr_;
-  const double tmp_init_;
-  const double tmp_decay_;
+  const double temp_init_;
+  const double temp_decay_;
 
   std::vector<double> male_;
   std::vector<double> female_;
