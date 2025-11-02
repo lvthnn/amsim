@@ -10,7 +10,6 @@
 #include <amsim/phenobuf.h>
 #include <amsim/phenotype.h>
 #include <amsim/rng.h>
-#include <amsim/simulation_status.h>
 
 #include <filesystem>
 

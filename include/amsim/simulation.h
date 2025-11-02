@@ -8,7 +8,6 @@
 #include <amsim/phenoarch.h>
 #include <amsim/phenobuf.h>
 #include <amsim/simulation_config.h>
-#include <amsim/simulation_status.h>
 
 #include <filesystem>
 #include <fstream>

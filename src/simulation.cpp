@@ -26,14 +26,14 @@ Simulation::Simulation(
               rng::auto_seed(rng_seed_ ? *rng_seed_ : config.rng_seed))),
       genome_(n_ind, n_loc, config.v_mut, config.v_rec, config.v_maf, rng_),
       arch_(
-          n_pheno,
-          n_loc,
-          config.v_n_loc,
-          config.v_h2_gen,
-          config.v_h2_env,
-          config.gen_cor,
-          config.env_cor,
-          rng_),
+        n_pheno,
+        n_loc,
+        config.v_n_loc,
+        config.v_h2_gen,
+        config.v_h2_env,
+        config.gen_cor,
+        config.env_cor,
+        rng_),
       buf_(n_ind, n_pheno, config.require_lat),
       phenotypes_([&]() {
         PhenotypeList phenotypes;
