@@ -58,6 +58,8 @@ PhenoArch::PhenoArch(
 
   for (std::size_t c = 0; c < n_pheno; c++)
     for (std::size_t r = 0; r < c; r++) env_chol_[c * n_pheno_ + r] = 0.0;
+
+  optim_arch(1e4);
 }
 
 void PhenoArch::gen_env(double* ptr_env, const std::size_t n_ind) {

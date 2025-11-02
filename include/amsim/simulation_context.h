@@ -43,7 +43,7 @@ struct SimulationContext {
   const std::size_t n_pheno;
   const std::vector<std::string> pheno_names;
 
-  // deep level data
+  // simulation components
   Genome& genome;
   PhenoArch& arch;
   PhenoBuf& buf;

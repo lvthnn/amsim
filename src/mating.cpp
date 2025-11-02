@@ -32,22 +32,23 @@ AssortativeModel::AssortativeModel(
     const std::size_t n_itr,
     const std::size_t n_sex,
     const rng::Xoshiro256ss& rng,
-    double tmp_init,
-    double tmp_decay)
+    double temp_init,
+    double temp_decay)
     : MatingModel(MatingType::ASSORTATIVE, n_sex),
       ptr_tot_([&]() {
         std::vector<const double*> res;
         res.reserve(phenotypes.size());
-        for (const auto& pheno : phenotypes)
+        for (const auto& pheno : phenotypes) {
           res.push_back(pheno(ComponentType::TOTAL));
+        }
         return res;
       }()),
       cor_(std::move(cor)),
       n_pheno_(phenotypes.size()),
       n_sex_(n_sex),
       n_itr_(n_itr),
-      tmp_init_(tmp_init),
-      tmp_decay_(tmp_decay),
+      temp_init_(temp_init),
+      temp_decay_(temp_decay),
       fuzz_(rng),
       swap_(rng),
       acc_(rng),
@@ -55,6 +56,18 @@ AssortativeModel::AssortativeModel(
       cor_U(n_pheno_ * n_pheno_),
       cor_VT(n_pheno_ * n_pheno_),
       state(n_sex_) {
+  // Basic invariants
+  if (n_pheno_ == 0) {
+    throw std::runtime_error("AssortativeModel: n_pheno_ must be > 0");
+  }
+  const auto need = n_pheno_ * n_pheno_;
+  if (cor_.size() != need) {
+    std::ostringstream oss;
+    oss << "AssortativeModel: cor size " << cor_.size()
+        << " does not match n_pheno_^2 = " << need;
+    throw std::runtime_error(oss.str());
+  }
+
   // copy since dgesvd from LAPACK destroys original matrix
   std::vector<double> cor_copy_ = cor_;
 
@@ -148,7 +161,6 @@ void AssortativeModel::arrange_() {
     const double* ptr_m = ptr_tot_[pheno];
     const double* ptr_f = ptr_m + n_sex_;
 
-    // @TODO: replace this with calls to stats header
     const double mean_m = stats::mean(n_sex_, ptr_m, 1);
     const double mean_f = stats::mean(n_sex_, ptr_f, 1);
     const double sd_m = std::sqrt(stats::var(n_sex_, ptr_m, 1));
@@ -277,7 +289,7 @@ void AssortativeModel::init_state() {
 std::vector<std::size_t> AssortativeModel::match() {
   if (n_itr_ == 0) return state;
   const std::size_t dim = n_pheno_ * n_pheno_;
-  double tmp_cur = tmp_init_;
+  double temp_cur = temp_init_;
 
   arrange_();
   std::vector<double> cur = compute_cor_();
@@ -290,7 +302,7 @@ std::vector<std::size_t> AssortativeModel::match() {
     std::vector<double> delta = compute_delta_(i0, i1);
 
     double denergy = compute_denergy_(cur, cor_, delta);
-    double acc_prob = std::min(1.0, std::exp(-denergy / tmp_cur));
+    double acc_prob = std::min(1.0, std::exp(-denergy / temp_cur));
     double u = acc_.sample(1.0);
 
     if (u < acc_prob) {
@@ -302,7 +314,7 @@ std::vector<std::size_t> AssortativeModel::match() {
       cblas_daxpy(dim, 1.0, delta.data(), 1, cur.data(), 1);
     }
 
-    tmp_cur *= tmp_decay_;
+    temp_cur *= temp_decay_;
   }
 
   return state;
