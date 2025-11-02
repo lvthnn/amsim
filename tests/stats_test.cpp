@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <vector>
+#include <numeric>
 
 #include <amsim/stats.h>
 
@@ -157,4 +158,17 @@ TEST(Stats, CorMatrixSelf) {
   ASSERT_NEAR(R[1 + 1*P], 1.0, tol);
   ASSERT_NEAR(R[0 + 1*P], 1.0, tol);
   ASSERT_NEAR(R[1 + 0*P], 1.0, tol);
+}
+
+TEST(Stats, QuantileTest) {
+  std::vector<double> x(10);
+  std::iota(x.begin(), x.end(), 1);
+
+  double q025 = amsim::stats::quantile(0.025, 10, x.data(), 1);
+  double q500 = amsim::stats::quantile(0.500, 10, x.data(), 1);
+  double q975 = amsim::stats::quantile(0.975, 10, x.data(), 1);
+
+  ASSERT_NEAR(q025, 1.225, tol);
+  ASSERT_NEAR(q500, 5.500, tol);
+  ASSERT_NEAR(q975, 9.775, tol);
 }

@@ -1,5 +1,7 @@
 #include <cmath>
+#include <algorithm>
 #include <optional>
+#include <limits>
 
 #if defined(__APPLE__)
 #include <Accelerate/Accelerate.h>
@@ -14,7 +16,7 @@ namespace amsim::stats {
 
 double sum(const int N, const double* X, const int incX) {
   double y, t, s = 0.0, c = 0.0;
-  for (int i = 0; i < N; i++, X += incX) {
+  for (int i = 0; i < N; ++i, X += incX) {
     y = *X - c;
     t = s + y;
     c = (t - s) - y;
@@ -37,7 +39,7 @@ double var(const int N, const double* X, const int incX, bool population) {
 
   const double* xi = X;
 
-  for (int i = 0; i < N; i++, xi += incX) {
+  for (int i = 0; i < N; ++i, xi += incX) {
     x = *xi;
     delta = x - mean;
     mean += delta / (i + 1);
@@ -58,7 +60,7 @@ void centre(
     const int incY,
     std::optional<double> centre) {
   if (!centre) centre = mean(N, X, incX);
-  for (int i = 0; i < N; i++) Y[i * incY] = X[i * incX] - *centre;
+  for (int i = 0; i < N; ++i) Y[i * incY] = X[i * incX] - *centre;
 }
 
 void scale(
@@ -71,7 +73,7 @@ void scale(
   if (!scale) scale = std::sqrt(var(N, X, incX));
   const double* xi = X;
   double* eta = Y;
-  for (int i = 0; i < N; i++, xi += incX, eta += incY) *eta = *xi / *scale;
+  for (int i = 0; i < N; ++i, xi += incX, eta += incY) *eta = *xi / *scale;
 }
 
 void standardise(
@@ -110,7 +112,7 @@ double cor(
       1.0 / (static_cast<double>(N) * *scale_X * *scale_Y);
   const double *xi = X, *eta = Y;
 
-  for (int i = 0; i < N; i++, xi += incX, eta += incY)
+  for (int i = 0; i < N; ++i, xi += incX, eta += incY)
     cor += denom * (*xi - *centre_X) * (*eta - *centre_Y);
 
   return cor;
@@ -161,12 +163,12 @@ void cor(
   std::vector<double> sxx(P), syy(Q);
   double nrm_i, nrm_j;
 
-  for (int i = 0; i < P; i++) {
+  for (int i = 0; i < P; ++i) {
     nrm_i = cblas_dnrm2(N, X + i * ldX, 1);
     sxx[i] = nrm_i * nrm_i;
   }
 
-  for (int j = 0; j < Q; j++) {
+  for (int j = 0; j < Q; ++j) {
     nrm_j = cblas_dnrm2(N, Y + j * ldY, 1);
     syy[j] = nrm_j * nrm_j;
   }
@@ -195,27 +197,27 @@ void cor(
   // compute standard deviations
   std::vector<double> sdx(P), sdy(Q);
 
-  for (int j = 0; j < P; j++) {
+  for (int j = 0; j < P; ++j) {
     double vx = sxx[j] - (sx[j] * sx[j]) / dN;
     sdx[j] = std::sqrt(std::max(0.0, vx));
   }
 
-  for (int k = 0; k < Q; k++) {
+  for (int k = 0; k < Q; ++k) {
     double vy = syy[k] - (sy[k] * sy[k]) / dN;
     sdy[k] = std::sqrt(std::max(0.0, vy));
   }
 
   // divide entries by standard deviations
-  for (int i = 0; i < P; i++) {
+  for (int i = 0; i < P; ++i) {
     if (sdx[i] == 0.0)
-      for (int j = 0; j < Q; j++)
+      for (int j = 0; j < Q; ++j)
         R[i + j * ldR] = std::numeric_limits<double>::quiet_NaN();
     else
       cblas_dscal(Q, 1.0 / sdx[i], R + i, ldR);
   }
-  for (int j = 0; j < Q; j++) {
+  for (int j = 0; j < Q; ++j) {
     if (sdy[j] == 0.0)
-      for (int i = 0; i < P; i++)
+      for (int i = 0; i < P; ++i)
         R[i + j * ldR] = std::numeric_limits<double>::quiet_NaN();
     else
       cblas_dscal(P, 1.0 / sdy[j], R + j * ldR, 1);
@@ -226,4 +228,38 @@ void cor(
     int N, int P, const double* X, const int ldX, double* R, const int ldR) {
   cor(N, P, P, X, ldX, X, ldX, R, ldR);
 }
+
+double quantile(const double q, const int N, const double *X, const int incX) {
+  if (q < 0.0) throw std::invalid_argument("can't specify quantile below zero");
+  if (q > 1.0) throw std::invalid_argument("can't specify quantile above one");
+  if (N <= 0) return std::numeric_limits<double>::quiet_NaN();
+  if (N == 1) return X[0];
+
+  // copy into temporary buffer
+  std::vector<double> tmp(N);
+  const double* xi = X;
+  for (int i = 0; i < N; ++i, xi += incX) tmp[i] = *xi;
+
+  // R type 7 quantile interpolation strategy
+  const double h = 1.0 + (N - 1) * q;
+  int lo = static_cast<int>(std::floor(h)) - 1;
+  int hi = static_cast<int>(std::ceil(h)) - 1;
+  if (lo < 0) lo = 0;
+  if (hi < 0) hi = 0;
+  if (lo >= N) lo = N - 1;
+  if (hi >= N) hi = N - 1;
+
+  const double gamma = std::max(0.0, h - std::floor(h));
+
+  std::nth_element(tmp.begin(), tmp.begin() + lo, tmp.end());
+  const double x_lo = tmp[lo];
+
+  if (gamma == 0.0 || hi == lo) return x_lo;
+
+  std::nth_element(tmp.begin(), tmp.begin() + hi, tmp.end());
+  const double x_hi = tmp[hi];
+
+  return (1.0 - gamma) * x_lo + gamma * x_hi;
+}
+
 }  // namespace amsim::stats

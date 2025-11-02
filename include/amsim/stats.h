@@ -72,6 +72,8 @@ void cor(
 void cor(
     int N, int P, const double* X, const int ldX, double* R, const int ldR);
 
+double quantile(double q, int N, const double* X, const int ldX);
+
 }  // namespace amsim::stats
 
 #endif  // AMSIMCPP_STATS_H
