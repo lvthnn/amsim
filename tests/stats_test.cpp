@@ -49,7 +49,7 @@ TEST(Stats, TestCentre) {
   double mean_v_centre = amsim::stats::mean(v_cnt.size(), v_cnt.data(), 1);
 
   ASSERT_NEAR(mean_v_opt, 0.0, tol);
-ASSERT_NEAR(mean_v_centre, 0.0, tol);
+  ASSERT_NEAR(mean_v_centre, 0.0, tol);
 }
 
 TEST(Stats, TestScale) {
@@ -158,4 +158,3 @@ TEST(Stats, CorMatrixSelf) {
   ASSERT_NEAR(R[0 + 1*P], 1.0, tol);
   ASSERT_NEAR(R[1 + 0*P], 1.0, tol);
 }
-
