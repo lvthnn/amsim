@@ -27,6 +27,7 @@ add_library(amsimcpp STATIC
   src/metricspec.cpp
   src/simulation.cpp
   src/simulation_config.cpp
+  src/simulation_results.cpp
   src/stats.cpp
 )
 
@@ -94,9 +95,11 @@ enable_testing()
 # Example programs
 add_executable(demo_simulation examples/demo_simulation.cpp)
 add_executable(demo_manual examples/demo_manual.cpp)
+add_executable(demo_results examples/demo_results.cpp)
 
 target_link_libraries(demo_simulation PRIVATE amsimcpp)
 target_link_libraries(demo_manual PRIVATE amsimcpp)
+target_link_libraries(demo_results PRIVATE amsimcpp)
 
 # Link unit tests
 add_executable(stats_test tests/stats_test.cpp)
