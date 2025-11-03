@@ -1,9 +1,8 @@
+#include <amsim/stats.h>
 #include <gtest/gtest.h>
 
-#include <vector>
 #include <numeric>
-
-#include <amsim/stats.h>
+#include <vector>
 
 double tol = 1e-12;
 
@@ -29,7 +28,7 @@ TEST(Stats, TestVar) {
   // bessel-corrected (sample) variance
   double sample_var = amsim::stats::var(x.size(), x.data(), 1, false);
 
-  // population variance 
+  // population variance
   double population_var = amsim::stats::var(x.size(), x.data(), 1, true);
 
   ASSERT_EQ(sample_var, 2.5);
@@ -42,7 +41,6 @@ TEST(Stats, TestCentre) {
   std::vector<double> v_cnt(x.size());
   double centre_x = amsim::stats::mean(x.size(), x.data(), 1);
 
-  // centre not passed vs passed 
   amsim::stats::centre(x.size(), x.data(), 1, v_opt.data(), 1);
   amsim::stats::centre(x.size(), x.data(), 1, v_cnt.data(), 1, centre_x);
 
@@ -59,7 +57,6 @@ TEST(Stats, TestScale) {
 
   double sd_x = std::sqrt(amsim::stats::var(x.size(), x.data(), 1));
 
-  // scale not passed vs passed
   amsim::stats::scale(x.size(), x.data(), 1, v.data(), 1);
   amsim::stats::scale(x.size(), x.data(), 1, v.data(), 1, sd_x);
 
@@ -78,7 +75,6 @@ TEST(Stats, TestStandardise) {
   ASSERT_NEAR(amsim::stats::var(x.size(), x.data(), 1), 1.0, tol);
 }
 
-
 TEST(Stats, CorVectorIdentical) {
   std::vector<double> x = {2, 4, 6, 8};
 
@@ -96,7 +92,8 @@ TEST(Stats, CorVectorWithCentreScale) {
   double sx = std::sqrt(amsim::stats::var(x.size(), x.data(), 1, true));
   double sy = std::sqrt(amsim::stats::var(y.size(), y.data(), 1, true));
 
-  double r = amsim::stats::cor(x.size(), x.data(), 1, y.data(), 1, mx, sx, my, sy);
+  double r =
+      amsim::stats::cor(x.size(), x.data(), 1, y.data(), 1, mx, sx, my, sy);
 
   ASSERT_NEAR(r, 1.0, tol);
 }
@@ -113,28 +110,18 @@ TEST(Stats, CorVectorConstantX) {
 TEST(Stats, CorMatrixCross) {
   int N = 4, P = 2, Q = 2;
 
-  double X[4*2] = {
-    // col0
-    1, 2, 3, 4,
-    // col1
-    2, 3, 4, 5
-  };
+  double X[4 * 2] = {1, 2, 3, 4, 2, 3, 4, 5};
 
-  double Y[4*2] = {
-    // col0 = 2 * col0 of X
-    2, 4, 6, 8,
-    // col1 = col1 of X - 1
-    1, 2, 3, 4
-  };
+  double Y[4 * 2] = {2, 4, 6, 8, 1, 2, 3, 4};
 
-  double R[2*2];
+  double R[2 * 2];
 
   amsim::stats::cor(N, P, Q, X, N, Y, N, R, P);
 
-  double r00 = R[0 + 0*P];
-  double r01 = R[0 + 1*P];
-  double r10 = R[1 + 0*P];
-  double r11 = R[1 + 1*P];
+  double r00 = R[0 + 0 * P];
+  double r01 = R[0 + 1 * P];
+  double r10 = R[1 + 0 * P];
+  double r11 = R[1 + 1 * P];
 
   ASSERT_NEAR(r00, 1.0, tol);
   ASSERT_NEAR(r11, 1.0, tol);
@@ -145,19 +132,16 @@ TEST(Stats, CorMatrixCross) {
 TEST(Stats, CorMatrixSelf) {
   int N = 4, P = 2;
 
-  double X[4*2] = {
-    1, 2, 3, 4,
-    2, 3, 4, 5
-  };
+  double X[4 * 2] = {1, 2, 3, 4, 2, 3, 4, 5};
 
-  double R[2*2];
+  double R[2 * 2];
 
   amsim::stats::cor(N, P, X, N, R, P);
 
-  ASSERT_NEAR(R[0 + 0*P], 1.0, tol);
-  ASSERT_NEAR(R[1 + 1*P], 1.0, tol);
-  ASSERT_NEAR(R[0 + 1*P], 1.0, tol);
-  ASSERT_NEAR(R[1 + 0*P], 1.0, tol);
+  ASSERT_NEAR(R[0 + 0 * P], 1.0, tol);
+  ASSERT_NEAR(R[1 + 1 * P], 1.0, tol);
+  ASSERT_NEAR(R[0 + 1 * P], 1.0, tol);
+  ASSERT_NEAR(R[1 + 0 * P], 1.0, tol);
 }
 
 TEST(Stats, QuantileTest) {
