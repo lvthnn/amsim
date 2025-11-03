@@ -10,9 +10,9 @@
 
 int main() {
   std::cout << "Alloc vectors..." << std::endl;
-  std::vector<double> v_maf(8000, 0.5);
-  std::vector<double> v_rec(8000, 0.5);
-  std::vector<double> v_mut(8000, 1e-8);
+  std::vector<double> v_maf(1000, 0.5);
+  std::vector<double> v_rec(1000, 0.5);
+  std::vector<double> v_mut(1000, 1e-8);
 
   std::cout << "Create config..." << std::endl;
   amsim::SimulationConfig config;
@@ -48,6 +48,7 @@ int main() {
        amsim::pheno_comp_cor(amsim::ComponentType::GENETIC),
        amsim::pheno_comp_cor(amsim::ComponentType::ENVIRONMENTAL),
        amsim::pheno_comp_xcor(amsim::ComponentType::GENETIC),
+       amsim::pheno_comp_xcor(amsim::ComponentType::TOTAL),
        amsim::pheno_latent_h2(),
        amsim::pheno_latent_comp_cor(amsim::ComponentType::GENETIC),
        amsim::pheno_latent_comp_xcor(amsim::ComponentType::GENETIC)});
