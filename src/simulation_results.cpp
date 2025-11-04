@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <iomanip>
+#include <optional>
 #include <regex>
 #include <set>
 #include <sstream>
@@ -31,9 +31,15 @@ SimulationResults::SimulationResults(
 
   // resize class elements
   metric_labels_.resize(metric_names_.size());
-  label_maps_.resize(metric_names_.size());
-  inv_label_maps_.resize(metric_names_.size());
   index_.resize(metric_names_.size());
+}
+
+ResultsTable SimulationResults::operator()(const std::string& metric) {
+  auto it = metric_map_.find(metric);
+  if (it == metric_map_.end()) {
+    throw std::invalid_argument("metric " + metric + " not found");
+  }
+  return index_[metric_map_[metric]];
 }
 
 void SimulationResults::encode_values_(
@@ -150,13 +156,8 @@ void SimulationResults::summarise_metric_(std::string metric) {
   }
 
   // loop over each of the files
-  KeyMap label_map;
-  InvKeyMap inv_label_map;
   get_labels_(labels, streams);
-  encode_values_(labels, label_map, inv_label_map);
-
-  label_maps_[metric_id] = label_map;
-  inv_label_maps_[metric_id] = inv_label_map;
+  encode_values_(labels, table.label_map, table.inv_label_map);
 
   // summarise cells and push back into columns
   while (std::all_of(streams.begin(), streams.end(), [](std::ifstream& stream) {
@@ -169,16 +170,18 @@ void SimulationResults::summarise_metric_(std::string metric) {
 
     // read and summarise columns
     for (std::size_t col = 0; col < labels.size(); ++col) {
-      std::string label_name = inv_label_maps_[metric_id][col];
+      std::string label_name = table.inv_label_map[col];
       char delimiter = (col == labels.size() - 1) ? '\n' : '\t';
 
       for (std::size_t rep = 0; rep < n_replicates_; ++rep) {
         std::getline(streams[rep], token, delimiter);
         stream_buf[rep] = std::stod(token);
       }
-      index_[metric_id].add(stream_buf);
+      table.add(stream_buf);
     }
   }
+
+  index_[metric_id] = std::move(table);
 }
 
 void SimulationResults::summarise() {
@@ -187,27 +190,46 @@ void SimulationResults::summarise() {
   }
 }
 
-void SimulationResults::print_metric_table(const std::string& metric) {
-  std::size_t metric_id = metric_map_[metric];
-  ResultsTable table = index_[metric_id];
-  KeyMap label_map = label_maps_[metric_id];
-  InvKeyMap inv_label_map = inv_label_maps_[metric_id];
+void SimulationResults::save(
+    std::optional<std::vector<std::string>> metrics,
+    std::optional<std::filesystem::path> out_dir,
+    bool overwrite) {
+  if (!metrics) metrics = metric_names_;
+  if (!out_dir) out_dir = out_dir_;
+  if (!std::filesystem::exists(*out_dir)) {
+    throw std::invalid_argument("specified output directory does not exist!");
+  }
+  for (const std::string& metric : *metrics) {
+    std::filesystem::path metric_path = *out_dir / (metric + ".tsv");
+    if (!overwrite && std::filesystem::exists(metric_path)) {
+      throw std::invalid_argument(
+          "file " + metric_path.string() + "already exists");
+    }
+    std::ofstream metric_out(metric_path);
+    if (!metric_out.is_open()) {
+      throw std::invalid_argument(
+          "could not open output stream for " + metric_path.string());
+    }
+    print_table(index_[metric_map_[metric]], metric_out);
+  }
+}
 
-  std::size_t n_rows = index_[metric_id].data[0].size() / label_map.size();
-  std::size_t n_cols = label_map.size();
+void print_table(ResultsTable& table, std::ostream& ofstream) {
+  std::size_t n_rows = table.data[0].size() / table.label_map.size();
+  std::size_t n_cols = table.label_map.size();
 
-  std::cout << "gen\tname\tmean\tmedian\tstddev\tstderr\tlower_ci95\tupper_"
-               "ci95\tquant025\tquant975\n";
+  ofstream << "gen\tname\tmean\tmedian\tstddev\tstderr\tlower_ci95\tupper_"
+              "ci95\tquant025\tquant975\n";
 
-	std::cout << std::scientific << 10;
+  ofstream << std::scientific;
   for (std::size_t col = 0; col < n_cols; ++col) {
     for (std::size_t row = 0; row < n_rows; ++row) {
       std::size_t idx = row * n_cols + col;
-      std::cout << row << "\t" << inv_label_map[col] << "\t"
-                << table.data[0][idx] << "\t" << table.data[1][idx] << "\t"
-                << table.data[2][idx] << "\t" << table.data[3][idx] << "\t"
-                << table.data[4][idx] << "\t" << table.data[5][idx] << "\t"
-                << table.data[6][idx] << "\t" << table.data[7][idx] << "\n";
+      ofstream << row + 1 << "\t" << table.inv_label_map[col] << "\t"
+               << table.data[0][idx] << "\t" << table.data[1][idx] << "\t"
+               << table.data[2][idx] << "\t" << table.data[3][idx] << "\t"
+               << table.data[4][idx] << "\t" << table.data[5][idx] << "\t"
+               << table.data[6][idx] << "\t" << table.data[7][idx] << "\n";
     }
   }
 }

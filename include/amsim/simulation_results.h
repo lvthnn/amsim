@@ -7,6 +7,9 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <fstream>
+#include <iostream>
+#include <optional>
 
 namespace amsim {
 
@@ -18,8 +21,8 @@ struct ResultsTable {
 
   void add(std::vector<double> stream) {
     std::size_t n_elem = stream.size();
-    const double* ptr = stream.data();
 
+    const double* ptr = stream.data();
     double mean = stats::mean(n_elem, ptr, 1);
     double sem = stats::sem(n_elem, ptr, 1);
 
@@ -33,6 +36,8 @@ struct ResultsTable {
     data[7].push_back(stats::quantile(0.975, n_elem, ptr, 1));
   }
 
+  KeyMap label_map;
+  InvKeyMap inv_label_map;
   std::array<std::vector<double>, 8> data;
 };
 
@@ -45,8 +50,13 @@ class SimulationResults {
       std::optional<std::size_t> n_replicates = std::nullopt,
       std::optional<std::vector<std::string>> metric_names = std::nullopt);
 
-	void summarise();
-	void print_metric_table(const std::string& metric_name);
+  ResultsTable operator()(const std::string& metric);
+
+  void summarise();
+  void save(
+      std::optional<std::vector<std::string>> metrics = std::nullopt,
+      std::optional<std::filesystem::path> out_dir = std::nullopt,
+      bool overwrite = false);
 
  private:
   // methods to use for constructor
@@ -58,7 +68,7 @@ class SimulationResults {
       std::vector<std::string> values, KeyMap& map_out, InvKeyMap& invmap_out);
   void get_labels_(
       std::vector<std::string>& labels, std::vector<std::ifstream>& streams);
-  void summarise_metric_(std::string metric_name);
+  void summarise_metric_(std::string metric);
 
   // inferred or supplied parameters
   std::filesystem::path out_dir_;
@@ -75,11 +85,11 @@ class SimulationResults {
   // data representation
   KeyMap metric_map_;
   InvKeyMap inv_metric_map_;
-  std::vector<KeyMap> label_maps_;
-  std::vector<InvKeyMap> inv_label_maps_;
 
   ResultsIndex index_;
 };
+
+void print_table(ResultsTable& table, std::ostream& ofstream = std::cout);
 
 }  // namespace amsim
 
