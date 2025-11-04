@@ -5,35 +5,51 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <iomanip>
 #include <regex>
 #include <set>
 #include <sstream>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace amsim {
-CellStats::CellStats(std::vector<double> stream)
-    : n_elem(stream.size()),
-      mean(stats::mean(n_elem, stream.data(), 1)),
-      median(stats::quantile(0.5, n_elem, stream.data(), 1)),
-      std(std::sqrt(stats::var(n_elem, stream.data(), 1, false))),
-      sem(std / std::sqrt(n_elem)),
-      lci(mean - 1.96 * sem),
-      uci(mean + 1.96 * sem),
-      q025(stats::quantile(0.025, n_elem, stream.data(), 1)),
-      q975(stats::quantile(0.975, n_elem, stream.data(), 1)) {}
 
 SimulationResults::SimulationResults(
     std::filesystem::path out_dir,
     std::optional<std::size_t> n_replicates,
-    std::optional<std::set<std::string>> metric_names)
+    std::optional<std::vector<std::string>> metric_names)
     : out_dir_(std::move(out_dir)) {
+  // ensure target directory exists
   if (!std::filesystem::exists(out_dir_)) {
     throw std::invalid_argument("specified output directory does not exist");
   }
 
   // infer number of replicates and replicate directories if not suppied
+  infer_replicates_(n_replicates);
+  infer_metrics_(metric_names);
+  encode_values_(metric_names_, metric_map_, inv_metric_map_);
+
+  // resize class elements
+  metric_labels_.resize(metric_names_.size());
+  label_maps_.resize(metric_names_.size());
+  inv_label_maps_.resize(metric_names_.size());
+  index_.resize(metric_names_.size());
+}
+
+void SimulationResults::encode_values_(
+    std::vector<std::string> values, KeyMap& map_out, InvKeyMap& invmap_out) {
+  map_out.reserve(values.size());
+
+  std::size_t cnt = 0;
+  for (const std::string& val : values) {
+    map_out.insert({val, cnt});
+    invmap_out.insert({cnt, val});
+    ++cnt;
+  }
+}
+
+void SimulationResults::infer_replicates_(
+    std::optional<std::size_t> n_replicates) {
   if (!n_replicates) {
     for (const auto& dir_entry :
          std::filesystem::directory_iterator(out_dir_)) {
@@ -49,47 +65,42 @@ SimulationResults::SimulationResults(
   } else {
     n_replicates_ = *n_replicates;
   }
+}
 
-  // infer metric names if not supplied
+void SimulationResults::infer_metrics_(
+    std::optional<std::vector<std::string>> metric_names) {
   if (!metric_names) {
-    std::set<std::string> metric_names;
-
+    std::set<std::string> metrics_set;
     for (const auto& rep_dir : rep_dirs_) {
       std::set<std::string> rep_names;
       for (const auto& entry : std::filesystem::directory_iterator(rep_dir)) {
         if (entry.is_regular_file()) {
-          rep_names.insert(entry.path().stem().string());
+          std::string stem = entry.path().stem().string();
+          rep_names.insert(stem);
         }
       }
       if (rep_dir == rep_dirs_.front()) {
-        metric_names = rep_names;
+        metrics_set = std::move(rep_names);
       } else {
+        std::set<std::string> isect;
         std::set_intersection(
-            metric_names.begin(),
-            metric_names.end(),
+            metrics_set.begin(),
+            metrics_set.end(),
             rep_names.begin(),
             rep_names.end(),
-            std::inserter(metric_names_, metric_names_.end()));
+            std::inserter(isect, isect.end()));
+        metrics_set = std::move(isect);
       }
     }
+    metric_names_ =
+        std::vector<std::string>(metrics_set.begin(), metrics_set.end());
   } else {
     metric_names_ = *metric_names;
   }
-
-  // set up encoding of metric names as integers
-  std::size_t map_names = 0;
-  for (const auto& metric : metric_names_) {
-    metric_map_.insert({metric, map_names});
-    ++map_names;
-  }
-
-  // resize the outermost indexer
-  table_.resize(metric_names_.size());
-  label_map_.resize(metric_names_.size());
-  label_names_.resize(metric_names_.size());
+  n_metrics_ = metric_names_.size();
 }
 
-void get_labels(
+void SimulationResults::get_labels_(
     std::vector<std::string>& labels, std::vector<std::ifstream>& streams) {
   std::string header_line;
   std::string token;
@@ -112,33 +123,42 @@ void get_labels(
   }
 }
 
-void SimulationResults::summarise_metric_(std::string metric_name) {
-  std::vector<std::ifstream> streams(n_replicates_);
-  std::vector<double> stream_buf(n_replicates_);
+void SimulationResults::summarise_metric_(std::string metric) {
+  std::vector<std::ifstream> streams;
+  std::vector<double> stream_buf;
   std::vector<std::string> labels;
 
+  streams.resize(n_replicates_);
+  stream_buf.resize(n_replicates_);
+
+  std::size_t metric_id = metric_map_[metric];
+
+  // placerholder string token
   std::string dummy, token;
 
-  // initialise each replicate stream
-  for (std::size_t rep = 0; rep < n_replicates_; ++rep) {
-    std::filesystem::path file = rep_dirs_[rep] / (metric_name + ".tsv");
+  // create the ResultsTable to be used
+  ResultsTable table;
+
+  // initialise input stream vectors
+  for (std::size_t rep = 0; rep < n_replicates_; rep++) {
+    std::filesystem::path file = rep_dirs_[rep] / (metric + ".tsv");
     streams[rep] = std::ifstream(file);
+    if (!streams[rep].is_open()) {
+      throw std::runtime_error(
+          "could not open metric stream for file " + file.string());
+    }
   }
 
-  get_labels(labels, streams);
+  // loop over each of the files
+  KeyMap label_map;
+  InvKeyMap inv_label_map;
+  get_labels_(labels, streams);
+  encode_values_(labels, label_map, inv_label_map);
 
-  label_names_[metric_map_[metric_name]].resize(labels.size());
-  label_names_[metric_map_[metric_name]] = labels;
+  label_maps_[metric_id] = label_map;
+  inv_label_maps_[metric_id] = inv_label_map;
 
-  KeyMap& metric_label_map = label_map_[metric_map_[metric_name]];
-  metric_label_map.reserve(labels.size());
-  for (std::size_t it = 0; it < labels.size(); it++) {
-    metric_label_map.insert({labels[it], it});
-  }
-
-  table_[metric_map_[metric_name]].resize(labels.size());
-
-  std::size_t row = 0;
+  // summarise cells and push back into columns
   while (std::all_of(streams.begin(), streams.end(), [](std::ifstream& stream) {
     return stream.good() && stream.peek() != EOF;
   })) {
@@ -149,48 +169,45 @@ void SimulationResults::summarise_metric_(std::string metric_name) {
 
     // read and summarise columns
     for (std::size_t col = 0; col < labels.size(); ++col) {
-      std::string label_name = labels[col];
+      std::string label_name = inv_label_maps_[metric_id][col];
       char delimiter = (col == labels.size() - 1) ? '\n' : '\t';
 
       for (std::size_t rep = 0; rep < n_replicates_; ++rep) {
         std::getline(streams[rep], token, delimiter);
         stream_buf[rep] = std::stod(token);
       }
-
-      CellStats cell_stats(stream_buf);
-      std::size_t metric_id = metric_map_[metric_name];
-      std::size_t label_id = metric_label_map[label_name];
-
-      table_[metric_id][label_id].push_back(cell_stats);
+      index_[metric_id].add(stream_buf);
     }
-    ++row;
   }
 }
 
 void SimulationResults::summarise() {
-  for (const auto& metric : metric_names_) {
+  for (const std::string& metric : metric_names_) {
     summarise_metric_(metric);
   }
 }
 
-void SimulationResults::print(std::string metric_name) {
-  std::vector<std::vector<CellStats>> metric_data = table_[metric_map_[metric_name]];
-  std::cout << "gen\tname\tmean\tmedian\tstd\tsem\tq025\tq975\tlci\tuci\n";
+void SimulationResults::print_metric_table(const std::string& metric) {
+  std::size_t metric_id = metric_map_[metric];
+  ResultsTable table = index_[metric_id];
+  KeyMap label_map = label_maps_[metric_id];
+  InvKeyMap inv_label_map = inv_label_maps_[metric_id];
 
-  for (std::size_t row = 0; row < metric_data.size(); row++) {
-    std::vector<CellStats> stats = metric_data[row];
-    for (std::size_t col = 0; col < stats.size(); col++) {
-      CellStats cell_stat = stats[col];
-      std::cout << col + 1 << "\t"
-                << label_names_[metric_map_[metric_name]][row] << "\t"
-                << cell_stat.mean << "\t"
-                << cell_stat.median << "\t"
-                << cell_stat.std << "\t"
-                << cell_stat.sem << "\t"
-                << cell_stat.q025 << "\t"
-                << cell_stat.q975 << "\t"
-                << cell_stat.lci << "\t"
-                << cell_stat.uci << "\n";
+  std::size_t n_rows = index_[metric_id].data[0].size() / label_map.size();
+  std::size_t n_cols = label_map.size();
+
+  std::cout << "gen\tname\tmean\tmedian\tstddev\tstderr\tlower_ci95\tupper_"
+               "ci95\tquant025\tquant975\n";
+
+	std::cout << std::scientific << 10;
+  for (std::size_t col = 0; col < n_cols; ++col) {
+    for (std::size_t row = 0; row < n_rows; ++row) {
+      std::size_t idx = row * n_cols + col;
+      std::cout << row << "\t" << inv_label_map[col] << "\t"
+                << table.data[0][idx] << "\t" << table.data[1][idx] << "\t"
+                << table.data[2][idx] << "\t" << table.data[3][idx] << "\t"
+                << table.data[4][idx] << "\t" << table.data[5][idx] << "\t"
+                << table.data[6][idx] << "\t" << table.data[7][idx] << "\n";
     }
   }
 }
