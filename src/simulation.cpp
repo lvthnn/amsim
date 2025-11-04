@@ -1,15 +1,30 @@
 #include <amsim/metric.h>
 #include <amsim/simulation.h>
 #include <amsim/simulation_config.h>
+#include <sys/resource.h>
 
 #include <atomic>
 #include <filesystem>
+#include <format>
 #include <iostream>
 #include <stdexcept>
 #include <thread>
-#include <format>
 
 namespace amsim {
+
+void check_rlimit(const std::size_t required) {
+  struct rlimit rl;
+  if (getrlimit(RLIMIT_NOFILE, &rl) == 0) {
+    if (rl.rlim_cur << required) {
+      std::cerr << "Warning: specified number of threads and metrics exceeds "
+                   "open file limit ("
+                << required << "). Consider running ulimit -n " << required
+                << " or more.";
+    } else {
+      perror("getrlimit");
+    }
+  }
+}
 
 Simulation::Simulation(
     const SimulationConfig& config,
@@ -26,14 +41,14 @@ Simulation::Simulation(
               rng::auto_seed(rng_seed_ ? *rng_seed_ : config.rng_seed))),
       genome_(n_ind, n_loc, config.v_mut, config.v_rec, config.v_maf, rng_),
       arch_(
-        n_pheno,
-        n_loc,
-        config.v_n_loc,
-        config.v_h2_gen,
-        config.v_h2_env,
-        config.gen_cor,
-        config.env_cor,
-        rng_),
+          n_pheno,
+          n_loc,
+          config.v_n_loc,
+          config.v_h2_gen,
+          config.v_h2_env,
+          config.gen_cor,
+          config.env_cor,
+          rng_),
       buf_(n_ind, n_pheno, config.require_lat),
       phenotypes_([&]() {
         PhenotypeList phenotypes;
@@ -173,15 +188,15 @@ void Simulation::run() {
   genome_.compute_stats();
 
   for (std::size_t gen = 0; gen < n_gen; gen++) {
-    std::cerr << "generation " << gen << "\n";
-    std::cerr << "computing mafs and stats\n";
+    // std::cerr << "generation " << gen << "\n";
+    // std::cerr << "computing mafs and stats\n";
     genome_.compute_mafs();
     genome_.compute_stats();
 
-    std::cerr << "generating env\n";
+    // std::cerr << "generating env\n";
     arch_.gen_env(buf_(ComponentType::ENVIRONMENTAL), ctx_.n_ind);
 
-    std::cerr << "scoring phenotypes\n";
+    // std::cerr << "scoring phenotypes\n";
     for (Phenotype& pheno : phenotypes_) {
       pheno.score(genome_);
       pheno.compute_stats();
@@ -190,17 +205,17 @@ void Simulation::run() {
 
     if (buf_.has_lat()) buf_.score_latent(model_.cor_U, model_.cor_VT);
 
-    std::cerr << "mating\n";
+    // std::cerr << "mating\n";
     model_.init_state();
     model_.update(phenotypes_);
     std::vector<std::size_t> opt_matching = model_.match();
 
     for (Phenotype& pheno : phenotypes_) pheno.transmit_vert(opt_matching);
 
-    std::cerr << "streaming\n";
+    // std::cerr << "streaming\n";
     stream_(gen);
 
-    std::cerr << "updating\n";
+    // std::cerr << "updating\n";
     genome_.transpose();
     genome_.update(opt_matching);
     genome_.transpose();
@@ -211,7 +226,7 @@ void run_simulations(
     const SimulationConfig& config,
     std::size_t n_replicates,
     std::size_t n_threads,
-		bool summarise) {
+    bool summarise) {
   // ensure the base directory exists
   if (!std::filesystem::exists(config.out_dir)) {
     std::filesystem::create_directory(config.out_dir);
@@ -221,6 +236,10 @@ void run_simulations(
   std::atomic<std::size_t> next{0};
   std::vector<std::thread> pool;
   pool.reserve(n_threads);
+
+  std::size_t n_metrics = config.specs.size();
+
+  check_rlimit(n_metrics * n_threads);
 
   for (std::size_t ii = 0; ii < n_threads; ++ii) {
     pool.emplace_back([&]() {
@@ -232,7 +251,7 @@ void run_simulations(
         std::filesystem::path rep_dir =
             config.out_dir / std::format("rep_{:03}", rep_id);
 
-        // adjust replicate rng seed  
+        // adjust replicate rng seed
         const std::uint64_t PHI = 0x9E3779B97F4A7C15ull;
         std::uint64_t rep_seed = config.rng_seed + PHI * rep_id;
 
