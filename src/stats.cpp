@@ -52,6 +52,14 @@ double var(const int N, const double* X, const int incX, bool population) {
   return m2 / denom;
 }
 
+double std(const int N, const double *X, const int incX, bool population) {
+  return std::sqrt(var(N, X, incX, population));
+}
+
+double sem(const int N, const double *X, const int incX) {
+  return std(N, X, incX, false) / static_cast<double>(N);
+}
+
 void centre(
     const int N,
     const double* X,
