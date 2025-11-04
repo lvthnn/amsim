@@ -210,7 +210,8 @@ void Simulation::run() {
 void run_simulations(
     const SimulationConfig& config,
     std::size_t n_replicates,
-    std::size_t n_threads) {
+    std::size_t n_threads,
+		bool summarise) {
   // ensure the base directory exists
   if (!std::filesystem::exists(config.out_dir)) {
     std::filesystem::create_directory(config.out_dir);
@@ -243,6 +244,12 @@ void run_simulations(
   }
 
   for (std::thread& thread : pool) thread.join();
+
+  if (summarise) {
+    SimulationResults results(config.out_dir);
+    results.summarise();
+    results.save();
+  }
 }
 
 }  // namespace amsim

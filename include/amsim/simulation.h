@@ -8,6 +8,7 @@
 #include <amsim/phenoarch.h>
 #include <amsim/phenobuf.h>
 #include <amsim/simulation_config.h>
+#include <amsim/simulation_results.h>
 
 #include <filesystem>
 #include <fstream>
@@ -99,7 +100,8 @@ void run_simulation(
 void run_simulations(
     const SimulationConfig& config,
     std::size_t n_replicates,
-    std::size_t n_threads);
+    std::size_t n_threads,
+    bool summarise = true);
 
 }  // namespace amsim
 
