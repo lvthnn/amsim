@@ -16,6 +16,14 @@ double mean(const int N, const double* X, const int incX);
 double var(
     const int N, const double* X, const int incX, bool population = true);
 
+// Compute the standard deviation of a vector
+double std(
+    const int N, const double* X, const int incX, bool population = true);
+
+// Compute the standard error of a vector
+double sem(
+    const int N, const double* X, const int incX);
+
 // Centre a vector to zero expectation.
 void centre(
     const int N,
