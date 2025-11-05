@@ -23,6 +23,8 @@ add_library(amsimcpp STATIC
   src/phenobuf.cpp
   src/phenoarch.cpp
   src/haplobuf.cpp
+  src/logger.cpp
+  src/logger_timer.cpp
   src/metric.cpp
   src/metricspec.cpp
   src/simulation.cpp
@@ -96,10 +98,12 @@ enable_testing()
 add_executable(demo_simulation examples/demo_simulation.cpp)
 add_executable(demo_manual examples/demo_manual.cpp)
 add_executable(demo_results examples/demo_results.cpp)
+add_executable(demo_logger examples/demo_logger.cpp)
 
 target_link_libraries(demo_simulation PRIVATE amsimcpp)
 target_link_libraries(demo_manual PRIVATE amsimcpp)
 target_link_libraries(demo_results PRIVATE amsimcpp)
+target_link_libraries(demo_logger PRIVATE amsimcpp)
 
 # Link unit tests
 add_executable(stats_test tests/stats_test.cpp)
