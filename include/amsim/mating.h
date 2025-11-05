@@ -2,6 +2,7 @@
 #define AMSIMCPP_MATING_H
 
 #pragma once
+
 #include <amsim/mating_type.h>
 #include <amsim/phenotype.h>
 #include <amsim/rng.h>

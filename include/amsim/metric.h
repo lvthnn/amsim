@@ -2,6 +2,7 @@
 #define AMSIMCPP_METRIC_H
 
 #pragma once
+
 #include <amsim/simulation_context.h>
 
 #include <string>

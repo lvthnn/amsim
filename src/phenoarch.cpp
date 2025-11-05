@@ -47,7 +47,6 @@ PhenoArch::PhenoArch(
   int clpk_lda_ = static_cast<int>(n_pheno_);
   int clpk_out_;
 
-// @TODO: Rework this since we're integrating BLAS and LAPACK
 #if defined(__APPLE__)
   dpotrf_(
       &clpk_uplo_, &clpk_n_pheno_, env_chol_.data(), &clpk_lda_, &clpk_out_);
@@ -59,6 +58,7 @@ PhenoArch::PhenoArch(
   for (std::size_t c = 0; c < n_pheno; c++)
     for (std::size_t r = 0; r < c; r++) env_chol_[c * n_pheno_ + r] = 0.0;
 
+  // add initial state optimisation to make this more reliable
   optim_arch(1e4);
 }
 

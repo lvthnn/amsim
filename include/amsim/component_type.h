@@ -2,6 +2,7 @@
 #define AMSIMCPP_COMPONENTTYPE_H
 
 #pragma once
+
 #include <string>
 
 namespace amsim {

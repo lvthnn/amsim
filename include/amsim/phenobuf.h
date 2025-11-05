@@ -2,6 +2,7 @@
 #define AMSIMCPP_PHENOBUF_H
 
 #pragma once
+
 #include <amsim/component_type.h>
 
 #include <cstddef>

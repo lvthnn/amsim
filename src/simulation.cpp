@@ -1,35 +1,40 @@
-#include <amsim/metric.h>
-#include <amsim/simulation.h>
-#include <amsim/simulation_config.h>
-#include <sys/resource.h>
-
 #include <atomic>
 #include <filesystem>
 #include <format>
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include <thread>
+
+#include <amsim/log_level.h>
+#include <amsim/logger.h>
+#include <amsim/logger_timer.h>
+#include <amsim/metric.h>
+#include <amsim/simulation.h>
+#include <amsim/simulation_config.h>
+#include <sys/resource.h>
 
 namespace amsim {
 
 void check_rlimit(const std::size_t required) {
   struct rlimit rl;
   if (getrlimit(RLIMIT_NOFILE, &rl) == 0) {
-    if (rl.rlim_cur << required) {
+    if (required > rl.rlim_cur) {
       std::cerr << "Warning: specified number of threads and metrics exceeds "
                    "open file limit ("
-                << required << "). Consider running ulimit -n " << required
-                << " or more.";
-    } else {
-      perror("getrlimit");
+                << required << "; current value: " << rl.rlim_cur
+                << "). Consider running ulimit -n " << required << " or more.";
     }
+  } else {
+    perror("getrlimit");
   }
 }
 
 Simulation::Simulation(
     const SimulationConfig& config,
     std::optional<std::filesystem::path> out_dir_,
-    std::optional<std::uint64_t> rng_seed_)
+    std::optional<std::uint64_t> rng_seed_,
+    Logger* logger)
     : n_gen(config.n_gen),
       n_ind(config.n_ind),
       n_loc(config.n_loc),
@@ -80,9 +85,9 @@ Simulation::Simulation(
           metrics.push_back(spec.setup(ctx_));
         return metrics;
       }()) {
-  if (!std::filesystem::exists(out_dir)) {
+  if (!std::filesystem::exists(out_dir))
     std::filesystem::create_directory(out_dir);
-  }
+  if (logger) logger_ = logger;
 }
 
 Simulation::Simulation(
@@ -144,7 +149,7 @@ Simulation::Simulation(
       }()) {
   if (!std::filesystem::exists(out_dir))
     std::filesystem::create_directory(out_dir);
-  std::cerr << "done!\n";
+  logger_->info("Initialised simulation");
 };
 
 void Simulation::stream_(std::size_t gen) {
@@ -157,7 +162,6 @@ void Simulation::stream_(std::size_t gen) {
       if (!stream->is_open()) {
         throw std::runtime_error(
             "could not open metric stream: " + metrics_[metric].name);
-        std::cout << out_dir / (metrics_[metric].name + ".tsv") << "\n";
       }
       *stream << metrics_[metric].header() << "\n";
       streams_.emplace_back(std::move(stream));
@@ -179,7 +183,6 @@ void Simulation::stream_(std::size_t gen) {
 }
 
 void Simulation::run() {
-  std::cerr << "generating initial haplotypes\n";
   std::vector<std::size_t> sib_matching(ctx_.n_ind / 2);
   std::iota(sib_matching.begin(), sib_matching.end(), ctx_.n_ind / 2);
 
@@ -187,14 +190,19 @@ void Simulation::run() {
   genome_.compute_mafs();
   genome_.compute_stats();
 
+  LoggerTimer timer;
+
   for (std::size_t gen = 0; gen < n_gen; gen++) {
-    // std::cerr << "generation " << gen << "\n";
-    // std::cerr << "computing mafs and stats\n";
+    logger_->info(
+        " Simulating generation " + std::to_string(gen + 1) + "/" +
+        std::to_string(n_gen));
+
     genome_.compute_mafs();
     genome_.compute_stats();
+    logger_->debug(timer.tick("Computed locus MAFs and statistics"));
 
-    // std::cerr << "generating env\n";
     arch_.gen_env(buf_(ComponentType::ENVIRONMENTAL), ctx_.n_ind);
+    logger_->debug(timer.tick("Generated environmental components"));
 
     // std::cerr << "scoring phenotypes\n";
     for (Phenotype& pheno : phenotypes_) {
@@ -202,23 +210,29 @@ void Simulation::run() {
       pheno.compute_stats();
       if (gen == 0) pheno.transmit_vert(sib_matching);
     }
+    logger_->debug(timer.tick("Scored phenotypes"));
 
-    if (buf_.has_lat()) buf_.score_latent(model_.cor_U, model_.cor_VT);
+    if (buf_.has_lat()) {
+      buf_.score_latent(model_.cor_U, model_.cor_VT);
+      logger_->debug(timer.tick("Scored latent phenotypes"));
+   }
 
-    // std::cerr << "mating\n";
     model_.init_state();
     model_.update(phenotypes_);
     std::vector<std::size_t> opt_matching = model_.match();
+    logger_->debug(timer.tick("Performed mate matching"));
 
     for (Phenotype& pheno : phenotypes_) pheno.transmit_vert(opt_matching);
+    logger_->debug(timer.tick("Performed vertical transmission"));
 
     // std::cerr << "streaming\n";
     stream_(gen);
+    logger_->debug(timer.tick("Streamed metric data"));
 
-    // std::cerr << "updating\n";
     genome_.transpose();
     genome_.update(opt_matching);
     genome_.transpose();
+    logger_->debug(timer.tick("Updated genome"));
   }
 }
 
@@ -226,11 +240,15 @@ void run_simulations(
     const SimulationConfig& config,
     std::size_t n_replicates,
     std::size_t n_threads,
-    bool summarise) {
+    bool summarise,
+    LogLevel log_level) {
   // ensure the base directory exists
   if (!std::filesystem::exists(config.out_dir)) {
     std::filesystem::create_directory(config.out_dir);
   }
+
+  std::ofstream log_out(config.out_dir / "amsim.log");
+  Logger logger(log_level, log_out);
 
   // run multithreaded replicate simulations
   std::atomic<std::size_t> next{0};
@@ -255,7 +273,7 @@ void run_simulations(
         const std::uint64_t PHI = 0x9E3779B97F4A7C15ull;
         std::uint64_t rep_seed = config.rng_seed + PHI * rep_id;
 
-        Simulation rep(config, rep_dir, rep_seed);
+        Simulation rep(config, rep_dir, rep_seed, &logger);
 
         rep.run();
       }

@@ -2,6 +2,7 @@
 #define AMSIMCPP_GENOME_H
 
 #pragma once
+
 #include <amsim/haplobuf.h>
 #include <amsim/haploview.h>
 #include <amsim/rng.h>

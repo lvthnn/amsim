@@ -1,6 +1,3 @@
-#include <amsim/simulation_results.h>
-#include <amsim/stats.h>
-
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
@@ -11,6 +8,9 @@
 #include <sstream>
 #include <string>
 #include <vector>
+
+#include <amsim/simulation_results.h>
+#include <amsim/stats.h>
 
 namespace amsim {
 

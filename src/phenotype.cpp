@@ -1,10 +1,3 @@
-#include <amsim/component_type.h>
-#include <amsim/genome.h>
-#include <amsim/haplobuf.h>
-#include <amsim/phenoarch.h>
-#include <amsim/phenobuf.h>
-#include <amsim/phenotype.h>
-
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -12,6 +5,13 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+
+#include <amsim/component_type.h>
+#include <amsim/genome.h>
+#include <amsim/haplobuf.h>
+#include <amsim/phenoarch.h>
+#include <amsim/phenobuf.h>
+#include <amsim/phenotype.h>
 
 #if __APPLE__
 #include <Accelerate/Accelerate.h>

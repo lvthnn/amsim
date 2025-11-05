@@ -1,8 +1,8 @@
-#include <amsim/haplobuf.h>
-#include <amsim/utils.h>
-
 #include <cstddef>
 #include <cstdint>
+
+#include <amsim/haplobuf.h>
+#include <amsim/utils.h>
 
 namespace amsim {
 

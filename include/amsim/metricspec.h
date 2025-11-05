@@ -1,6 +1,8 @@
 #ifndef AMSIMCPP_METRICSPEC_H
 #define AMSIMCPP_METRICSPEC_H
 
+#pragma once
+
 #include <amsim/metric.h>
 #include <amsim/simulation_context.h>
 

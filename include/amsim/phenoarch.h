@@ -2,6 +2,7 @@
 #define AMSIMCPP_PHENOARCH_H
 
 #pragma once
+
 #include <amsim/rng.h>
 
 #include <cstddef>

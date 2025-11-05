@@ -1,7 +1,7 @@
-#include <cmath>
 #include <algorithm>
-#include <optional>
+#include <cmath>
 #include <limits>
+#include <optional>
 
 #if defined(__APPLE__)
 #include <Accelerate/Accelerate.h>
@@ -52,11 +52,11 @@ double var(const int N, const double* X, const int incX, bool population) {
   return m2 / denom;
 }
 
-double std(const int N, const double *X, const int incX, bool population) {
+double std(const int N, const double* X, const int incX, bool population) {
   return std::sqrt(var(N, X, incX, population));
 }
 
-double sem(const int N, const double *X, const int incX) {
+double sem(const int N, const double* X, const int incX) {
   return std(N, X, incX, false) / static_cast<double>(N);
 }
 
@@ -116,8 +116,7 @@ double cor(
   if (!scale_X) scale_X = std::sqrt(var(N, X, incX));
   if (!scale_Y) scale_Y = std::sqrt(var(N, Y, incY));
   double cor = 0.0;
-  double denom =
-      1.0 / (static_cast<double>(N) * *scale_X * *scale_Y);
+  double denom = 1.0 / (static_cast<double>(N) * *scale_X * *scale_Y);
   const double *xi = X, *eta = Y;
 
   for (int i = 0; i < N; ++i, xi += incX, eta += incY)
@@ -237,7 +236,7 @@ void cor(
   cor(N, P, P, X, ldX, X, ldX, R, ldR);
 }
 
-double quantile(const double q, const int N, const double *X, const int incX) {
+double quantile(const double q, const int N, const double* X, const int incX) {
   if (q < 0.0) throw std::invalid_argument("can't specify quantile below zero");
   if (q > 1.0) throw std::invalid_argument("can't specify quantile above one");
   if (N <= 0) return std::numeric_limits<double>::quiet_NaN();

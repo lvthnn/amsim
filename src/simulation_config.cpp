@@ -1,7 +1,7 @@
-#include <amsim/simulation_config.h>
-
 #include <filesystem>
 #include <iostream>
+
+#include <amsim/simulation_config.h>
 
 namespace amsim {
 

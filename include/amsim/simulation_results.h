@@ -1,15 +1,17 @@
 #ifndef AMSIMCPP_SIMULATION_RESULTS_H
 #define AMSIMCPP_SIMULATION_RESULTS_H
 
+#pragma once
+
 #include <amsim/stats.h>
 
 #include <filesystem>
-#include <string>
-#include <unordered_map>
-#include <vector>
 #include <fstream>
 #include <iostream>
 #include <optional>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace amsim {
 

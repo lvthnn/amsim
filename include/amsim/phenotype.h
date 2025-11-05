@@ -2,6 +2,7 @@
 #define AMSIMCPP_PHENOTYPE_H
 
 #pragma once
+
 #include <amsim/component_type.h>
 #include <amsim/genome.h>
 #include <amsim/phenoarch.h>

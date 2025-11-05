@@ -2,6 +2,7 @@
 #define AMSIMCPP_UTILS_H
 
 #pragma once
+
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>

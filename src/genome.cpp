@@ -1,11 +1,11 @@
-#include <amsim/genome.h>
-#include <amsim/haploview.h>
-#include <amsim/rng.h>
-
 #include <cstddef>
 #include <cstdint>
 #include <stdexcept>
 #include <vector>
+
+#include <amsim/genome.h>
+#include <amsim/haploview.h>
+#include <amsim/rng.h>
 
 namespace amsim {
 Genome::Genome(

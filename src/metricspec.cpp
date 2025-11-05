@@ -1,10 +1,10 @@
+#include <string>
+#include <vector>
+
 #include <amsim/component_type.h>
 #include <amsim/metric.h>
 #include <amsim/metricspec.h>
 #include <amsim/simulation_context.h>
-
-#include <string>
-#include <vector>
 
 namespace amsim {
 

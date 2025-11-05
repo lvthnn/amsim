@@ -2,6 +2,7 @@
 #define AMSIMCPP_HAPLOBUF_H
 
 #pragma once
+
 #include <amsim/haploview.h>
 
 #include <cstddef>

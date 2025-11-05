@@ -1,6 +1,8 @@
 #ifndef AMSIMCPP_SIMULATION_CONFIG_H
 #define AMSIMCPP_SIMULATION_CONFIG_H
 
+#pragma once
+
 #include <amsim/genome.h>
 #include <amsim/haplobuf.h>
 #include <amsim/mating.h>

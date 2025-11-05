@@ -2,6 +2,7 @@
 #define AMSIMCPP_STATS_H
 
 #pragma once
+
 #include <optional>
 
 namespace amsim::stats {
@@ -21,8 +22,7 @@ double std(
     const int N, const double* X, const int incX, bool population = true);
 
 // Compute the standard error of a vector
-double sem(
-    const int N, const double* X, const int incX);
+double sem(const int N, const double* X, const int incX);
 
 // Centre a vector to zero expectation.
 void centre(

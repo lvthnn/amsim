@@ -2,6 +2,7 @@
 #define AMSIMCPP_RNG_H
 
 #pragma once
+
 #include <array>
 #include <chrono>
 #include <cmath>

@@ -6,8 +6,8 @@
 #include <cblas.h>
 #endif
 
-#include <amsim/component_type.h>
 #include <amsim/metric.h>
+#include <amsim/component_type.h>
 #include <amsim/simulation_context.h>
 #include <amsim/stats.h>
 
