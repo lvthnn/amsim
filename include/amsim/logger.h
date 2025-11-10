@@ -64,11 +64,14 @@ class Logger {
 #define LOG_STREAM(stream, log_level) \
   amsim::Logger::getInstance(stream, log_level)
 
-#define LOG_INFO(msg) amsim::Logger::getInstance().log(msg, LogLevel::INFO)
-#define LOG_DEBUG(msg) amsim::Logger::getInstance().log(msg, LogLevel::DEBUG)
+#define LOG_INFO(msg) \
+  amsim::Logger::getInstance().log(msg, amsim::LogLevel::INFO)
+#define LOG_DEBUG(msg) \
+  amsim::Logger::getInstance().log(msg, amsim::LogLevel::DEBUG)
 #define LOG_WARNING(msg) \
-  amsim::Logger::getInstance().log(msg, LogLevel::WARNING)
-#define LOG_ERROR(msg) amsim::Logger::getInstance().log(msg, LogLevel::ERROR)
+  amsim::Logger::getInstance().log(msg, amsim::LogLevel::WARNING)
+#define LOG_ERROR(msg) \
+  amsim::Logger::getInstance().log(msg, amsim::LogLevel::ERROR)
 
 }  // namespace amsim
 
