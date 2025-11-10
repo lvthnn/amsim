@@ -244,7 +244,6 @@ void assert_cross_cor(
         "LAPACK dgesvd failed with INFO = " + std::to_string(clpk_info));
 
   for (const double& sval : svals) {
-    std::cerr << sval << "\n";
     if (sval > 1.0)
       throw std::invalid_argument(
           "infeasible between-mate correlation regime; singular value exceeds "

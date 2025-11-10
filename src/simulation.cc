@@ -229,8 +229,6 @@ void run_simulations(
 
   LOG_STREAM(std::cout, log_level);
 
-  LOG_INFO("hello there");
-
   // run multithreaded replicate simulations
   std::atomic<std::size_t> next{0};
   std::vector<std::thread> pool;

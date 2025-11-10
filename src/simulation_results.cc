@@ -20,9 +20,8 @@ SimulationResults::SimulationResults(
     std::optional<std::vector<std::string>> metric_names)
     : out_dir_(std::move(out_dir)) {
   // ensure target directory exists
-  if (!std::filesystem::exists(out_dir_)) {
+  if (!std::filesystem::exists(out_dir_))
     throw std::invalid_argument("specified output directory does not exist");
-  }
 
   // infer number of replicates and replicate directories if not suppied
   infer_replicates_(n_replicates);
@@ -36,9 +35,8 @@ SimulationResults::SimulationResults(
 
 ResultsTable SimulationResults::operator()(const std::string& metric) {
   auto it = metric_map_.find(metric);
-  if (it == metric_map_.end()) {
+  if (it == metric_map_.end())
     throw std::invalid_argument("metric " + metric + " not found");
-  }
   return index_[metric_map_[metric]];
 }
 
@@ -149,10 +147,9 @@ void SimulationResults::summarise_metric_(std::string metric) {
   for (std::size_t rep = 0; rep < n_replicates_; ++rep) {
     std::filesystem::path file = rep_dirs_[rep] / (metric + ".tsv");
     streams[rep] = std::ifstream(file);
-    if (!streams[rep].is_open()) {
+    if (!streams[rep].is_open())
       throw std::runtime_error(
           "could not open metric stream for file " + file.string());
-    }
   }
 
   // loop over each of the files
@@ -164,9 +161,8 @@ void SimulationResults::summarise_metric_(std::string metric) {
     return stream.good() && stream.peek() != EOF;
   })) {
     // skip the first column (index) at the start of the row
-    for (std::size_t rep = 0; rep < n_replicates_; ++rep) {
+    for (std::size_t rep = 0; rep < n_replicates_; ++rep)
       std::getline(streams[rep], dummy, '\t');
-    }
 
     // read and summarise columns
     for (std::size_t col = 0; col < labels.size(); ++col) {
@@ -185,9 +181,8 @@ void SimulationResults::summarise_metric_(std::string metric) {
 }
 
 void SimulationResults::summarise() {
-  for (const std::string& metric : metric_names_) {
+  for (const std::string& metric : metric_names_)
     summarise_metric_(metric);
-  }
 }
 
 void SimulationResults::save(
@@ -196,20 +191,20 @@ void SimulationResults::save(
     bool overwrite) {
   if (!metrics) metrics = metric_names_;
   if (!out_dir) out_dir = out_dir_;
-  if (!std::filesystem::exists(*out_dir)) {
+  if (!std::filesystem::exists(*out_dir))
     throw std::invalid_argument("specified output directory does not exist!");
-  }
+
   for (const std::string& metric : *metrics) {
     std::filesystem::path metric_path = *out_dir / (metric + ".tsv");
-    if (!overwrite && std::filesystem::exists(metric_path)) {
+    if (!overwrite && std::filesystem::exists(metric_path))
       throw std::invalid_argument(
           "file " + metric_path.string() + "already exists");
-    }
     std::ofstream metric_out(metric_path);
-    if (!metric_out.is_open()) {
+
+    if (!metric_out.is_open())
       throw std::invalid_argument(
           "could not open output stream for " + metric_path.string());
-    }
+
     print_table(index_[metric_map_[metric]], metric_out);
   }
 }
