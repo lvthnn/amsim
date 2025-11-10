@@ -1,10 +1,10 @@
-#include <string>
-#include <vector>
-
 #include <amsim/component_type.h>
 #include <amsim/metric.h>
 #include <amsim/metricspec.h>
 #include <amsim/simulation_context.h>
+
+#include <string>
+#include <vector>
 
 namespace amsim {
 
@@ -14,8 +14,8 @@ std::vector<std::string> label_matrix(
     std::vector<std::string> names, bool cross = false) {
   std::size_t n = names.size();
   std::vector<std::string> labels(n * n);
-  for (std::size_t i = 0; i < names.size(); i++)
-    for (std::size_t j = 0; j < names.size(); j++)
+  for (std::size_t i = 0; i < names.size(); ++i)
+    for (std::size_t j = 0; j < names.size(); ++j)
       labels[i * n + j] = (cross)
                               ? names[i] + "_male::" + names[j] + "_female"
                               : labels[i * n + j] = names[i] + "::" + names[j];
@@ -111,7 +111,7 @@ MetricSpec pheno_latent_comp_cor(ComponentType type) {
     const std::size_t n_cols = ctx.n_pheno;
 
     std::vector<std::string> latent_names(ctx.n_pheno);
-    for (std::size_t el = 0; el < ctx.n_pheno; el++)
+    for (std::size_t el = 0; el < ctx.n_pheno; ++el)
       latent_names[el] = "L" + std::to_string(el + 1);
 
     const std::vector<std::string> labels = labels::label_matrix(latent_names);
@@ -129,7 +129,7 @@ MetricSpec pheno_latent_comp_xcor(ComponentType type) {
     const std::size_t n_cols = ctx.n_pheno;
 
     std::vector<std::string> latent_names(ctx.n_pheno);
-    for (std::size_t el = 0; el < ctx.n_pheno; el++)
+    for (std::size_t el = 0; el < ctx.n_pheno; ++el)
       latent_names[el] = "L" + std::to_string(el + 1);
 
     const std::vector<std::string> labels =
@@ -148,7 +148,7 @@ MetricSpec pheno_latent_comp_mean(ComponentType type) {
     const std::size_t n_cols = 1;
 
     std::vector<std::string> labels(ctx.n_pheno);
-    for (std::size_t el = 0; el < ctx.n_pheno; el++)
+    for (std::size_t el = 0; el < ctx.n_pheno; ++el)
       labels[el] = "L" + std::to_string(el + 1);
 
     return Metric{func, name, n_rows, n_cols, labels, true};
@@ -164,7 +164,7 @@ MetricSpec pheno_latent_comp_var(ComponentType type) {
     const std::size_t n_cols = 1;
 
     std::vector<std::string> labels(ctx.n_pheno);
-    for (std::size_t el = 0; el < ctx.n_pheno; el++)
+    for (std::size_t el = 0; el < ctx.n_pheno; ++el)
       labels[el] = "L" + std::to_string(el + 1);
 
     return Metric{func, name, n_rows, n_cols, labels, true};

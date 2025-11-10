@@ -1,7 +1,7 @@
+#include <amsim/logger_timer.h>
+
 #include <iomanip>
 #include <sstream>
-
-#include <amsim/logger_timer.h>
 
 namespace amsim {
 

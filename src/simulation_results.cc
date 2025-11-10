@@ -1,3 +1,6 @@
+#include <amsim/simulation_results.h>
+#include <amsim/stats.h>
+
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
@@ -8,9 +11,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include <amsim/simulation_results.h>
-#include <amsim/stats.h>
 
 namespace amsim {
 
@@ -146,7 +146,7 @@ void SimulationResults::summarise_metric_(std::string metric) {
   ResultsTable table;
 
   // initialise input stream vectors
-  for (std::size_t rep = 0; rep < n_replicates_; rep++) {
+  for (std::size_t rep = 0; rep < n_replicates_; ++rep) {
     std::filesystem::path file = rep_dirs_[rep] / (metric + ".tsv");
     streams[rep] = std::ifstream(file);
     if (!streams[rep].is_open()) {

@@ -1,12 +1,12 @@
+#include <amsim/log_level.h>
+#include <amsim/logger.h>
+
 #include <chrono>
 #include <deque>
 #include <iomanip>
 #include <iostream>
 #include <mutex>
 #include <sstream>
-
-#include <amsim/log_level.h>
-#include <amsim/logger.h>
 
 namespace amsim {
 

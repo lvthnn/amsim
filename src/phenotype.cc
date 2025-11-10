@@ -71,7 +71,7 @@ void Phenotype::score_bitwise(Genome& genome) {
 
   double global_centre = 0.0;
 
-  for (std::size_t el = 0; el < loci_.size(); el++) {
+  for (std::size_t el = 0; el < loci_.size(); ++el) {
     const std::size_t loc = loci_[el];
     const double loc_sd = std::sqrt(genome.v_lvar(loc));
     const double loc_effect = loc_effects_[el] / loc_sd;
@@ -82,7 +82,7 @@ void Phenotype::score_bitwise(Genome& genome) {
     // if the locus is monomorphic, skip it
     if (genome.v_lvar(loc) == 0) continue;
 
-    for (std::size_t word = 0; word < n_words; word++) {
+    for (std::size_t word = 0; word < n_words; ++word) {
       std::uint64_t HET = H0(loc, word) ^ H1(loc, word);
       std::uint64_t HOM = H0(loc, word) & H1(loc, word);
       std::size_t offset, ind;
@@ -101,7 +101,7 @@ void Phenotype::score_bitwise(Genome& genome) {
     }
   }
 
-  for (std::size_t ind = 0; ind < n_ind; ind++) ptr_gen_[ind] -= global_centre;
+  for (std::size_t ind = 0; ind < n_ind; ++ind) ptr_gen_[ind] -= global_centre;
 }
 
 void Phenotype::score_tiled(Genome& genome) {
@@ -181,7 +181,7 @@ void Phenotype::compute_stats() {
   const std::vector<double> ones(n_ind_, 1.0);
   for (ComponentType comp = ComponentType::GENETIC;
        comp <= ComponentType::TOTAL;
-       comp++) {
+       ++comp) {
     const double* ptr_ = (*this)(comp);
 
     const double sum_sq = cblas_ddot(n_ind_, ptr_, 1, ptr_, 1);

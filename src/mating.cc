@@ -71,14 +71,14 @@ AssortativeModel::AssortativeModel(
   // copy since dgesvd from LAPACK destroys original matrix
   std::vector<double> cor_copy_ = cor_;
 
-  char clpk_job = 'A';
-  int clpk_n_pheno_ = static_cast<int>(n_pheno_);
+  const char clpk_job = 'A';
+  const int clpk_n_pheno_ = static_cast<int>(n_pheno_);
   int clpk_lwork = -1;
   int clpk_info;
   double clpk_wkopt;
 
 // perform workspace query
-#if defined(__APPLE__)
+#ifdef __APPLE__
   dgesvd_(
       &clpk_job,
       &clpk_job,
@@ -157,7 +157,7 @@ AssortativeModel::AssortativeModel(
 
 void AssortativeModel::arrange_() {
   std::vector<double> ones(n_sex_, 1.0);
-  for (std::size_t pheno = 0; pheno < n_pheno_; pheno++) {
+  for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno) {
     const double* ptr_m = ptr_tot_[pheno];
     const double* ptr_f = ptr_m + n_sex_;
 
@@ -166,7 +166,7 @@ void AssortativeModel::arrange_() {
     const double sd_m = std::sqrt(stats::var(n_sex_, ptr_m, 1));
     const double sd_f = std::sqrt(stats::var(n_sex_, ptr_f, 1));
 
-    for (std::size_t ind = 0; ind < n_sex_; ind++) {
+    for (std::size_t ind = 0; ind < n_sex_; ++ind) {
       male_[pheno * n_sex_ + ind] = (ptr_m[ind] - mean_m) / sd_m;
       female_[pheno * n_sex_ + ind] = (ptr_f[state[ind]] - mean_f) / sd_f;
     }
@@ -198,10 +198,10 @@ std::vector<double> AssortativeModel::compute_delta_(
   std::vector<double> res(n_pheno_ * n_pheno_);
   const double scale = 1.0 / static_cast<double>(n_sex_);
 
-  for (std::size_t p1 = 0; p1 < n_pheno_; p1++) {
+  for (std::size_t p1 = 0; p1 < n_pheno_; ++p1) {
     double m0 = male_[p1 * n_sex_ + i0];
     double m1 = male_[p1 * n_sex_ + i1];
-    for (std::size_t p2 = 0; p2 < n_pheno_; p2++) {
+    for (std::size_t p2 = 0; p2 < n_pheno_; ++p2) {
       double f0 = female_[p2 * n_sex_ + i0];
       double f1 = female_[p2 * n_sex_ + i1];
       // column-major: index = row + col * n_rows
@@ -227,7 +227,7 @@ double AssortativeModel::compute_denergy_(
 void AssortativeModel::display_cor() {
   std::vector<double> cor_mat = compute_cor_();
   std::cerr << std::setprecision(5);
-  for (std::size_t el = 0; el < cor_mat.size(); el++) {
+  for (std::size_t el = 0; el < cor_mat.size(); ++el) {
     if (el % n_pheno_ == 0) std::cerr << "\n";
     std::cerr << cor_mat[el] << "\t";
   }
@@ -274,7 +274,7 @@ void AssortativeModel::init_state() {
   // add noise to get correlation to equal latent_cor
   std::vector<double> latent_fuzz(n_sex_);
   fuzz_.fill(latent_fuzz.data(), n_sex_);
-  for (std::size_t ind = 0; ind < n_sex_; ind++)
+  for (std::size_t ind = 0; ind < n_sex_; ++ind)
     latent_female[ind] += latent_noise * latent_fuzz[ind];
 
   // generate initial state based on matching of order statistics
@@ -294,7 +294,7 @@ std::vector<std::size_t> AssortativeModel::match() {
   arrange_();
   std::vector<double> cur = compute_cor_();
 
-  for (std::size_t itr = 0; itr < n_itr_; itr++) {
+  for (std::size_t itr = 0; itr < n_itr_; ++itr) {
     std::size_t i0 = swap_.sample(n_sex_);
     std::size_t i1 = swap_.sample(n_sex_);
     while (i0 == i1) i1 = swap_.sample(n_sex_);
@@ -308,7 +308,7 @@ std::vector<std::size_t> AssortativeModel::match() {
     if (u < acc_prob) {
       std::swap(state[i0], state[i1]);
 
-      for (std::size_t pheno = 0; pheno < n_pheno_; pheno++)
+      for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
         std::swap(female_[pheno * n_sex_ + i0], female_[pheno * n_sex_ + i1]);
 
       cblas_daxpy(dim, 1.0, delta.data(), 1, cur.data(), 1);

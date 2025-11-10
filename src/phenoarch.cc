@@ -55,8 +55,8 @@ PhenoArch::PhenoArch(
       &clpk_uplo_, &clpk_n_pheno_, env_chol_.data(), &clpk_lda_, &clpk_out_);
 #endif
 
-  for (std::size_t c = 0; c < n_pheno; c++)
-    for (std::size_t r = 0; r < c; r++) env_chol_[c * n_pheno_ + r] = 0.0;
+  for (std::size_t c = 0; c < n_pheno; ++c)
+    for (std::size_t r = 0; r < c; ++r) env_chol_[c * n_pheno_ + r] = 0.0;
 
   // add initial state optimisation to make this more reliable
   optim_arch(1e4);
@@ -89,12 +89,12 @@ void PhenoArch::print_correlations(
   std::cerr << std::fixed << std::setprecision(4);
 
   std::size_t id = 0;
-  for (std::size_t i = 0; i < n_pheno_; i++) {
-    for (std::size_t j = i + 1; j < n_pheno_; j++) {
+  for (std::size_t i = 0; i < n_pheno_; ++i) {
+    for (std::size_t j = i + 1; j < n_pheno_; ++j) {
       const double actual_cor =
           intersect[id] / std::sqrt(n_loc_[i] * n_loc_[j]);
       std::cerr << "  Pheno " << i << " vs " << j << ": " << actual_cor << "\n";
-      id++;
+      ++id;
     }
   }
   std::cerr << "\n";
@@ -104,12 +104,12 @@ std::vector<std::uint64_t> PhenoArch::init_mask_() {
   const std::size_t n_words = (n_loc_tot_ + 63) / 64;
   std::vector<std::uint64_t> loc_mask(n_words * n_pheno_);
 
-  for (std::size_t pheno = 0; pheno < n_pheno_; pheno++) {
+  for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno) {
     std::uint64_t* loc_ptr = &loc_mask[pheno * n_words];
 
     const std::size_t n_loc_pheno = n_loc_[pheno];
     for (std::size_t r_id = n_loc_tot_ - n_loc_pheno; r_id < n_loc_tot_;
-         r_id++) {
+         ++r_id) {
       const std::size_t l_id = rng_unf_.sample(r_id + 1);
       const std::size_t lw = l_id / 64;
       const std::size_t lo = l_id % 64;
@@ -131,14 +131,14 @@ std::vector<std::size_t> PhenoArch::init_intersect_(
   const std::size_t n_words = (n_loc_tot_ + 63) / 64;
 
   std::size_t id = 0;
-  for (std::size_t i = 0; i < n_pheno_; i++) {
-    for (std::size_t j = i + 1; j < n_pheno_; j++) {
+  for (std::size_t i = 0; i < n_pheno_; ++i) {
+    for (std::size_t j = i + 1; j < n_pheno_; ++j) {
       const std::uint64_t* pheno_i = &mask[n_words * i];
       const std::uint64_t* pheno_j = &mask[n_words * j];
-      for (std::size_t word = 0; word < n_words; word++) {
+      for (std::size_t word = 0; word < n_words; ++word) {
         intersect[id] += __builtin_popcountll(pheno_i[word] & pheno_j[word]);
       }
-      id++;
+      ++id;
     }
   }
   return intersect;
@@ -147,11 +147,11 @@ std::vector<std::size_t> PhenoArch::init_intersect_(
 std::vector<double> PhenoArch::init_weights_() const {
   std::vector<double> weights((n_pheno_ * (n_pheno_ - 1)) / 2);
   std::size_t id = 0;
-  for (std::size_t i = 0; i < n_pheno_; i++) {
-    for (std::size_t j = i + 1; j < n_pheno_; j++) {
+  for (std::size_t i = 0; i < n_pheno_; ++i) {
+    for (std::size_t j = i + 1; j < n_pheno_; ++j) {
       weights[id] =
           gen_cor_[j * n_pheno_ + i] * std::sqrt(n_loc_[i] * n_loc_[j]);
-      id++;
+      ++id;
     }
   }
   return weights;
@@ -164,7 +164,7 @@ void PhenoArch::optim_arch(std::size_t max_it, double eps) {
   std::vector<double> weights = init_weights_();
 
   const std::size_t n_words = (n_loc_tot_ + 63) / 64;
-  for (std::size_t it = 0; it < max_it; it++) {
+  for (std::size_t it = 0; it < max_it; ++it) {
     std::size_t pheno = it % n_pheno_;
     std::size_t opt_add = 0;
     std::size_t opt_del = 0;
@@ -174,14 +174,14 @@ void PhenoArch::optim_arch(std::size_t max_it, double eps) {
     std::uint64_t* ptr_pheno = &loc_mask_[n_words * pheno];
 
     // scan through loci and determine optimal addition and deletion
-    for (std::size_t loc = 0; loc < n_loc_tot_; loc++) {
+    for (std::size_t loc = 0; loc < n_loc_tot_; ++loc) {
       std::size_t block = loc / 64;
       std::size_t offset = loc % 64;
 
       double delta = 0.0;
       bool causal = ptr_pheno[block] & (1ull << offset);
 
-      for (std::size_t pheno_adj = 0; pheno_adj < n_pheno_; pheno_adj++) {
+      for (std::size_t pheno_adj = 0; pheno_adj < n_pheno_; ++pheno_adj) {
         if (pheno == pheno_adj) continue;
 
         std::uint64_t* ptr_pheno_adj = &loc_mask_[n_words * pheno_adj];
@@ -224,7 +224,7 @@ void PhenoArch::optim_arch(std::size_t max_it, double eps) {
       ptr_pheno[add_block] |= (1ull << add_offset);
 
       // update intersections and weights for deletion
-      for (std::size_t pheno_adj = 0; pheno_adj < n_pheno_; pheno_adj++) {
+      for (std::size_t pheno_adj = 0; pheno_adj < n_pheno_; ++pheno_adj) {
         if (pheno == pheno_adj) continue;
 
         std::uint64_t* ptr_pheno_adj = &loc_mask_[n_words * pheno_adj];
@@ -237,7 +237,7 @@ void PhenoArch::optim_arch(std::size_t max_it, double eps) {
       }
 
       // update intersections and weights for addition
-      for (std::size_t pheno_adj = 0; pheno_adj < n_pheno_; pheno_adj++) {
+      for (std::size_t pheno_adj = 0; pheno_adj < n_pheno_; ++pheno_adj) {
         if (pheno == pheno_adj) continue;
 
         std::uint64_t* ptr_pheno_adj = &loc_mask_[n_words * pheno_adj];
@@ -258,7 +258,7 @@ std::vector<std::size_t> PhenoArch::pheno_mask(
   const std::uint64_t* ptr_pheno = &loc_mask_[pheno_id * n_words];
   std::vector<std::size_t> loci;
 
-  for (std::size_t word = 0; word < n_words; word++) {
+  for (std::size_t word = 0; word < n_words; ++word) {
     for (std::uint64_t mask = ptr_pheno[word]; mask; mask &= (mask - 1)) {
       const std::size_t offset =
           static_cast<std::uint64_t>(__builtin_ctzll(mask));

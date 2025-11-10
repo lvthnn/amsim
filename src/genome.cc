@@ -1,11 +1,11 @@
+#include <amsim/genome.h>
+#include <amsim/haploview.h>
+#include <amsim/rng.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <stdexcept>
 #include <vector>
-
-#include <amsim/genome.h>
-#include <amsim/haploview.h>
-#include <amsim/rng.h>
 
 namespace amsim {
 Genome::Genome(
@@ -45,12 +45,12 @@ void Genome::generate_haplotypes() noexcept {
   std::size_t n_loc = H0_.n_loc();
   std::size_t n_words = H0_.n_words();
 
-  for (std::size_t loc = 0; loc < n_loc; loc++) {
+  for (std::size_t loc = 0; loc < n_loc; ++loc) {
     bw_.set_prob(v_maf_[loc]);
     std::uint64_t* word0 = H0_.rowptr(loc);
     std::uint64_t* word1 = H1_.rowptr(loc);
 
-    for (std::size_t word = 0; word < n_words; word++) {
+    for (std::size_t word = 0; word < n_words; ++word) {
       word0[word] = bw_.sample();
       word1[word] = bw_.sample();
     }
@@ -122,9 +122,9 @@ void Genome::update(std::vector<std::size_t> matching) {
   bw_.set_prob(v_rec_[0]);
 
   // @TODO: integrate mutation
-  for (std::size_t pair = 0; pair < n_pairs; pair++) {
+  for (std::size_t pair = 0; pair < n_pairs; ++pair) {
     std::size_t fpair = matching[pair] + n_pairs;
-    for (std::size_t word = 0; word < n_words; word++) {
+    for (std::size_t word = 0; word < n_words; ++word) {
       uint64_t male_H0 = H0_(pair, word);
       uint64_t male_H1 = H1_(pair, word);
       uint64_t female_H0 = H0_(fpair, word);

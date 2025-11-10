@@ -6,8 +6,8 @@
 #include <cblas.h>
 #endif
 
-#include <amsim/metric.h>
 #include <amsim/component_type.h>
+#include <amsim/metric.h>
 #include <amsim/simulation_context.h>
 #include <amsim/stats.h>
 
@@ -29,7 +29,7 @@ Metric::Metric(
 
 std::string Metric::header() {
   std::string header = "gen\t";
-  for (std::size_t el = 0; el < buf_.size(); el++) {
+  for (std::size_t el = 0; el < buf_.size(); ++el) {
     header += (!labels_.empty()) ? labels_[el] : std::to_string(el);
     if (el < buf_.size() - 1) header += "\t";
   }
@@ -39,7 +39,7 @@ std::string Metric::header() {
 std::string Metric::stream(const SimulationContext& ctx) {
   buf_ = f_(ctx);
   std::string res;
-  for (std::size_t el = 0; el < buf_.size(); el++)
+  for (std::size_t el = 0; el < buf_.size(); ++el)
     res += std::to_string(buf_[el]) + ((el < (buf_.size() - 1)) ? "\t" : "");
   return res;
 }
@@ -60,7 +60,7 @@ std::vector<double> f_pheno_h2(const SimulationContext& ctx) {
   const std::size_t n_pheno = ctx.n_pheno;
   std::vector<double> pheno_h2(n_pheno);
 
-  for (std::size_t pheno = 0; pheno < n_pheno; pheno++) {
+  for (std::size_t pheno = 0; pheno < n_pheno; ++pheno) {
     const Phenotype& pheno_cur = ctx.phenotypes[pheno];
     pheno_h2[pheno] = pheno_cur.comp_var(ComponentType::GENETIC) /
                       pheno_cur.comp_var(ComponentType::TOTAL);
@@ -76,7 +76,7 @@ MetricFunc f_comp_cor(ComponentType type) {
     std::vector<double> cor_buf(n_pheno * n_pheno, 0.0);
     std::vector<double> std_buf(n_pheno * n_ind, 0.0);
 
-    for (std::size_t pheno = 0; pheno < n_pheno; pheno++) {
+    for (std::size_t pheno = 0; pheno < n_pheno; ++pheno) {
       if (ctx.phenotypes[pheno].comp_var(type) == 0) continue;
       double* buf_cur = &std_buf[pheno * n_ind];
       double mean_cur = ctx.phenotypes[pheno].comp_mean(type);
@@ -85,9 +85,9 @@ MetricFunc f_comp_cor(ComponentType type) {
           n_ind, ctx.phenotypes[pheno](type), 1, buf_cur, 1, mean_cur, sd_cur);
     }
 
-    for (std::size_t i = 0; i < n_pheno; i++) {
+    for (std::size_t i = 0; i < n_pheno; ++i) {
       const double* ptr_i = &std_buf[i * n_ind];
-      for (std::size_t j = i; j < n_pheno; j++) {
+      for (std::size_t j = i; j < n_pheno; ++j) {
         if (i == j) {
           cor_buf[i * n_pheno + j] = 1.0;
           continue;
@@ -144,7 +144,7 @@ MetricFunc f_comp_xcor(ComponentType type) {
 MetricFunc f_comp_mean(ComponentType type) {
   return [type](const SimulationContext& ctx) -> std::vector<double> {
     std::vector<double> comp_means(ctx.n_pheno);
-    for (std::size_t pheno = 0; pheno < ctx.n_pheno; pheno++)
+    for (std::size_t pheno = 0; pheno < ctx.n_pheno; ++pheno)
       comp_means[pheno] = ctx.phenotypes[pheno].comp_mean(type);
     return comp_means;
   };
@@ -154,7 +154,7 @@ MetricFunc f_comp_mean(ComponentType type) {
 MetricFunc f_comp_var(ComponentType type) {
   return [type](const SimulationContext& ctx) -> std::vector<double> {
     std::vector<double> comp_vars(ctx.n_pheno);
-    for (std::size_t pheno = 0; pheno < ctx.n_pheno; pheno++)
+    for (std::size_t pheno = 0; pheno < ctx.n_pheno; ++pheno)
       comp_vars[pheno] = ctx.phenotypes[pheno].comp_var(type);
     return comp_vars;
   };

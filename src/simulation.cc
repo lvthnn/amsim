@@ -1,17 +1,17 @@
-#include <atomic>
-#include <filesystem>
-#include <format>
-#include <iostream>
-#include <stdexcept>
-#include <thread>
-#include <sys/resource.h>
-
 #include <amsim/log_level.h>
 #include <amsim/logger.h>
 #include <amsim/logger_timer.h>
 #include <amsim/metric.h>
 #include <amsim/simulation.h>
 #include <amsim/simulation_config.h>
+#include <sys/resource.h>
+
+#include <atomic>
+#include <filesystem>
+#include <format>
+#include <iostream>
+#include <stdexcept>
+#include <thread>
 
 namespace amsim {
 
@@ -57,7 +57,7 @@ Simulation::Simulation(
       phenotypes_([&]() {
         PhenotypeList phenotypes;
         phenotypes.reserve(n_pheno);
-        for (std::size_t pheno = 0; pheno < n_pheno; pheno++) {
+        for (std::size_t pheno = 0; pheno < n_pheno; ++pheno) {
           phenotypes.emplace_back(
               buf_,
               arch_,
@@ -124,7 +124,7 @@ Simulation::Simulation(
       phenotypes_([&]() {
         PhenotypeList phenotypes;
         phenotypes.reserve(n_pheno);
-        for (std::size_t pheno = 0; pheno < n_pheno; pheno++) {
+        for (std::size_t pheno = 0; pheno < n_pheno; ++pheno) {
           phenotypes.emplace_back(
               buf_,
               arch_,
@@ -189,7 +189,7 @@ void Simulation::run() {
 
   LoggerTimer timer;
 
-  for (std::size_t gen = 0; gen < n_gen; gen++) {
+  for (std::size_t gen = 0; gen < n_gen; ++gen) {
     genome_.compute_mafs();
     genome_.compute_stats();
 
@@ -201,8 +201,7 @@ void Simulation::run() {
       if (gen == 0) pheno.transmit_vert(sib_matching);
     }
 
-    if (buf_.has_lat())
-      buf_.score_latent(model_.cor_U, model_.cor_VT);
+    if (buf_.has_lat()) buf_.score_latent(model_.cor_U, model_.cor_VT);
 
     model_.init_state();
     model_.update(phenotypes_);
