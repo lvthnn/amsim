@@ -248,7 +248,8 @@ void assert_cross_cor(
     if (sval > 1.0)
       throw std::invalid_argument(
           "infeasible between-mate correlation regime; singular value exceeds "
-          "one (" + std::to_string(sval) + ")");
+          "one (" +
+          std::to_string(sval) + ")");
   }
 }
 

@@ -57,17 +57,17 @@ SimulationConfig& SimulationConfig::phenome(
     throw std::invalid_argument(
         "must have equally many number of loci per phenotype as phenotypes");
   if (v_h2_gen_.size() != n_pheno_)
-    throw std::invalid_argument("must specify genetic h2 for all phenotypes"); 
+    throw std::invalid_argument("must specify genetic h2 for all phenotypes");
   if (v_h2_env_.size() != n_pheno_)
     throw std::invalid_argument(
-        "must specify environmental h2 for all phenotypes"); 
+        "must specify environmental h2 for all phenotypes");
   if (v_h2_vert_.size() != n_pheno_)
-    throw std::invalid_argument("must specify vertical h2 for all phenotypes"); 
+    throw std::invalid_argument("must specify vertical h2 for all phenotypes");
 
   for (const std::size_t& n_loc_ : v_n_loc_)
     if (n_loc_ > n_loc)
       throw std::invalid_argument(
-        "number of causal loci exceeds number of modelled loci");
+          "number of causal loci exceeds number of modelled loci");
 
   utils::assert_probs(n_pheno_, v_h2_gen_.data(), 1);
   utils::assert_probs(n_pheno_, v_h2_env_.data(), 1);
@@ -115,7 +115,7 @@ SimulationConfig& SimulationConfig::mating(
   if (n_itr_) n_itr = *n_itr_;
   if (temp_init_) temp_init = *temp_init_;     // positive
   if (temp_decay_) temp_decay = *temp_decay_;  // positive
-  
+
   if (temp_init < 0.0)
     throw std::invalid_argument("temp_init must be positive");
   if (temp_decay < 0.0)
