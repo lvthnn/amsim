@@ -1,4 +1,0 @@
--Iinst/include
--I/opt/homebrew/Cellar/r/4.5.1/lib/R/include
--I/opt/homebrew/lib/R/4.5/site-library/Rcpp/include
--std=c++20
