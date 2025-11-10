@@ -2,7 +2,6 @@
 #include <filesystem>
 #include <format>
 #include <iostream>
-#include <sstream>
 #include <stdexcept>
 #include <thread>
 
@@ -16,6 +15,7 @@
 
 namespace amsim {
 
+// @TODO: refactor to set ulimit if not exceeding soft limit
 void check_rlimit(const std::size_t required) {
   struct rlimit rl;
   if (getrlimit(RLIMIT_NOFILE, &rl) == 0) {
@@ -33,8 +33,7 @@ void check_rlimit(const std::size_t required) {
 Simulation::Simulation(
     const SimulationConfig& config,
     std::optional<std::filesystem::path> out_dir_,
-    std::optional<std::uint64_t> rng_seed_,
-    Logger* logger)
+    std::optional<std::uint64_t> rng_seed_)
     : n_gen(config.n_gen),
       n_ind(config.n_ind),
       n_loc(config.n_loc),
@@ -87,7 +86,7 @@ Simulation::Simulation(
       }()) {
   if (!std::filesystem::exists(out_dir))
     std::filesystem::create_directory(out_dir);
-  if (logger) logger_ = logger;
+  // if (logger) logger_ = logger;
 }
 
 Simulation::Simulation(
@@ -149,7 +148,7 @@ Simulation::Simulation(
       }()) {
   if (!std::filesystem::exists(out_dir))
     std::filesystem::create_directory(out_dir);
-  logger_->info("Initialised simulation");
+  // logger_->info("Initialised simulation");
 };
 
 void Simulation::stream_(std::size_t gen) {
@@ -193,16 +192,16 @@ void Simulation::run() {
   LoggerTimer timer;
 
   for (std::size_t gen = 0; gen < n_gen; gen++) {
-    logger_->info(
-        " Simulating generation " + std::to_string(gen + 1) + "/" +
-        std::to_string(n_gen));
+    // logger_->info(
+    //     " Simulating generation " + std::to_string(gen + 1) + "/" +
+    //     std::to_string(n_gen));
 
     genome_.compute_mafs();
     genome_.compute_stats();
-    logger_->debug(timer.tick("Computed locus MAFs and statistics"));
+    // logger_->debug(timer.tick("Computed locus MAFs and statistics"));
 
     arch_.gen_env(buf_(ComponentType::ENVIRONMENTAL), ctx_.n_ind);
-    logger_->debug(timer.tick("Generated environmental components"));
+    // logger_->debug(timer.tick("Generated environmental components"));
 
     // std::cerr << "scoring phenotypes\n";
     for (Phenotype& pheno : phenotypes_) {
@@ -210,29 +209,29 @@ void Simulation::run() {
       pheno.compute_stats();
       if (gen == 0) pheno.transmit_vert(sib_matching);
     }
-    logger_->debug(timer.tick("Scored phenotypes"));
+    // logger_->debug(timer.tick("Scored phenotypes"));
 
     if (buf_.has_lat()) {
       buf_.score_latent(model_.cor_U, model_.cor_VT);
-      logger_->debug(timer.tick("Scored latent phenotypes"));
+      // logger_->debug(timer.tick("Scored latent phenotypes"));
    }
 
     model_.init_state();
     model_.update(phenotypes_);
     std::vector<std::size_t> opt_matching = model_.match();
-    logger_->debug(timer.tick("Performed mate matching"));
+    // logger_->debug(timer.tick("Performed mate matching"));
 
     for (Phenotype& pheno : phenotypes_) pheno.transmit_vert(opt_matching);
-    logger_->debug(timer.tick("Performed vertical transmission"));
+    // logger_->debug(timer.tick("Performed vertical transmission"));
 
     // std::cerr << "streaming\n";
     stream_(gen);
-    logger_->debug(timer.tick("Streamed metric data"));
+    // logger_->debug(timer.tick("Streamed metric data"));
 
     genome_.transpose();
     genome_.update(opt_matching);
     genome_.transpose();
-    logger_->debug(timer.tick("Updated genome"));
+    // logger_->debug(timer.tick("Updated genome"));
   }
 }
 
@@ -247,8 +246,12 @@ void run_simulations(
     std::filesystem::create_directory(config.out_dir);
   }
 
-  std::ofstream log_out(config.out_dir / "amsim.log");
-  Logger logger(log_level, log_out);
+  // set up the logger instance
+  // std::ofstream log_out(config.out_dir / "amsim.log");
+
+  LOG_STREAM(std::cout, log_level);
+
+  LOG_INFO("hello there");
 
   // run multithreaded replicate simulations
   std::atomic<std::size_t> next{0};
@@ -273,7 +276,7 @@ void run_simulations(
         const std::uint64_t PHI = 0x9E3779B97F4A7C15ull;
         std::uint64_t rep_seed = config.rng_seed + PHI * rep_id;
 
-        Simulation rep(config, rep_dir, rep_seed, &logger);
+        Simulation rep(config, rep_dir, rep_seed);
 
         rep.run();
       }

@@ -20,11 +20,12 @@ void Logger::thread_callback_() {
       messages_.pop_front();
 
       lk.unlock();
-      out_ << msg << "\n";
+      stream_ << msg << "\n";
       lk.lock();
     }
   }
 }
+
 std::string Logger::get_time_str_() {
   const auto now = std::chrono::system_clock::now();
   const auto tse = now.time_since_epoch();
@@ -58,8 +59,8 @@ std::string Logger::format_msg_(const std::string& msg, const LogLevel level) {
   return msg_format.str();
 }
 
-void Logger::log_(const std::string& msg, const LogLevel level) {
-  // if (level <= level_) return;
+void Logger::log(const std::string& msg, const LogLevel level) {
+  if (level < level_) return;
   {
     std::lock_guard<std::mutex> lg(mutex_);
     std::string msg_format = format_msg_(msg, level);
