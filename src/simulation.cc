@@ -15,18 +15,20 @@
 
 namespace amsim {
 
-// @TODO: refactor to set ulimit if not exceeding soft limit
-void check_rlimit(const std::size_t required) {
+void resolve_rlimit(const std::size_t required) {
+  rlim_t rl_req = static_cast<rlim_t>(required);
   struct rlimit rl;
-  if (getrlimit(RLIMIT_NOFILE, &rl) == 0) {
-    if (required > rl.rlim_cur) {
-      std::cerr << "Warning: specified number of threads and metrics exceeds "
-                   "open file limit ("
-                << required << "; current value: " << rl.rlim_cur
-                << "). Consider running ulimit -n " << required << " or more.";
-    }
-  } else {
-    perror("getrlimit");
+
+  if (getrlimit(RLIMIT_NOFILE, &rl) != 0) perror("getrlimit");
+
+  if (rl_req > rl.rlim_max)
+    throw std::invalid_argument(
+        "required resource limit exceeds hard limit; consider lowering "
+        "number of threads or the number of metrics");
+
+  if (rl_req > rl.rlim_cur) {
+    rl.rlim_cur = rl_req;
+    if (setrlimit(RLIMIT_NOFILE, &rl) != 0) perror("setrlimit");
   }
 }
 
@@ -87,67 +89,6 @@ Simulation::Simulation(
   if (!std::filesystem::exists(out_dir))
     std::filesystem::create_directory(out_dir);
 }
-
-Simulation::Simulation(
-    std::size_t n_gen,
-    std::size_t n_ind,
-    std::filesystem::path out_dir,
-    std::uint64_t rng_seed,
-    std::size_t n_loc,
-    std::vector<double> v_maf,
-    std::vector<double> v_rec,
-    std::vector<double> v_mut,
-    std::size_t n_pheno,
-    std::vector<std::string> v_name,
-    std::vector<std::size_t> v_n_loc,
-    std::vector<double> v_h2_gen,
-    std::vector<double> v_h2_env,
-    std::vector<double> v_h2_vert,
-    std::vector<double> gen_cor,
-    std::vector<double> env_cor,
-    std::vector<double> mate_cor,
-    std::size_t n_itr,
-    double tmp_init,
-    double tmp_decay,
-    std::vector<MetricSpec> specs,
-    bool require_latent)
-    : n_gen(n_gen),
-      n_ind(n_ind),
-      n_loc(n_loc),
-      n_pheno(n_pheno),
-      out_dir(out_dir),
-      rng_(rng::seed_xoshiro(rng::auto_seed(rng_seed))),
-      genome_(n_ind, n_loc, v_mut, v_rec, v_maf, rng_),
-      arch_(
-          n_pheno, n_loc, v_n_loc, v_h2_gen, v_h2_env, gen_cor, env_cor, rng_),
-      buf_(n_ind, n_pheno, require_latent),
-      phenotypes_([&]() {
-        PhenotypeList phenotypes;
-        phenotypes.reserve(n_pheno);
-        for (std::size_t pheno = 0; pheno < n_pheno; ++pheno) {
-          phenotypes.emplace_back(
-              buf_,
-              arch_,
-              v_name[pheno],
-              v_h2_gen[pheno],
-              v_h2_env[pheno],
-              v_h2_vert[pheno]);
-        }
-        return phenotypes;
-      }()),
-      model_(
-          phenotypes_, mate_cor, n_itr, n_ind / 2, rng_, tmp_init, tmp_decay),
-      ctx_(genome_, arch_, buf_, phenotypes_, model_),
-      metrics_([&]() {
-        std::vector<Metric> metrics;
-        metrics.reserve(specs.size());
-        for (const MetricSpec& spec : specs)
-          metrics.push_back(spec.setup(ctx_));
-        return metrics;
-      }()) {
-  if (!std::filesystem::exists(out_dir))
-    std::filesystem::create_directory(out_dir);
-};
 
 void Simulation::stream_(std::size_t gen) {
   if (gen == 0) {
@@ -236,7 +177,8 @@ void run_simulations(
 
   std::size_t n_metrics = config.specs.size();
 
-  check_rlimit(n_metrics * n_threads);
+  // set rlimit or warn user if process hard limit exceeded
+  resolve_rlimit(n_metrics * n_threads);
 
   for (std::size_t ii = 0; ii < n_threads; ++ii) {
     pool.emplace_back([&]() {
@@ -249,7 +191,7 @@ void run_simulations(
             config.out_dir / std::format("rep_{:03}", rep_id);
 
         // adjust replicate rng seed
-        const std::uint64_t PHI = 0x9E3779B97F4A7C15ull;
+        constexpr std::uint64_t PHI = 0x9E3779B97F4A7C15ull;
         std::uint64_t rep_seed = config.rng_seed + PHI * rep_id;
 
         Simulation rep(config, rep_dir, rep_seed);
