@@ -1,6 +1,3 @@
-#include <amsim/phenoarch.h>
-#include <amsim/rng.h>
-
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -16,6 +13,9 @@
 #include <cblas.h>
 #include <lapacke.h>
 #endif
+
+#include <amsim/phenoarch.h>
+#include <amsim/rng.h>
 
 namespace amsim {
 PhenoArch::PhenoArch(

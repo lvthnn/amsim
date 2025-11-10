@@ -3,12 +3,12 @@
 
 #pragma once
 
-#include <amsim/component_type.h>
-
 #include <cstddef>
 #include <optional>
 #include <stdexcept>
 #include <vector>
+
+#include <amsim/component_type.h>
 
 namespace amsim {
 class PhenoBuf {

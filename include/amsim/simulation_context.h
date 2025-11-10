@@ -3,13 +3,13 @@
 
 #pragma once
 
+#include <functional>
+
 #include <amsim/genome.h>
 #include <amsim/mating.h>
 #include <amsim/phenoarch.h>
 #include <amsim/phenobuf.h>
 #include <amsim/phenotype.h>
-
-#include <functional>
 
 namespace amsim {
 

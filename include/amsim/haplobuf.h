@@ -3,11 +3,11 @@
 
 #pragma once
 
-#include <amsim/haploview.h>
-
 #include <cstddef>
 #include <cstdint>
 #include <vector>
+
+#include <amsim/haploview.h>
 
 namespace amsim {
 

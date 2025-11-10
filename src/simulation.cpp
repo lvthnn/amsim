@@ -4,6 +4,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <thread>
+#include <sys/resource.h>
 
 #include <amsim/log_level.h>
 #include <amsim/logger.h>
@@ -11,7 +12,6 @@
 #include <amsim/metric.h>
 #include <amsim/simulation.h>
 #include <amsim/simulation_config.h>
-#include <sys/resource.h>
 
 namespace amsim {
 
@@ -86,7 +86,6 @@ Simulation::Simulation(
       }()) {
   if (!std::filesystem::exists(out_dir))
     std::filesystem::create_directory(out_dir);
-  // if (logger) logger_ = logger;
 }
 
 Simulation::Simulation(
@@ -148,7 +147,6 @@ Simulation::Simulation(
       }()) {
   if (!std::filesystem::exists(out_dir))
     std::filesystem::create_directory(out_dir);
-  // logger_->info("Initialised simulation");
 };
 
 void Simulation::stream_(std::size_t gen) {
@@ -192,46 +190,31 @@ void Simulation::run() {
   LoggerTimer timer;
 
   for (std::size_t gen = 0; gen < n_gen; gen++) {
-    // logger_->info(
-    //     " Simulating generation " + std::to_string(gen + 1) + "/" +
-    //     std::to_string(n_gen));
-
     genome_.compute_mafs();
     genome_.compute_stats();
-    // logger_->debug(timer.tick("Computed locus MAFs and statistics"));
 
     arch_.gen_env(buf_(ComponentType::ENVIRONMENTAL), ctx_.n_ind);
-    // logger_->debug(timer.tick("Generated environmental components"));
 
-    // std::cerr << "scoring phenotypes\n";
     for (Phenotype& pheno : phenotypes_) {
       pheno.score(genome_);
       pheno.compute_stats();
       if (gen == 0) pheno.transmit_vert(sib_matching);
     }
-    // logger_->debug(timer.tick("Scored phenotypes"));
 
-    if (buf_.has_lat()) {
+    if (buf_.has_lat())
       buf_.score_latent(model_.cor_U, model_.cor_VT);
-      // logger_->debug(timer.tick("Scored latent phenotypes"));
-   }
 
     model_.init_state();
     model_.update(phenotypes_);
     std::vector<std::size_t> opt_matching = model_.match();
-    // logger_->debug(timer.tick("Performed mate matching"));
 
     for (Phenotype& pheno : phenotypes_) pheno.transmit_vert(opt_matching);
-    // logger_->debug(timer.tick("Performed vertical transmission"));
 
-    // std::cerr << "streaming\n";
     stream_(gen);
-    // logger_->debug(timer.tick("Streamed metric data"));
 
     genome_.transpose();
     genome_.update(opt_matching);
     genome_.transpose();
-    // logger_->debug(timer.tick("Updated genome"));
   }
 }
 
@@ -242,12 +225,8 @@ void run_simulations(
     bool summarise,
     LogLevel log_level) {
   // ensure the base directory exists
-  if (!std::filesystem::exists(config.out_dir)) {
+  if (!std::filesystem::exists(config.out_dir))
     std::filesystem::create_directory(config.out_dir);
-  }
-
-  // set up the logger instance
-  // std::ofstream log_out(config.out_dir / "amsim.log");
 
   LOG_STREAM(std::cout, log_level);
 

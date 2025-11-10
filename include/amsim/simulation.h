@@ -2,19 +2,19 @@
 #define AMSIMCPP_SIMULATION_H
 
 #pragma once
+
+#include <filesystem>
+#include <fstream>
+#include <vector>
+
 #include <amsim/genome.h>
 #include <amsim/log_level.h>
-#include <amsim/logger.h>
 #include <amsim/mating.h>
 #include <amsim/metricspec.h>
 #include <amsim/phenoarch.h>
 #include <amsim/phenobuf.h>
 #include <amsim/simulation_config.h>
 #include <amsim/simulation_results.h>
-
-#include <filesystem>
-#include <fstream>
-#include <vector>
 
 namespace amsim {
 
@@ -23,8 +23,7 @@ class Simulation {
   Simulation(
       const SimulationConfig& config,
       std::optional<std::filesystem::path> out_dir_ = std::nullopt,
-      std::optional<std::uint64_t> rng_seed_ = std::nullopt,
-      Logger* logger = nullptr);
+      std::optional<std::uint64_t> rng_seed_ = std::nullopt);
 
   Simulation(
       std::size_t n_gen,
@@ -91,7 +90,6 @@ class Simulation {
   SimulationContext ctx_;
   std::vector<Metric> metrics_;
   std::vector<std::unique_ptr<std::ofstream>> streams_;
-  Logger* logger_;
 
   void stream_(std::size_t gen);
 };

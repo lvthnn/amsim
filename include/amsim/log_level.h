@@ -5,7 +5,7 @@
 
 #include <string>
 
-enum LogLevel { DEBUG, INFO, WARNING, ERROR, CRITICAL, NONE };
+enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE };
 
 inline std::string to_string(LogLevel level) {
   switch (level) {
@@ -17,8 +17,6 @@ inline std::string to_string(LogLevel level) {
       return "WARNING";
     case LogLevel::ERROR:
       return "ERROR";
-    case LogLevel::CRITICAL:
-      return "CRITICAL";
     case LogLevel::NONE:
       return "NONE";
   }

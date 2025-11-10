@@ -3,10 +3,10 @@
 
 #pragma once
 
-#include <amsim/simulation_context.h>
-
 #include <string>
 #include <vector>
+
+#include <amsim/simulation_context.h>
 
 namespace amsim {
 

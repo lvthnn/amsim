@@ -3,16 +3,16 @@
 
 #pragma once
 
-#include <amsim/component_type.h>
-#include <amsim/genome.h>
-#include <amsim/phenoarch.h>
-#include <amsim/phenobuf.h>
-
 #include <array>
 #include <cstddef>
 #include <optional>
 #include <string>
 #include <vector>
+
+#include <amsim/component_type.h>
+#include <amsim/genome.h>
+#include <amsim/phenoarch.h>
+#include <amsim/phenobuf.h>
 
 namespace amsim {
 

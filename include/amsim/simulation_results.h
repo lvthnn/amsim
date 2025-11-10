@@ -3,8 +3,6 @@
 
 #pragma once
 
-#include <amsim/stats.h>
-
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -12,6 +10,8 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#include <amsim/stats.h>
 
 namespace amsim {
 

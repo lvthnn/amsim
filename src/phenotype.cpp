@@ -6,18 +6,18 @@
 #include <string>
 #include <vector>
 
+#ifdef __APPLE__
+#include <Accelerate/Accelerate.h>
+#else
+#include <cblas.h>
+#endif
+
 #include <amsim/component_type.h>
 #include <amsim/genome.h>
 #include <amsim/haplobuf.h>
 #include <amsim/phenoarch.h>
 #include <amsim/phenobuf.h>
 #include <amsim/phenotype.h>
-
-#if __APPLE__
-#include <Accelerate/Accelerate.h>
-#else
-#include <cblas.h>
-#endif
 
 namespace amsim {
 namespace utils {

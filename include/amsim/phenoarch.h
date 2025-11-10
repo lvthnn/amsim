@@ -3,11 +3,11 @@
 
 #pragma once
 
-#include <amsim/rng.h>
-
 #include <cstddef>
 #include <cstdint>
 #include <vector>
+
+#include <amsim/rng.h>
 
 namespace amsim {
 
