@@ -5,19 +5,12 @@
 int main() {
   const std::filesystem::path out_dir = "amsim_multithread";
   amsim::SimulationResults results(out_dir);
+	results.summarise();
 
-  // std::cout << "n_replicates: " << results.n_replicates_ << "\n";
-  // for (const auto& rep_dir : results.rep_dirs_) {
-  //   std::cout << rep_dir.string() << "\n";
-  // }
+	amsim::ResultsTable pheno_h2 = results("pheno_h2");
+	amsim::ResultsTable pheno_gen_cor = results("pheno_gen_cor");
 
-  // for (const auto& metric_name : results.metric_names_) {
-  //   std::cout << metric_name << "\n";
-  // }
-
-  // std::cout << results.metric_names_.size();
-
-  // results.summarise_metric_("pheno_h2");
-  results.summarise();
-  results.print("pheno_tot_xcor");
+	results.save(
+      std::vector<std::string>({"pheno_h2", "pheno_gen_cor", "pheno_tot_xcor"}),
+			"/Users/karihlynsson/Documents/ak_kh_simulations");
 }
