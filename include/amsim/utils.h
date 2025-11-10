@@ -27,7 +27,8 @@ void assert_cors(const std::size_t N, const double* X, const std::size_t incX);
 void assert_udiag(const std::size_t N, const double* X, const std::size_t ldX);
 void assert_psd(const std::size_t N, const double* X, const std::size_t ldX);
 void assert_cor(const std::size_t N, const double* X, const std::size_t ldX);
-void assert_cross_cor(const std::size_t N, const double* X, const std::size_t ldX);
+void assert_cross_cor(
+    const std::size_t N, const double* X, const std::size_t ldX);
 
 void random_effects(std::size_t n_loci);
 void uniform_effects(std::size_t n_loci);
