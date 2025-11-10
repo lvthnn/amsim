@@ -5,6 +5,8 @@
 
 #include <string>
 
+namespace amsim {
+
 enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE };
 
 inline std::string to_string(LogLevel level) {
@@ -26,5 +28,7 @@ inline std::string to_string(LogLevel level) {
 inline std::ostream& operator<<(std::ostream& os, LogLevel level) {
   return os << to_string(level);
 }
+
+}  // namespace amsim
 
 #endif  // AMSIMCPP_LOG_LEVEL_H
