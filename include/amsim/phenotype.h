@@ -3,16 +3,16 @@
 
 #pragma once
 
+#include <amsim/component_type.h>
+#include <amsim/genome.h>
+#include <amsim/phenoarch.h>
+#include <amsim/phenobuf.h>
+
 #include <array>
 #include <cstddef>
 #include <optional>
 #include <string>
 #include <vector>
-
-#include <amsim/component_type.h>
-#include <amsim/genome.h>
-#include <amsim/phenoarch.h>
-#include <amsim/phenobuf.h>
 
 namespace amsim {
 
@@ -80,14 +80,14 @@ class Phenotype {
     const double scale = std::sqrt(h2_vert_);
     const std::size_t n_sex = n_ind_ / 2;
 
-    for (std::size_t ind = 0; ind < n_sex; ind++) {
+    for (std::size_t ind = 0; ind < n_sex; ++ind) {
       ptr_vert_[ind] = scale * (ptr_tot_[ind] + ptr_tot_[matching[ind]]);
       ptr_vert_[matching[ind]] = ptr_vert_[ind];
     }
   }
 
   inline void score_tot() {
-    for (std::size_t ind = 0; ind < n_ind_; ind++)
+    for (std::size_t ind = 0; ind < n_ind_; ++ind)
       ptr_tot_[ind] = ptr_gen_[ind] + ptr_env_[ind] + ptr_vert_[ind];
   }
 

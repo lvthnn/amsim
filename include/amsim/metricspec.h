@@ -3,12 +3,12 @@
 
 #pragma once
 
+#include <amsim/metric.h>
+#include <amsim/simulation_context.h>
+
 #include <functional>
 #include <optional>
 #include <string>
-
-#include <amsim/metric.h>
-#include <amsim/simulation_context.h>
 
 namespace amsim {
 

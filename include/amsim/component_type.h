@@ -10,6 +10,13 @@ namespace amsim {
 enum ComponentType { GENETIC = 0, ENVIRONMENTAL = 1, VERTICAL = 2, TOTAL = 3 };
 
 inline ComponentType operator++(ComponentType& type, int) {
+  ComponentType old = type;
+  type = (type == ComponentType::TOTAL) ? ComponentType::GENETIC
+                                        : ComponentType(int(type) + 1);
+  return old;
+}
+
+inline ComponentType& operator++(ComponentType& type) {
   type = (type == ComponentType::TOTAL) ? ComponentType::GENETIC
                                         : ComponentType(int(type) + 1);
   return type;

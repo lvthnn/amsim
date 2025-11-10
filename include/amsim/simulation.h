@@ -3,10 +3,6 @@
 
 #pragma once
 
-#include <filesystem>
-#include <fstream>
-#include <vector>
-
 #include <amsim/genome.h>
 #include <amsim/log_level.h>
 #include <amsim/mating.h>
@@ -15,6 +11,10 @@
 #include <amsim/phenobuf.h>
 #include <amsim/simulation_config.h>
 #include <amsim/simulation_results.h>
+
+#include <filesystem>
+#include <fstream>
+#include <vector>
 
 namespace amsim {
 

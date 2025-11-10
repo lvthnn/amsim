@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <iostream>
 #include <numeric>
 
 namespace amsim::utils {
@@ -23,20 +22,18 @@ std::vector<std::size_t> order(const std::vector<T>& v) {
   return idx;
 }
 
+void assert_probs(const std::size_t N, const double* X, const std::size_t incX);
+void assert_cors(const std::size_t N, const double* X, const std::size_t incX);
+void assert_udiag(const std::size_t N, const double* X, const std::size_t ldX);
+void assert_psd(const std::size_t N, const double* X, const std::size_t ldX);
+void assert_cor(const std::size_t N, const double* X, const std::size_t ldX);
+void assert_cross_cor(const std::size_t N, const double* X, const std::size_t ldX);
+
 void random_effects(std::size_t n_loci);
-void random_mafs(std::size_t n_loci);
 void uniform_effects(std::size_t n_loci);
+void random_mafs(std::size_t n_loci);
 void uniform_mafs(std::size_t n_loci);
 
-template <class F>
-void time_step(const char* label, F&& fn) {
-  const auto t0 = std::chrono::steady_clock::now();
-  fn();
-  const auto t1 = std::chrono::steady_clock::now();
-  const auto ms =
-      std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
-  std::cout << label << " (" << ms << " ms)\n";
-}
 }  // namespace amsim::utils
 
 #endif  // AMSIMCPP_UTILS_H

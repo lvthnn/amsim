@@ -3,13 +3,13 @@
 
 #pragma once
 
-#include <functional>
-
 #include <amsim/genome.h>
 #include <amsim/mating.h>
 #include <amsim/phenoarch.h>
 #include <amsim/phenobuf.h>
 #include <amsim/phenotype.h>
+
+#include <functional>
 
 namespace amsim {
 
@@ -27,7 +27,7 @@ struct SimulationContext {
         pheno_names([&]() {
           std::vector<std::string> names;
           names.resize(phenotypes_.size());
-          for (std::size_t pheno = 0; pheno < phenotypes_.size(); pheno++)
+          for (std::size_t pheno = 0; pheno < phenotypes_.size(); ++pheno)
             names[pheno] = phenotypes_[pheno].name();
           return names;
         }()),

@@ -3,13 +3,13 @@
 
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
-#include <vector>
-
 #include <amsim/haplobuf.h>
 #include <amsim/haploview.h>
 #include <amsim/rng.h>
+
+#include <cstddef>
+#include <cstdint>
+#include <vector>
 
 namespace amsim {
 

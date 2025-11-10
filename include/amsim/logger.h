@@ -3,11 +3,11 @@
 
 #pragma once
 
+#include <amsim/log_level.h>
+
 #include <iostream>
 #include <mutex>
 #include <thread>
-
-#include <amsim/log_level.h>
 
 namespace amsim {
 

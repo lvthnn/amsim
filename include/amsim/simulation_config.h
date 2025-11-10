@@ -3,8 +3,6 @@
 
 #pragma once
 
-#include <filesystem>
-
 #include <amsim/genome.h>
 #include <amsim/haplobuf.h>
 #include <amsim/mating.h>
@@ -14,6 +12,8 @@
 #include <amsim/phenobuf.h>
 #include <amsim/phenotype.h>
 #include <amsim/rng.h>
+
+#include <filesystem>
 
 namespace amsim {
 
