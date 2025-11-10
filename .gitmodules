@@ -1,0 +1,6 @@
+[submodule "amsimr"]
+	path = amsimr
+	url = https://github.com/lvthnn/amsimr
+[submodule "amsimpy"]
+	path = amsimpy
+	url = https://github.com/lvthnn/amsimpy
