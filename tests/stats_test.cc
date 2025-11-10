@@ -1,8 +1,9 @@
-#include <amsim/stats.h>
-#include <gtest/gtest.h>
-
 #include <numeric>
 #include <vector>
+
+#include <amsim/stats.h>
+
+#include <gtest/gtest.h>
 
 double tol = 1e-12;
 
