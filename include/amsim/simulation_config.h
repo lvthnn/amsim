@@ -43,7 +43,7 @@ struct SimulationConfig {
       std::vector<double> env_cor_);
 
   SimulationConfig& mating(
-      MatingType type_,
+      MatingType mating_type_,
       std::optional<std::size_t> n_itr_ = std::nullopt,
       std::optional<double> temp_init_ = std::nullopt,
       std::optional<double> temp_decay_ = std::nullopt,
@@ -70,7 +70,7 @@ struct SimulationConfig {
   std::vector<double> gen_cor;
   std::vector<double> env_cor;
 
-  MatingType type;
+  MatingType mating_type;
   std::size_t n_itr;
   double temp_init;
   double temp_decay;

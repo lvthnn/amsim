@@ -92,14 +92,14 @@ SimulationConfig& SimulationConfig::phenome(
 }
 
 SimulationConfig& SimulationConfig::mating(
-    MatingType type_,
+    MatingType mating_type_,
     std::optional<std::size_t> n_itr_,
     std::optional<double> temp_init_,
     std::optional<double> temp_decay_,
     std::optional<std::vector<double>> mate_cor_) {
-  type = type_;
+  mating_type = mating_type_;
 
-  if (type == MatingType::RANDOM) {
+  if (mating_type == MatingType::RANDOM) {
     n_itr = 0.0;
     temp_init = 0.0;
     temp_decay = 0.0;
