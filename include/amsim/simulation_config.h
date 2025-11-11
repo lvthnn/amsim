@@ -24,7 +24,7 @@ struct SimulationConfig {
       std::size_t n_gen_,
       std::size_t n_ind_,
       std::string out_dir_,
-      std::uint64_t rng_seed_);
+      std::optional<std::uint64_t> rng_seed_);
 
   SimulationConfig& genome(
       std::size_t n_loc_,

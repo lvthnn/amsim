@@ -1,7 +1,9 @@
 #include <amsim/simulation_config.h>
+#include <amsim/logger.h>
 #include <amsim/utils.h>
 
 #include <cassert>
+#include <chrono>
 #include <filesystem>
 #include <stdexcept>
 
@@ -11,12 +13,20 @@ SimulationConfig& SimulationConfig::simulation(
     std::size_t n_gen_,
     std::size_t n_ind_,
     std::string out_dir_,
-    std::uint64_t rng_seed_) {
+    std::optional<std::uint64_t> rng_seed_) {
   if (n_ind_ % 2 != 0) n_ind_ += 1;
   n_gen = n_gen_;
   n_ind = n_ind_;
   out_dir = std::filesystem::path(out_dir_);
-  rng_seed = rng_seed_;
+
+  if (rng_seed)
+    rng_seed = *rng_seed_;
+  else
+    rng_seed =
+        std::chrono::high_resolution_clock::now().time_since_epoch().count();
+
+  LOG_DEBUG("Using seed " + std::to_string(rng_seed) + " for RNG");
+
   return *this;
 }
 
