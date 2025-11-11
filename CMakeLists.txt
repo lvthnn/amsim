@@ -96,12 +96,10 @@ enable_testing()
 
 # Example programs
 add_executable(demo_simulation examples/demo_simulation.cc)
-add_executable(demo_manual examples/demo_manual.cc)
 add_executable(demo_results examples/demo_results.cc)
 add_executable(demo_logger examples/demo_logger.cc)
 
 target_link_libraries(demo_simulation PRIVATE amsimcpp)
-target_link_libraries(demo_manual PRIVATE amsimcpp)
 target_link_libraries(demo_results PRIVATE amsimcpp)
 target_link_libraries(demo_logger PRIVATE amsimcpp)
 
