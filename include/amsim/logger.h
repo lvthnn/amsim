@@ -57,12 +57,14 @@ class Logger {
   std::string format_msg_(const std::string& msg, const LogLevel level);
 };
 
-#define LOG_FILE(path, log_level)          \
-  static std::ofstream __log_file__(path); \
-  amsim::Logger::getInstance(__log_file__, log_level)
+#define LOG_FILE(path, log_level)                        \
+  do {                                                   \
+    static std::ofstream __log_file__(path);             \
+    amsim::Logger::getInstance(__log_file__, log_level); \
+  } while(0)
 
 #define LOG_STREAM(stream, log_level) \
-  amsim::Logger::getInstance(stream, log_level)
+  amsim::Logger::getInstance(stream, log_level);
 
 #define LOG_INFO(msg) \
   amsim::Logger::getInstance().log(msg, amsim::LogLevel::INFO)
