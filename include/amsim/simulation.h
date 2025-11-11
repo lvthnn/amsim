@@ -94,17 +94,13 @@ class Simulation {
   void stream_(std::size_t gen);
 };
 
-void run_simulation(
-    const SimulationConfig& config,
-    std::optional<std::size_t> rep_id = std::nullopt);
-
 void run_simulations(
     const SimulationConfig& config,
     std::size_t n_replicates,
     std::size_t n_threads,
     bool summarise = true,
-    LogLevel level = LogLevel::INFO);
-
+    bool log_file = true,
+    LogLevel log_level = LogLevel::INFO);
 }  // namespace amsim
 
 #endif  // AMSIMCPP_SIMULATION_H

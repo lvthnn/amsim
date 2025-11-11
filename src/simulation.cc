@@ -163,12 +163,17 @@ void run_simulations(
     std::size_t n_replicates,
     std::size_t n_threads,
     bool summarise,
+    bool log_file,
     LogLevel log_level) {
   // ensure the base directory exists
   if (!std::filesystem::exists(config.out_dir))
     std::filesystem::create_directory(config.out_dir);
 
-  LOG_STREAM(std::cout, log_level);
+  // set up the logger instance
+  if (log_file)
+    LOG_FILE(config.out_dir / "amsim.log", log_level);
+  else
+    LOG_STREAM(std::cout, log_level);
 
   // run multithreaded replicate simulations
   std::atomic<std::size_t> next{0};
