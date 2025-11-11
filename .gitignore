@@ -1,6 +1,12 @@
 # No DS_Store files
 **/.DS_Store
 
+# IntelliJ
+.idea
+
+# VSCode
+.vscode
+
 # Build directories
 build/
 out/
@@ -53,14 +59,6 @@ compile_commands.json
 
 # LSP specific
 .cache
-
-# IntelliJ
-.idea
-
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[codz]
-*$py.class
 
 # C extensions
 *.so
