@@ -6,6 +6,7 @@
 #include <chrono>
 #include <filesystem>
 #include <stdexcept>
+#include <iostream>
 
 namespace amsim {
 
@@ -19,13 +20,11 @@ SimulationConfig& SimulationConfig::simulation(
   n_ind = n_ind_;
   out_dir = std::filesystem::path(out_dir_);
 
-  if (rng_seed)
+  if (rng_seed_)
     rng_seed = *rng_seed_;
   else
     rng_seed =
         std::chrono::high_resolution_clock::now().time_since_epoch().count();
-
-  LOG_DEBUG("Using seed " + std::to_string(rng_seed) + " for RNG");
 
   return *this;
 }
@@ -103,16 +102,18 @@ SimulationConfig& SimulationConfig::phenome(
 
 SimulationConfig& SimulationConfig::mating(
     MatingType mating_type_,
+    std::optional<std::vector<double>> mate_cor_,
+    std::optional<double> tol_inf_,
     std::optional<std::size_t> n_itr_,
     std::optional<double> temp_init_,
-    std::optional<double> temp_decay_,
-    std::optional<std::vector<double>> mate_cor_) {
+    std::optional<double> temp_decay_) {
   mating_type = mating_type_;
 
   if (mating_type == MatingType::RANDOM) {
     n_itr = 0.0;
     temp_init = 0.0;
     temp_decay = 0.0;
+    tol_inf = 0.0;
     mate_cor = std::vector<double>(n_pheno * n_pheno, 0.0);
     return *this;
   }
@@ -123,15 +124,18 @@ SimulationConfig& SimulationConfig::mating(
   utils::assert_cross_cor(n_pheno, (*mate_cor_).data(), n_pheno);
 
   if (n_itr_) n_itr = *n_itr_;
-  if (temp_init_) temp_init = *temp_init_;     // positive
-  if (temp_decay_) temp_decay = *temp_decay_;  // positive
+  if (temp_init_) temp_init = *temp_init_;
+  if (temp_decay_) temp_decay = *temp_decay_;
+  if (tol_inf_) tol_inf = *tol_inf_;
 
   if (temp_init < 0.0)
     throw std::invalid_argument("temp_init must be positive");
   if (temp_decay < 0.0)
     throw std::invalid_argument("temp_decay must be positive");
+  if (tol_inf < 0.0)
+    throw std::invalid_argument("tol_inf must be positive");
 
-  mate_cor = std::move(*mate_cor_);  // check SVDs are correlation values
+  mate_cor = std::move(*mate_cor_);
 
   return *this;
 }

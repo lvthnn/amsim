@@ -44,10 +44,11 @@ struct SimulationConfig {
 
   SimulationConfig& mating(
       MatingType mating_type_,
-      std::optional<std::size_t> n_itr_ = std::nullopt,
-      std::optional<double> temp_init_ = std::nullopt,
-      std::optional<double> temp_decay_ = std::nullopt,
-      std::optional<std::vector<double>> mate_cor_ = std::nullopt);
+      std::optional<std::vector<double>> mate_cor_ = std::nullopt,
+      std::optional<double> tol_inf_ = 1e-6,
+      std::optional<std::size_t> n_itr_ = 2e6,
+      std::optional<double> temp_init_ = 1.0,
+      std::optional<double> temp_decay_ = 0.999);
 
   SimulationConfig& metrics(std::vector<MetricSpec> metric_specs_);
 
@@ -74,6 +75,7 @@ struct SimulationConfig {
   std::size_t n_itr;
   double temp_init;
   double temp_decay;
+  double tol_inf;
   std::vector<double> mate_cor;
 
   std::vector<MetricSpec> specs;
