@@ -52,8 +52,9 @@ std::string Logger::format_msg_(const std::string& msg, const LogLevel level) {
   std::string time_str = get_time_str_();
   std::ostringstream msg_format;
 
-  msg_format << "[" << time_str << "] " << "[thread "
-             << std::this_thread::get_id() << "] " << to_string(level) << " "
+  msg_format << "[" << to_string(level) << "] "
+             << "[" << time_str << "] " << "[thread "
+             << std::this_thread::get_id() << "] "
              << msg;
 
   return msg_format.str();
