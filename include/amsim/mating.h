@@ -33,11 +33,12 @@ class AssortativeModel : public MatingModel {
   AssortativeModel(
       const PhenotypeList& phenotypes,
       std::vector<double> cor,
-      const std::size_t n_itr,
       const std::size_t n_sex,
       const rng::Xoshiro256ss& rng,
-      double temp_init = 1e-2,
-      double temp_decay = 0.99999);
+      const std::size_t n_itr = 2e6,
+      double temp_init = 0.50,
+      double temp_decay = 0.9999,
+      double tol_inf = 1e-7);
 
   void display_cor();
   void init_state();
@@ -50,6 +51,7 @@ class AssortativeModel : public MatingModel {
   const std::vector<double> cor_;
   const std::size_t n_pheno_;
   const std::size_t n_sex_;
+  const double tol_inf_;
   const std::size_t n_itr_;
   const double temp_init_;
   const double temp_decay_;

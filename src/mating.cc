@@ -12,6 +12,7 @@
 #include <lapacke.h>
 #endif
 
+#include <amsim/logger.h>
 #include <amsim/mating.h>
 #include <amsim/mating_type.h>
 #include <amsim/rng.h>
@@ -29,11 +30,12 @@ std::vector<std::size_t> MatingModel::rand_state_() {
 AssortativeModel::AssortativeModel(
     const PhenotypeList& phenotypes,
     std::vector<double> cor,
-    const std::size_t n_itr,
     const std::size_t n_sex,
     const rng::Xoshiro256ss& rng,
+    const std::size_t n_itr,
     double temp_init,
-    double temp_decay)
+    double temp_decay,
+    double tol_inf)
     : MatingModel(MatingType::ASSORTATIVE, n_sex),
       ptr_tot_([&]() {
         std::vector<const double*> res;
@@ -46,6 +48,7 @@ AssortativeModel::AssortativeModel(
       cor_(std::move(cor)),
       n_pheno_(phenotypes.size()),
       n_sex_(n_sex),
+      tol_inf_(tol_inf),
       n_itr_(n_itr),
       temp_init_(temp_init),
       temp_decay_(temp_decay),
@@ -56,6 +59,8 @@ AssortativeModel::AssortativeModel(
       cor_U(n_pheno_ * n_pheno_),
       cor_VT(n_pheno_ * n_pheno_),
       state(n_sex_) {
+  LOG_DEBUG("tol_inf param in ctor equals " + std::to_string(tol_inf));
+  LOG_DEBUG("Set tol_inf to " + std::to_string(tol_inf_));
   // Basic invariants
   if (n_pheno_ == 0) {
     throw std::runtime_error("AssortativeModel: n_pheno_ must be > 0");
@@ -291,6 +296,9 @@ std::vector<std::size_t> AssortativeModel::match() {
   const std::size_t dim = n_pheno_ * n_pheno_;
   double temp_cur = temp_init_;
 
+  bool term_early = false;
+  std::size_t check_interval;
+
   arrange_();
   std::vector<double> cur = compute_cor_();
 
@@ -314,8 +322,27 @@ std::vector<std::size_t> AssortativeModel::match() {
       cblas_daxpy(dim, 1.0, delta.data(), 1, cur.data(), 1);
     }
 
+    check_interval = std::max(n_itr_ / (100 + itr / 100), 1ul);
+    if (itr % check_interval == 0) {
+      std::vector<double> diff = cur;
+      cblas_daxpy(dim, -1.0, cor_.data(), 1, diff.data(), 1);
+      double max_err = std::abs(diff[0]);
+      for (std::size_t i = 1; i < dim; ++i)
+        max_err = std::max(max_err, std::abs(diff[i]));
+      if (max_err < tol_inf_) {
+        term_early = true;
+        LOG_DEBUG(
+            "Terminating annealing routine at iteration " +
+            std::to_string(itr) + " with L_infty error " +
+            std::to_string(max_err));
+        break;
+      }
+    }
+
     temp_cur *= temp_decay_;
   }
+
+  if (!term_early) LOG_DEBUG("Timed out after reaching max iteration count");
 
   return state;
 }
