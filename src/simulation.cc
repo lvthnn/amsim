@@ -73,11 +73,12 @@ Simulation::Simulation(
       model_(
           phenotypes_,
           config.mate_cor,
-          config.n_itr,
           n_ind / 2,
           rng_,
+          config.n_itr,
           config.temp_init,
-          config.temp_decay),
+          config.temp_decay,
+          config.tol_inf),
       ctx_(genome_, arch_, buf_, phenotypes_, model_),
       metrics_([&]() {
         std::vector<Metric> metrics;
@@ -86,6 +87,7 @@ Simulation::Simulation(
           metrics.push_back(spec.setup(ctx_));
         return metrics;
       }()) {
+
   if (!std::filesystem::exists(out_dir))
     std::filesystem::create_directory(out_dir);
 }
@@ -121,6 +123,7 @@ void Simulation::stream_(std::size_t gen) {
 }
 
 void Simulation::run() {
+  LOG_DEBUG("Setting up simulation");
   std::vector<std::size_t> sib_matching(ctx_.n_ind / 2);
   std::iota(sib_matching.begin(), sib_matching.end(), ctx_.n_ind / 2);
 
@@ -131,6 +134,7 @@ void Simulation::run() {
   LoggerTimer timer;
 
   for (std::size_t gen = 0; gen < n_gen; ++gen) {
+    LOG_DEBUG("Simulating generation " + std::to_string(gen));
     genome_.compute_mafs();
     genome_.compute_stats();
 
@@ -175,6 +179,9 @@ void run_simulations(
   else
     LOG_STREAM(std::cout, log_level);
 
+  LOG_INFO("Starting simulation");
+  LOG_DEBUG("Using random seed " + std::to_string(config.rng_seed));
+
   // run multithreaded replicate simulations
   std::atomic<std::size_t> next{0};
   std::vector<std::thread> pool;
@@ -208,11 +215,15 @@ void run_simulations(
 
   for (std::thread& thread : pool) thread.join();
 
+  LOG_INFO("Summarising results");
+
   if (summarise) {
     SimulationResults results(config.out_dir);
     results.summarise();
     results.save();
   }
+
+  LOG_INFO("Done!");
 }
 
 }  // namespace amsim
