@@ -3,37 +3,33 @@
 #include <amsim/metricspec.h>
 #include <amsim/simulation.h>
 #include <amsim/simulation_config.h>
+#include <amsim/logger.h>
 
 #include <cstddef>
 #include <vector>
 
 int main() {
-  std::vector<double> v_maf(8000, 0.5);
-  std::vector<double> v_rec(8000, 0.5);
-  std::vector<double> v_mut(8000, 0.0);
+  std::vector<double> v_maf(500, 0.5);
+  std::vector<double> v_rec(500, 0.5);
+  std::vector<double> v_mut(500, 0.0);
 
   amsim::SimulationConfig config;
 
-  config.simulation(10, 32000, "amsim_multithread", 1234568ull);
+  config.simulation(10, 256000, "amsim_multithread", 1234568ull);
 
-  config.genome(8000, v_maf, v_rec, v_mut);
+  config.genome(500, v_maf, v_rec, v_mut);
 
   config.phenome(
       2,
       {"height", "weight"},
-      {4000, 4000},
+      {250, 250},
       {0.5, 0.5},
       {0.5, 0.5},
       {0.0, 0.0},
       {1.0, 0.5, 0.5, 1.0},
       {1.0, 0.5, 0.5, 1.0});
 
-  config.mating(
-      amsim::MatingType::ASSORTATIVE,
-      2e6,
-      0.5,
-      0.9999,
-      std::vector<double>{0.4, 0.3, 0.2, 0.5});
+  config.assortative_mating(std::vector<double>{0.4, 0.3, 0.2, 0.5}, 1e-7, 2e6);
 
   config.metrics(
       {amsim::pheno_h2(),
@@ -49,5 +45,5 @@ int main() {
   std::size_t n_threads = 10;
 
   amsim::run_simulations(
-      config, n_replicates, n_threads, true, amsim::LogLevel::DEBUG);
+      config, n_replicates, n_threads, true, false, amsim::LogLevel::DEBUG);
 }

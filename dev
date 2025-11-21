@@ -12,9 +12,9 @@ case "$1" in
     mkdir -p r/inst/include
     cp -r include/amsim r/inst/include/
 
-    echo "[dev] Syncing backend sources (preserving R bindings)..."
+    echo "[dev] Syncing backend sources..."
     mkdir -p r/src
-    rsync -a --delete --exclude 'bindings.cpp' src/ r/src/
+    rsync -a --delete --exclude 'bindings.cpp Makevars Makevars.win' src/ r/src/
 
     echo "[dev] Done."
     ;;

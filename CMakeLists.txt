@@ -9,7 +9,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Add debugging options depending on CMAKE_BUILD_TYPE
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    message(STATUS "Enabling sanitizers")
     add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
     add_link_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
 endif()
@@ -44,7 +43,7 @@ if (APPLE)
   find_library(ACCELERATE_FRAMEWORK Accelerate REQUIRED)
   target_link_libraries(amsimcpp PUBLIC ${ACCELERATE_FRAMEWORK})
   target_compile_definitions(amsimcpp PUBLIC ACCELERATE_NEW_LAPACK)
-  target_compile_options(amsimcpp PRIVATE -Wno-deprecated-declarations)
+  # target_compile_options(amsimcpp PRIVATE -Wno-deprecated-declarations)
 else()
   find_package(BLAS REQUIRED)
   find_package(LAPACK REQUIRED)
@@ -67,11 +66,15 @@ option(BUILD_PYTHON "Build Python bindings for amsimpy" OFF)
 
 if (BUILD_PYTHON)
   set(PYBIND11_FINDPYTHON ON)
+  set(PYBIND11_DETAILED_ERROR_MESSAGES ON CACHE BOOL "Enable detailed error messages")
   find_package(pybind11 REQUIRED)
 
-  pybind11_add_module(_core python/bindings/python_bindings.cpp)
+  pybind11_add_module(_core
+      ${CMAKE_SOURCE_DIR}/python/bindings/python_bindings.cpp
+      ${CMAKE_SOURCE_DIR}/python/bindings/context_wrapper.cpp)
   target_link_libraries(_core PRIVATE amsimcpp)
-  target_include_directories(_core PRIVATE include)
+  target_include_directories(_core PRIVATE ${CMAKE_SOURCE_DIR}/include)
+  target_compile_definitions(_core PRIVATE PYBIND11_DETAILED_ERROR_MESSAGES)
 endif()
 
 # Reasonable warnings

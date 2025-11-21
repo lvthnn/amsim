@@ -215,9 +215,8 @@ void run_simulations(
 
   for (std::thread& thread : pool) thread.join();
 
-  LOG_INFO("Summarising results");
-
   if (summarise) {
+    LOG_INFO("Summarising results");
     SimulationResults results(config.out_dir);
     results.summarise();
     results.save();
