@@ -16,7 +16,7 @@
 #
 #  --modernize-use-nodiscard: clang-tidy recommends adding a nodiscard annotation
 #      to functions where the return value should not be ignored.
-#      We need to support C++14, which does not supported the annotation.
+#      We need to support C++14, which does not support the annotation.
 #
 #  -modernize-return-braced-init-list: We think removing typenames and using
 #      only braced-init can hurt readability.
