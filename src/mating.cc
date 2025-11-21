@@ -20,7 +20,7 @@
 #include <amsim/utils.h>
 
 namespace amsim {
-std::vector<std::size_t> MatingModel::rand_state_() {
+std::vector<std::size_t> MatingModel::randState() {
   std::vector<std::size_t> state(n_sex_);
   std::iota(state.begin(), state.end(), 0);
   std::shuffle(state.begin(), state.end(), g_);
@@ -74,10 +74,10 @@ AssortativeModel::AssortativeModel(
   }
 
   // copy since dgesvd from LAPACK destroys original matrix
-  std::vector<double> cor_copy_ = cor_;
+  std::vector<double> cor_copy = cor_;
 
   const char clpk_job = 'A';
-  const int clpk_n_pheno_ = static_cast<int>(n_pheno_);
+  const int clpk_n_pheno = static_cast<int>(n_pheno_);
   int clpk_lwork = -1;
   int clpk_info;
   double clpk_wkopt;
@@ -87,15 +87,15 @@ AssortativeModel::AssortativeModel(
   dgesvd_(
       &clpk_job,
       &clpk_job,
-      &clpk_n_pheno_,
-      &clpk_n_pheno_,
-      cor_copy_.data(),
-      &clpk_n_pheno_,
+      &clpk_n_pheno,
+      &clpk_n_pheno,
+      cor_copy.data(),
+      &clpk_n_pheno,
       cor_S.data(),
       cor_U.data(),
-      &clpk_n_pheno_,
+      &clpk_n_pheno,
       cor_VT.data(),
-      &clpk_n_pheno_,
+      &clpk_n_pheno,
       &clpk_wkopt,
       &clpk_lwork,
       &clpk_info);
@@ -126,15 +126,15 @@ AssortativeModel::AssortativeModel(
   dgesvd_(
       &clpk_job,
       &clpk_job,
-      &clpk_n_pheno_,
-      &clpk_n_pheno_,
-      cor_copy_.data(),
-      &clpk_n_pheno_,
+      &clpk_n_pheno,
+      &clpk_n_pheno,
+      cor_copy.data(),
+      &clpk_n_pheno,
       cor_S.data(),
       cor_U.data(),
-      &clpk_n_pheno_,
+      &clpk_n_pheno,
       cor_VT.data(),
-      &clpk_n_pheno_,
+      &clpk_n_pheno,
       clpk_work.data(),
       &clpk_lwork,
       &clpk_info);
@@ -160,7 +160,7 @@ AssortativeModel::AssortativeModel(
   female_.resize(n_sex_ * n_pheno_);
 }
 
-void AssortativeModel::arrange_() {
+void AssortativeModel::arrange() {
   std::vector<double> ones(n_sex_, 1.0);
   for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno) {
     const double* ptr_m = ptr_tot_[pheno];
@@ -172,14 +172,14 @@ void AssortativeModel::arrange_() {
     const double sd_f = std::sqrt(stats::var(n_sex_, ptr_f, 1));
 
     for (std::size_t ind = 0; ind < n_sex_; ++ind) {
-      male_[pheno * n_sex_ + ind] = (ptr_m[ind] - mean_m) / sd_m;
-      female_[pheno * n_sex_ + ind] = (ptr_f[state[ind]] - mean_f) / sd_f;
+      male_[(pheno * n_sex_) + ind] = (ptr_m[ind] - mean_m) / sd_m;
+      female_[(pheno * n_sex_) + ind] = (ptr_f[state[ind]] - mean_f) / sd_f;
     }
   }
 }
 
-std::vector<double> AssortativeModel::compute_cor_() {
-  std::vector<double> cross_cor_(n_pheno_ * n_pheno_);
+std::vector<double> AssortativeModel::computeCor() {
+  std::vector<double> cross_cor(n_pheno_ * n_pheno_);
   cblas_dgemm(
       CblasColMajor,
       CblasTrans,
@@ -193,44 +193,44 @@ std::vector<double> AssortativeModel::compute_cor_() {
       female_.data(),
       n_sex_,
       0.0,
-      cross_cor_.data(),
+      cross_cor.data(),
       n_pheno_);
-  return cross_cor_;
+  return cross_cor;
 }
 
-std::vector<double> AssortativeModel::compute_delta_(
+std::vector<double> AssortativeModel::computeDelta(
     std::size_t i0, std::size_t i1) {
   std::vector<double> res(n_pheno_ * n_pheno_);
   const double scale = 1.0 / static_cast<double>(n_sex_);
 
   for (std::size_t p1 = 0; p1 < n_pheno_; ++p1) {
-    double m0 = male_[p1 * n_sex_ + i0];
-    double m1 = male_[p1 * n_sex_ + i1];
+    double m0 = male_[(p1 * n_sex_) + i0];
+    double m1 = male_[(p1 * n_sex_) + i1];
     for (std::size_t p2 = 0; p2 < n_pheno_; ++p2) {
-      double f0 = female_[p2 * n_sex_ + i0];
-      double f1 = female_[p2 * n_sex_ + i1];
+      double f0 = female_[(p2 * n_sex_) + i0];
+      double f1 = female_[(p2 * n_sex_) + i1];
       // column-major: index = row + col * n_rows
-      std::size_t pair = p1 + p2 * n_pheno_;
+      std::size_t pair = p1 + (p2 * n_pheno_);
       res[pair] = scale * (m0 * (f1 - f0) + m1 * (f0 - f1));
     }
   }
   return res;
 }
 
-double AssortativeModel::compute_denergy_(
+double AssortativeModel::computeDiffEnergy(
     const std::vector<double>& cur,
     const std::vector<double>& target,
-    const std::vector<double>& delta) {
+    const std::vector<double>& delta) const {
   std::size_t dim = n_pheno_ * n_pheno_;
   std::vector<double> diff = cur;
 
   cblas_daxpy(dim, -1.0, target.data(), 1, diff.data(), 1);
   return cblas_ddot(dim, delta.data(), 1, delta.data(), 1) +
-         2.0 * cblas_ddot(dim, diff.data(), 1, delta.data(), 1);
+         (2.0 * cblas_ddot(dim, diff.data(), 1, delta.data(), 1));
 }
 
 void AssortativeModel::display_cor() {
-  std::vector<double> cor_mat = compute_cor_();
+  std::vector<double> cor_mat = computeCor();
   std::cerr << std::setprecision(5);
   for (std::size_t el = 0; el < cor_mat.size(); ++el) {
     if (el % n_pheno_ == 0) std::cerr << "\n";
@@ -242,7 +242,7 @@ void AssortativeModel::display_cor() {
 void AssortativeModel::init_state() {
   // compute dominant latent phenotypes
   double latent_cor = cor_S[0];
-  double latent_noise = std::sqrt(1.0 - latent_cor * latent_cor);
+  double latent_noise = std::sqrt(1.0 - (latent_cor * latent_cor));
   std::vector<double> latent_male(n_sex_);
   std::vector<double> latent_female(n_sex_);
 
@@ -299,17 +299,17 @@ std::vector<std::size_t> AssortativeModel::match() {
   bool term_early = false;
   std::size_t check_interval;
 
-  arrange_();
-  std::vector<double> cur = compute_cor_();
+  arrange();
+  std::vector<double> cur = computeCor();
 
   for (std::size_t itr = 0; itr < n_itr_; ++itr) {
     std::size_t i0 = swap_.sample(n_sex_);
     std::size_t i1 = swap_.sample(n_sex_);
     while (i0 == i1) i1 = swap_.sample(n_sex_);
 
-    std::vector<double> delta = compute_delta_(i0, i1);
+    std::vector<double> delta = computeDelta(i0, i1);
 
-    double denergy = compute_denergy_(cur, cor_, delta);
+    double denergy = computeDiffEnergy(cur, cor_, delta);
     double acc_prob = std::min(1.0, std::exp(-denergy / temp_cur));
     double u = acc_.sample(1.0);
 
@@ -317,12 +317,13 @@ std::vector<std::size_t> AssortativeModel::match() {
       std::swap(state[i0], state[i1]);
 
       for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
-        std::swap(female_[pheno * n_sex_ + i0], female_[pheno * n_sex_ + i1]);
+        std::swap(
+            female_[(pheno * n_sex_) + i0], female_[(pheno * n_sex_) + i1]);
 
       cblas_daxpy(dim, 1.0, delta.data(), 1, cur.data(), 1);
     }
 
-    check_interval = std::max(n_itr_ / (100 + itr / 100), 1ul);
+    check_interval = std::max(n_itr_ / (100 + itr / 100), 1UL);
     if (itr % check_interval == 0) {
       std::vector<double> diff = cur;
       cblas_daxpy(dim, -1.0, cor_.data(), 1, diff.data(), 1);

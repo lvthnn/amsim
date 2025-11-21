@@ -14,8 +14,11 @@
 
 namespace amsim::stats {
 
-double sum(const int N, const double* X, const int incX) {
-  double y, t, s = 0.0, c = 0.0;
+double sum(int N, const double* X, int incX) {
+  double y;
+  double t;
+  double s = 0.0;
+  double c = 0.0;
   for (int i = 0; i < N; ++i, X += incX) {
     y = *X - c;
     t = s + y;
@@ -25,17 +28,16 @@ double sum(const int N, const double* X, const int incX) {
   return s;
 }
 
-double sum_sq(const int N, const double* X, const int incX) {
-  return cblas_ddot(N, X, incX, X, incX);
-}
-
-double mean(const int N, const double* X, const int incX) {
+double mean(int N, const double* X, int incX) {
   return sum(N, X, incX) / static_cast<double>(N);
 }
 
-double var(const int N, const double* X, const int incX, bool population) {
-  double mean = 0.0, m2 = 0.0;
-  double x, delta, delta2;
+double var(int N, const double* X, int incX, bool population) {
+  double mean = 0.0;
+  double m2 = 0.0;
+  double x;
+  double delta;
+  double delta2;
 
   const double* xi = X;
 
@@ -52,31 +54,31 @@ double var(const int N, const double* X, const int incX, bool population) {
   return m2 / denom;
 }
 
-double std(const int N, const double* X, const int incX, bool population) {
+double std(int N, const double* X, int incX, bool population) {
   return std::sqrt(var(N, X, incX, population));
 }
 
-double sem(const int N, const double* X, const int incX) {
+double sem(int N, const double* X, int incX) {
   return std(N, X, incX, false) / static_cast<double>(N);
 }
 
 void centre(
-    const int N,
+    int N,
     const double* X,
-    const int incX,
+    int incX,
     double* Y,
-    const int incY,
+    int incY,
     std::optional<double> centre) {
   if (!centre) centre = mean(N, X, incX);
   for (int i = 0; i < N; ++i) Y[i * incY] = X[i * incX] - *centre;
 }
 
 void scale(
-    const int N,
+    int N,
     const double* X,
-    const int incX,
+    int incX,
     double* Y,
-    const int incY,
+    int incY,
     std::optional<double> scale) {
   if (!scale) scale = std::sqrt(var(N, X, incX));
   const double* xi = X;
@@ -85,11 +87,11 @@ void scale(
 }
 
 void standardise(
-    const int N,
+    int N,
     const double* X,
-    const int incX,
+    int incX,
     double* Y,
-    const int incY,
+    int incY,
     std::optional<double> centre_val,
     std::optional<double> scale_val) {
   double c = centre_val.value_or(mean(N, X, incX));
@@ -102,11 +104,11 @@ void standardise(
 }
 
 double cor(
-    const int N,
+    int N,
     const double* X,
-    const int incX,
+    int incX,
     const double* Y,
-    const int incY,
+    int incY,
     std::optional<double> centre_X,
     std::optional<double> scale_X,
     std::optional<double> centre_Y,
@@ -117,7 +119,8 @@ double cor(
   if (!scale_Y) scale_Y = std::sqrt(var(N, Y, incY));
   double cor = 0.0;
   double denom = 1.0 / (static_cast<double>(N) * *scale_X * *scale_Y);
-  const double *xi = X, *eta = Y;
+  const double* xi = X;
+  const double* eta = Y;
 
   for (int i = 0; i < N; ++i, xi += incX, eta += incY)
     cor += denom * (*xi - *centre_X) * (*eta - *centre_Y);
@@ -130,15 +133,17 @@ void cor(
     int P,
     int Q,
     const double* X,
-    const int ldX,
+    int ldX,
     const double* Y,
-    const int ldY,
+    int ldY,
     double* R,
-    const int ldR) {
-  double dN = static_cast<double>(N);
+    int ldR) {
+  auto dn = static_cast<double>(N);
 
   // compute column sums of X and Y (sx and sy)
-  std::vector<double> ones(N, 1.0), sx(P), sy(Q);
+  std::vector<double> ones(N, 1.0);
+  std::vector<double> sx(P);
+  std::vector<double> sy(Q);
   cblas_dgemv(
       CblasColMajor,
       CblasTrans,
@@ -167,16 +172,18 @@ void cor(
       1);
 
   // compute column sum of squares of X and Y (sxx and syy)
-  std::vector<double> sxx(P), syy(Q);
-  double nrm_i, nrm_j;
+  std::vector<double> sxx(P);
+  std::vector<double> syy(Q);
+  double nrm_i;
+  double nrm_j;
 
   for (int i = 0; i < P; ++i) {
-    nrm_i = cblas_dnrm2(N, X + i * ldX, 1);
+    nrm_i = cblas_dnrm2(N, X + (i * ldX), 1);
     sxx[i] = nrm_i * nrm_i;
   }
 
   for (int j = 0; j < Q; ++j) {
-    nrm_j = cblas_dnrm2(N, Y + j * ldY, 1);
+    nrm_j = cblas_dnrm2(N, Y + (j * ldY), 1);
     syy[j] = nrm_j * nrm_j;
   }
 
@@ -199,18 +206,19 @@ void cor(
 
   // subtract rank-one 1/n * sx * sy^T
   cblas_dger(
-      CblasColMajor, P, Q, -1.0 / dN, sx.data(), 1, sy.data(), 1, R, ldR);
+      CblasColMajor, P, Q, -1.0 / dn, sx.data(), 1, sy.data(), 1, R, ldR);
 
   // compute standard deviations
-  std::vector<double> sdx(P), sdy(Q);
+  std::vector<double> sdx(P);
+  std::vector<double> sdy(Q);
 
   for (int j = 0; j < P; ++j) {
-    double vx = sxx[j] - (sx[j] * sx[j]) / dN;
+    double vx = sxx[j] - ((sx[j] * sx[j]) / dn);
     sdx[j] = std::sqrt(std::max(0.0, vx));
   }
 
   for (int k = 0; k < Q; ++k) {
-    double vy = syy[k] - (sy[k] * sy[k]) / dN;
+    double vy = syy[k] - ((sy[k] * sy[k]) / dn);
     sdy[k] = std::sqrt(std::max(0.0, vy));
   }
 
@@ -218,25 +226,24 @@ void cor(
   for (int i = 0; i < P; ++i) {
     if (sdx[i] == 0.0)
       for (int j = 0; j < Q; ++j)
-        R[i + j * ldR] = std::numeric_limits<double>::quiet_NaN();
+        R[i + (j * ldR)] = std::numeric_limits<double>::quiet_NaN();
     else
       cblas_dscal(Q, 1.0 / sdx[i], R + i, ldR);
   }
   for (int j = 0; j < Q; ++j) {
     if (sdy[j] == 0.0)
       for (int i = 0; i < P; ++i)
-        R[i + j * ldR] = std::numeric_limits<double>::quiet_NaN();
+        R[i + (j * ldR)] = std::numeric_limits<double>::quiet_NaN();
     else
-      cblas_dscal(P, 1.0 / sdy[j], R + j * ldR, 1);
+      cblas_dscal(P, 1.0 / sdy[j], R + (j * ldR), 1);
   }
 }
 
-void cor(
-    int N, int P, const double* X, const int ldX, double* R, const int ldR) {
+void cor(int N, int P, const double* X, int ldX, double* R, int ldR) {
   cor(N, P, P, X, ldX, X, ldX, R, ldR);
 }
 
-double quantile(const double q, const int N, const double* X, const int incX) {
+double quantile(const double q, int N, const double* X, int incX) {
   if (q < 0.0) throw std::invalid_argument("can't specify quantile below zero");
   if (q > 1.0) throw std::invalid_argument("can't specify quantile above one");
   if (N <= 0) return std::numeric_limits<double>::quiet_NaN();
@@ -248,11 +255,11 @@ double quantile(const double q, const int N, const double* X, const int incX) {
   for (int i = 0; i < N; ++i, xi += incX) tmp[i] = *xi;
 
   // R type 7 quantile interpolation strategy
-  const double h = 1.0 + (N - 1) * q;
+  const double h = 1.0 + ((N - 1) * q);
   int lo = static_cast<int>(std::floor(h)) - 1;
   int hi = static_cast<int>(std::ceil(h)) - 1;
-  if (lo < 0) lo = 0;
-  if (hi < 0) hi = 0;
+  lo = std::max(0, lo);
+  hi = std::max(0, hi);
   if (lo >= N) lo = N - 1;
   if (hi >= N) hi = N - 1;
 
@@ -266,7 +273,7 @@ double quantile(const double q, const int N, const double* X, const int incX) {
   std::nth_element(tmp.begin(), tmp.begin() + hi, tmp.end());
   const double x_hi = tmp[hi];
 
-  return (1.0 - gamma) * x_lo + gamma * x_hi;
+  return ((1.0 - gamma) * x_lo) + (gamma * x_hi);
 }
 
 }  // namespace amsim::stats

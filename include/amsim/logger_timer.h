@@ -1,8 +1,6 @@
 #ifndef AMSIMCPP_LOGGER_TIMER_H
 #define AMSIMCPP_LOGGER_TIMER_H
 
-#pragma once
-
 #include <chrono>
 #include <string>
 

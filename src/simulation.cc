@@ -16,7 +16,7 @@
 namespace amsim {
 
 void resolve_rlimit(const std::size_t required) {
-  rlim_t rl_req = static_cast<rlim_t>(required);
+  auto rl_req = static_cast<rlim_t>(required);
   struct rlimit rl;
 
   if (getrlimit(RLIMIT_NOFILE, &rl) != 0) perror("getrlimit");
@@ -87,23 +87,22 @@ Simulation::Simulation(
           metrics.push_back(spec.setup(ctx_));
         return metrics;
       }()) {
-
   if (!std::filesystem::exists(out_dir))
     std::filesystem::create_directory(out_dir);
 }
 
-void Simulation::stream_(std::size_t gen) {
+void Simulation::stream(std::size_t gen) {
   if (gen == 0) {
     streams_.reserve(metrics_.size());
 
-    for (std::size_t metric = 0; metric < metrics_.size(); ++metric) {
-      auto stream = std::make_unique<std::ofstream>(
-          out_dir / (metrics_[metric].name + ".tsv"));
+    for (auto& metric : metrics_) {
+      auto stream =
+          std::make_unique<std::ofstream>(out_dir / (metric.name + ".tsv"));
       if (!stream->is_open()) {
         throw std::runtime_error(
-            "could not open metric stream: " + metrics_[metric].name);
+            "could not open metric stream: " + metric.name);
       }
-      *stream << metrics_[metric].header() << "\n";
+      *stream << metric.header() << "\n";
       streams_.emplace_back(std::move(stream));
     }
   }
@@ -154,7 +153,7 @@ void Simulation::run() {
 
     for (Phenotype& pheno : phenotypes_) pheno.transmit_vert(opt_matching);
 
-    stream_(gen);
+    stream(gen);
 
     genome_.transpose();
     genome_.update(opt_matching);
@@ -203,8 +202,8 @@ void run_simulations(
             config.out_dir / std::format("rep_{:03}", rep_id);
 
         // adjust replicate rng seed
-        constexpr std::uint64_t PHI = 0x9E3779B97F4A7C15ull;
-        std::uint64_t rep_seed = config.rng_seed + PHI * rep_id;
+        constexpr std::uint64_t PHI = 0x9E3779B97F4A7C15ULL;
+        std::uint64_t rep_seed = config.rng_seed + (PHI * rep_id);
 
         Simulation rep(config, rep_dir, rep_seed);
 

@@ -1,8 +1,6 @@
 #ifndef AMSIMCPP_GENOME_H
 #define AMSIMCPP_GENOME_H
 
-#pragma once
-
 #include <amsim/haplobuf.h>
 #include <amsim/haploview.h>
 #include <amsim/rng.h>
@@ -23,19 +21,17 @@ class Genome {
       std::vector<double> v_maf,
       const rng::Xoshiro256ss& rng);
 
-  inline std::vector<double>& v_lmean() noexcept { return v_lmean_; }
-  inline std::vector<double>& v_lvar() noexcept { return v_lvar_; }
-  inline std::vector<double>& v_lmaf() noexcept { return v_lmaf_; }
-  inline double v_lmean(std::size_t loc) const noexcept {
-    return v_lmean_[loc];
-  }
-  inline double v_lvar(std::size_t loc) const noexcept { return v_lvar_[loc]; }
-  inline double v_lmaf(std::size_t loc) const noexcept { return v_lmaf_[loc]; }
-  inline std::size_t n_loc() const noexcept { return H0_.n_loc(); }
-  inline std::size_t n_ind() const noexcept { return H0_.n_ind(); }
-  inline HaploView view() const noexcept { return H0_.view(); }
-  inline HaploBuf& H0() noexcept { return H0_; }
-  inline HaploBuf& H1() noexcept { return H1_; }
+  std::vector<double>& v_lmean() noexcept { return v_lmean_; }
+  std::vector<double>& v_lvar() noexcept { return v_lvar_; }
+  std::vector<double>& v_lmaf() noexcept { return v_lmaf_; }
+  double v_lmean(std::size_t loc) const noexcept { return v_lmean_[loc]; }
+  double v_lvar(std::size_t loc) const noexcept { return v_lvar_[loc]; }
+  double v_lmaf(std::size_t loc) const noexcept { return v_lmaf_[loc]; }
+  std::size_t n_loc() const noexcept { return h0_.n_loc(); }
+  std::size_t n_ind() const noexcept { return h0_.n_ind(); }
+  HaploView view() const noexcept { return h0_.view(); }
+  HaploBuf& H0() noexcept { return h0_; }
+  HaploBuf& H1() noexcept { return h1_; }
   void generate_haplotypes() noexcept;
   void transpose() noexcept;
   void compute_mafs();
@@ -47,13 +43,12 @@ class Genome {
   const std::vector<double> v_rec_;
   const std::vector<double> v_maf_;
   std::vector<double> v_lmean_;
-  std::vector<double> v_bmean;
   std::vector<double> v_lvar_;
   std::vector<double> v_lmaf_;
   rng::BW16 bw_;
-  HaploBuf H0_;
-  HaploBuf H1_;
-  uint64_t gam_word_(std::uint64_t ind_H0, std::uint64_t ind_H1) noexcept;
+  HaploBuf h0_;
+  HaploBuf h1_;
+  uint64_t gamWord(std::uint64_t ind_H0, std::uint64_t ind_H1) noexcept;
 };
 
 }  // namespace amsim

@@ -1,8 +1,6 @@
 #ifndef AMSIMCPP_SIMULATION_CONTEXT_H
 #define AMSIMCPP_SIMULATION_CONTEXT_H
 
-#pragma once
-
 #include <amsim/genome.h>
 #include <amsim/mating.h>
 #include <amsim/phenoarch.h>

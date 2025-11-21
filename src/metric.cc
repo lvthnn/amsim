@@ -14,12 +14,12 @@
 namespace amsim {
 Metric::Metric(
     MetricFunc f,
-    const std::string& name,
-    const std::size_t n_rows,
-    const std::size_t n_cols,
+    std::string name,
+    std::size_t n_rows,
+    std::size_t n_cols,
     std::vector<std::string> labels,
-    const bool require_lat)
-    : name(name),
+    bool require_lat)
+    : name(std::move(name)),
       n_rows(n_rows),
       n_cols(n_cols),
       require_lat(require_lat),
@@ -45,16 +45,6 @@ std::string Metric::stream(const SimulationContext& ctx) {
 }
 
 namespace metrics {
-Metric make_metric(
-    MetricFunc f,
-    const std::string& name,
-    const std::size_t n_rows,
-    const std::size_t n_cols,
-    const std::vector<std::string> labels,
-    const bool require_lat) {
-  return Metric{std::move(f), name, n_rows, n_cols, labels, require_lat};
-}
-
 namespace phenome {
 std::vector<double> f_pheno_h2(const SimulationContext& ctx) {
   const std::size_t n_pheno = ctx.n_pheno;
@@ -89,13 +79,13 @@ MetricFunc f_comp_cor(ComponentType type) {
       const double* ptr_i = &std_buf[i * n_ind];
       for (std::size_t j = i; j < n_pheno; ++j) {
         if (i == j) {
-          cor_buf[i * n_pheno + j] = 1.0;
+          cor_buf[(i * n_pheno) + j] = 1.0;
           continue;
         }
         const double* ptr_j = &std_buf[j * n_ind];
-        cor_buf[i * n_pheno + j] = (1.0 / static_cast<double>(n_ind)) *
-                                   cblas_ddot(n_ind, ptr_i, 1, ptr_j, 1);
-        cor_buf[j * n_pheno + i] = cor_buf[i * n_pheno + j];
+        cor_buf[(i * n_pheno) + j] = (1.0 / static_cast<double>(n_ind)) *
+                                     cblas_ddot(n_ind, ptr_i, 1, ptr_j, 1);
+        cor_buf[(j * n_pheno) + i] = cor_buf[(i * n_pheno) + j];
       }
     }
 
@@ -119,8 +109,8 @@ MetricFunc f_comp_xcor(ComponentType type) {
 
     std::vector<double> female_reordered(n_sex * n_pheno);
     for (std::size_t pheno = 0; pheno < n_pheno; ++pheno) {
-      const double* src = buf_female + pheno * lda_buf;
-      double* dst = female_reordered.data() + pheno * n_sex;
+      const double* src = buf_female + (pheno * lda_buf);
+      double* dst = female_reordered.data() + (pheno * n_sex);
       for (std::size_t male_idx = 0; male_idx < n_sex; ++male_idx) {
         dst[male_idx] = src[matching[male_idx]];
       }
@@ -250,7 +240,7 @@ MetricFunc f_latent_comp_mean(ComponentType type) {
     std::vector<double> mean_buf(n_pheno);
 
     for (std::size_t dim = 0; dim < n_pheno; ++dim) {
-      const double* latent_dim = latent_all + dim * n_ind;
+      const double* latent_dim = latent_all + (dim * n_ind);
       mean_buf[dim] = stats::mean(n_ind, latent_dim, 1);
     }
 
@@ -269,7 +259,7 @@ MetricFunc f_latent_comp_var(ComponentType type) {
     std::vector<double> var_buf(n_pheno);
 
     for (std::size_t dim = 0; dim < n_pheno; ++dim) {
-      const double* latent_dim = latent_all + dim * n_ind;
+      const double* latent_dim = latent_all + (dim * n_ind);
       var_buf[dim] = stats::var(n_ind, latent_dim, 1);
     }
 

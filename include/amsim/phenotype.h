@@ -1,8 +1,6 @@
 #ifndef AMSIMCPP_PHENOTYPE_H
 #define AMSIMCPP_PHENOTYPE_H
 
-#pragma once
-
 #include <amsim/component_type.h>
 #include <amsim/genome.h>
 #include <amsim/phenoarch.h>
@@ -22,19 +20,19 @@ class Phenotype {
       PhenoBuf& buf,
       PhenoArch& arch,
       std::string name,
-      const double h2_gen,
-      const double h2_env,
-      const double h2_vert,
-      const std::optional<std::size_t> id = std::nullopt);
+      double h2_gen,
+      double h2_env,
+      double h2_vert,
+      std::optional<std::size_t> id = std::nullopt);
 
-  inline const std::string name() const noexcept { return name_; }
-  inline const std::vector<std::size_t> loci() const& noexcept { return loci_; }
-  inline std::size_t n_ind() const noexcept { return n_ind_; }
-  inline double h2_gen() const noexcept { return h2_gen_; }
-  inline double h2_vert() const noexcept { return h2_vert_; }
-  inline double h2_env() const noexcept { return h2_env_; }
+  std::string name() const noexcept { return name_; }
+  std::vector<std::size_t> loci() const& noexcept { return loci_; }
+  std::size_t n_ind() const noexcept { return n_ind_; }
+  double h2_gen() const noexcept { return h2_gen_; }
+  double h2_vert() const noexcept { return h2_vert_; }
+  double h2_env() const noexcept { return h2_env_; }
 
-  inline const double& operator()(std::size_t id, ComponentType type) const {
+  const double& operator()(std::size_t id, ComponentType type) const {
     if (id >= n_ind_)
       throw std::runtime_error("attempting out-of-bounds access of phenotype");
     switch (type) {
@@ -49,13 +47,13 @@ class Phenotype {
     }
   }
 
-  inline const double& operator()(std::size_t id) const {
+  const double& operator()(std::size_t id) const {
     if (id >= n_ind_)
       throw std::runtime_error("attempting out-of-bounds access of phenotype");
     return ptr_tot_[id];
   }
 
-  inline const double* operator()(ComponentType type) const {
+  const double* operator()(ComponentType type) const {
     switch (type) {
       case ComponentType::GENETIC:
         return ptr_gen_;
@@ -69,13 +67,11 @@ class Phenotype {
     __builtin_unreachable();
   }
 
-  inline double comp_mean(ComponentType type) const {
-    return comp_means_[type];
-  }
+  double comp_mean(ComponentType type) const { return comp_means_[type]; }
 
-  inline double comp_var(ComponentType type) const { return comp_vars_[type]; }
+  double comp_var(ComponentType type) const { return comp_vars_[type]; }
 
-  inline void transmit_vert(std::vector<std::size_t> matching) {
+  void transmit_vert(std::vector<std::size_t> matching) {
     if (h2_vert_ == 0.0) return;
     const double scale = std::sqrt(h2_vert_);
     const std::size_t n_sex = n_ind_ / 2;
@@ -86,7 +82,7 @@ class Phenotype {
     }
   }
 
-  inline void score_tot() {
+  void score_tot() {
     for (std::size_t ind = 0; ind < n_ind_; ++ind)
       ptr_tot_[ind] = ptr_gen_[ind] + ptr_env_[ind] + ptr_vert_[ind];
   }

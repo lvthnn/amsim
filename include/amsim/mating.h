@@ -1,8 +1,6 @@
 #ifndef AMSIMCPP_MATING_H
 #define AMSIMCPP_MATING_H
 
-#pragma once
-
 #include <amsim/mating_type.h>
 #include <amsim/phenotype.h>
 #include <amsim/rng.h>
@@ -25,7 +23,7 @@ class MatingModel {
   std::mt19937 g_;
   std::size_t n_sex_;
 
-  std::vector<std::size_t> rand_state_();
+  std::vector<std::size_t> randState();
 };
 
 class AssortativeModel : public MatingModel {
@@ -33,9 +31,9 @@ class AssortativeModel : public MatingModel {
   AssortativeModel(
       const PhenotypeList& phenotypes,
       std::vector<double> cor,
-      const std::size_t n_sex,
+      std::size_t n_sex,
       const rng::Xoshiro256ss& rng,
-      const std::size_t n_itr = 2e6,
+      std::size_t n_itr = 2e6,
       double temp_init = 0.50,
       double temp_decay = 0.9999,
       double tol_inf = 1e-7);
@@ -59,15 +57,15 @@ class AssortativeModel : public MatingModel {
   std::vector<double> male_;
   std::vector<double> female_;
 
-  void arrange_();
+  void arrange();
 
-  std::vector<double> compute_cor_();
-  std::vector<double> compute_delta_(std::size_t i0, std::size_t i1);
+  std::vector<double> computeCor();
+  std::vector<double> computeDelta(std::size_t i0, std::size_t i1);
 
-  double compute_denergy_(
+  double computeDiffEnergy(
       const std::vector<double>& cur,
       const std::vector<double>& target,
-      const std::vector<double>& delta);
+      const std::vector<double>& delta) const;
 
   rng::NormalPolar fuzz_;
   rng::UniformIntRange swap_;

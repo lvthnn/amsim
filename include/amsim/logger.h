@@ -1,8 +1,6 @@
 #ifndef AMSIMCPP_LOGGER_H
 #define AMSIMCPP_LOGGER_H
 
-#pragma once
-
 #include <amsim/log_level.h>
 
 #include <iostream>
@@ -34,12 +32,13 @@ class Logger {
     if (thread_.joinable()) thread_.join();
   }
 
-  void log(const std::string& msg, const LogLevel level);
+  void log(const std::string& msg, LogLevel level);
 
  private:
-  Logger(std::ostream& out = std::cout, const LogLevel level = LogLevel::INFO)
-      : stream_(out), level_(level), done_(false) {
-    thread_ = std::thread(&Logger::thread_callback_, this);
+  explicit Logger(
+      std::ostream& out = std::cout, const LogLevel level = LogLevel::INFO)
+      : stream_(out), level_(level) {
+    thread_ = std::thread(&Logger::threadCallback, this);
   }
 
   std::ostream& stream_;
@@ -48,20 +47,20 @@ class Logger {
   std::thread thread_;
   std::mutex mutex_;
   LogLevel level_;
-  bool done_;
+  bool done_ = false;
 
-  void thread_callback_();
-  void set_stream_(std::ostream& stream);
-  std::string get_time_str_();
-  std::string level_to_str_(const LogLevel level);
-  std::string format_msg_(const std::string& msg, const LogLevel level);
+  void threadCallback();
+  void setStream(std::ostream& stream);
+  std::string levelToStr(LogLevel level);
+  static std::string getTimeStr();
+  static std::string formatMsg(const std::string& msg, LogLevel level);
 };
 
 #define LOG_FILE(path, log_level)                        \
   do {                                                   \
     static std::ofstream __log_file__(path);             \
     amsim::Logger::getInstance(__log_file__, log_level); \
-  } while(0)
+  } while (false)
 
 #define LOG_STREAM(stream, log_level) \
   amsim::Logger::getInstance(stream, log_level);

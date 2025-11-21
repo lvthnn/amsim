@@ -1,8 +1,6 @@
 #ifndef AMSIMCPP_UTILS_H
 #define AMSIMCPP_UTILS_H
 
-#pragma once
-
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -22,13 +20,12 @@ std::vector<std::size_t> order(const std::vector<T>& v) {
   return idx;
 }
 
-void assert_probs(const std::size_t N, const double* X, const std::size_t incX);
-void assert_cors(const std::size_t N, const double* X, const std::size_t incX);
-void assert_udiag(const std::size_t N, const double* X, const std::size_t ldX);
-void assert_psd(const std::size_t N, const double* X, const std::size_t ldX);
-void assert_cor(const std::size_t N, const double* X, const std::size_t ldX);
-void assert_cross_cor(
-    const std::size_t N, const double* X, const std::size_t ldX);
+void assert_probs(std::size_t N, const double* X, std::size_t incX);
+void assert_cors(std::size_t N, const double* X, std::size_t incX);
+void assert_udiag(std::size_t N, const double* X, std::size_t ldX);
+void assert_psd(std::size_t N, const double* X, std::size_t ldX);
+void assert_cor(std::size_t N, const double* X, std::size_t ldX);
+void assert_cross_cor(std::size_t N, const double* X, std::size_t ldX);
 
 void random_effects(std::size_t n_loci);
 void uniform_effects(std::size_t n_loci);

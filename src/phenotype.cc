@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -20,13 +21,14 @@
 #include <amsim/phenotype.h>
 
 namespace amsim {
-namespace utils {
+
+namespace {
 std::size_t attach(PhenoBuf& buf, std::optional<std::size_t> id) {
   if (!id) id = buf.unoccupied();
   if (!id) throw std::runtime_error("all phenotype buffer slots occupied");
   return *id;
 }
-}  // namespace utils
+}  // namespace
 
 Phenotype::Phenotype(
     PhenoBuf& buf,
@@ -37,7 +39,7 @@ Phenotype::Phenotype(
     const double h2_vert,
     const std::optional<std::size_t> id)
     : name_(std::move(name)),
-      id_(utils::attach(buf, id)),
+      id_(attach(buf, id)),
       n_ind_(buf.n_ind()),
       loci_(arch.pheno_mask(id_)),
       loc_effects_(
@@ -64,10 +66,10 @@ void Phenotype::score_bitwise(Genome& genome) {
   if (genome.view() != HaploView::LOC_MAJOR)
     throw std::runtime_error("Phenotype::score: requires loc-major view.");
 
-  HaploBuf& H0 = genome.H0();
-  HaploBuf& H1 = genome.H1();
-  std::size_t n_words = H0.n_words();
-  std::size_t n_ind = H0.n_ind();
+  HaploBuf& h0 = genome.H0();
+  HaploBuf& h1 = genome.H1();
+  std::size_t n_words = h0.n_words();
+  std::size_t n_ind = h0.n_ind();
 
   double global_centre = 0.0;
 
@@ -83,17 +85,18 @@ void Phenotype::score_bitwise(Genome& genome) {
     if (genome.v_lvar(loc) == 0) continue;
 
     for (std::size_t word = 0; word < n_words; ++word) {
-      std::uint64_t HET = H0(loc, word) ^ H1(loc, word);
-      std::uint64_t HOM = H0(loc, word) & H1(loc, word);
-      std::size_t offset, ind;
+      std::uint64_t het = h0(loc, word) ^ h1(loc, word);
+      std::uint64_t hom = h0(loc, word) & h1(loc, word);
+      std::size_t offset;
+      std::size_t ind;
 
-      for (std::uint64_t mask = HET; mask; mask &= (mask - 1)) {
+      for (std::uint64_t mask = het; mask; mask &= (mask - 1)) {
         offset = static_cast<std::size_t>(__builtin_ctzll(mask));
         ind = word * 64 + offset;
         ptr_gen_[ind] += 1.0 * loc_effect;
       }
 
-      for (std::uint64_t mask = HOM; mask; mask &= (mask - 1)) {
+      for (std::uint64_t mask = hom; mask; mask &= (mask - 1)) {
         offset = static_cast<std::size_t>(__builtin_ctzll(mask));
         ind = word * 64 + offset;
         ptr_gen_[ind] += 2.0 * loc_effect;
@@ -108,16 +111,16 @@ void Phenotype::score_tiled(Genome& genome) {
   if (genome.H0().view() != HaploView::LOC_MAJOR)
     throw std::runtime_error("Phenotype::score: require LOC_MAJOR view.");
 
-  HaploBuf& H0 = genome.H0();
-  HaploBuf& H1 = genome.H1();
+  HaploBuf& h0 = genome.H0();
+  HaploBuf& h1 = genome.H1();
 
-  const std::size_t n_ind = H0.n_ind();
-  const std::size_t n_words = H0.n_words();
+  const std::size_t n_ind = h0.n_ind();
+  const std::size_t n_words = h0.n_words();
   const std::size_t n_causal_loc = loci_.size();
 
   std::vector<double> effects(n_causal_loc);
   std::vector<double> centres(n_causal_loc);
-  std::vector<double> Gd(64 * n_causal_loc);
+  std::vector<double> gd(64 * n_causal_loc);
   std::vector<double> out(64, 0.0);
 
   for (std::size_t el = 0; el < n_causal_loc; ++el) {
@@ -138,17 +141,17 @@ void Phenotype::score_tiled(Genome& genome) {
   for (std::size_t word = 0; word < n_words; ++word) {
     const std::size_t tile_start = word * 64;
     const std::size_t tile_size = std::min<std::size_t>(64, n_ind - tile_start);
-    std::fill(Gd.begin(), Gd.end(), 0.0);
-    std::fill(out.begin(), out.end(), 0.0);
+    std::ranges::fill(gd, 0.0);
+    std::ranges::fill(out, 0.0);
 
     for (std::size_t el = 0; el < n_causal_loc; ++el) {
       std::size_t loc = loci_[el];
-      std::uint64_t HOM = H0(loc, word) & H1(loc, word);
-      std::uint64_t HET = H0(loc, word) ^ H1(loc, word);
+      std::uint64_t hom = h0(loc, word) & h1(loc, word);
+      std::uint64_t het = h0(loc, word) ^ h1(loc, word);
 
       for (std::size_t k = 0; k < tile_size; ++k) {
-        int geno = ((HOM >> k) & 1ull) * 2 + ((HET >> k) & 1ull);
-        Gd[k * n_causal_loc + el] = effects[el] * geno + centres[el];
+        int geno = (((hom >> k) & 1ULL) * 2) + ((het >> k) & 1ULL);
+        gd[(k * n_causal_loc) + el] = effects[el] * geno + centres[el];
       }
     }
 
@@ -158,7 +161,7 @@ void Phenotype::score_tiled(Genome& genome) {
         tile_size,
         n_causal_loc,
         1.0,
-        Gd.data(),
+        gd.data(),
         n_causal_loc,
         ones.data(),
         1,
@@ -182,12 +185,12 @@ void Phenotype::compute_stats() {
   for (ComponentType comp = ComponentType::GENETIC;
        comp <= ComponentType::TOTAL;
        ++comp) {
-    const double* ptr_ = (*this)(comp);
+    const double* ptr = (*this)(comp);
 
-    const double sum_sq = cblas_ddot(n_ind_, ptr_, 1, ptr_, 1);
+    const double sum_sq = cblas_ddot(n_ind_, ptr, 1, ptr, 1);
     const double scale = (1.0 / static_cast<double>(n_ind_));
 
-    comp_means_[comp] = scale * cblas_ddot(n_ind_, ptr_, 1, ones.data(), 1);
+    comp_means_[comp] = scale * cblas_ddot(n_ind_, ptr, 1, ones.data(), 1);
     comp_vars_[comp] = scale * sum_sq - comp_means_[comp] * comp_means_[comp];
     if (comp == ComponentType::TOTAL) break;
   }

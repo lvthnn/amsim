@@ -1,8 +1,6 @@
 #ifndef AMSIMCPP_LOG_LEVEL_H
 #define AMSIMCPP_LOG_LEVEL_H
 
-#pragma once
-
 #include <string>
 
 namespace amsim {

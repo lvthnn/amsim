@@ -10,7 +10,7 @@
 
 namespace amsim {
 
-void Logger::thread_callback_() {
+void Logger::threadCallback() {
   std::unique_lock<std::mutex> lk(mutex_);
   while (!done_ || !messages_.empty()) {
     cv_.wait(lk, [this] { return done_ || !messages_.empty(); });
@@ -26,7 +26,7 @@ void Logger::thread_callback_() {
   }
 }
 
-std::string Logger::get_time_str_() {
+std::string Logger::getTimeStr() {
   const auto now = std::chrono::system_clock::now();
   const auto tse = now.time_since_epoch();
   const auto ms =
@@ -48,14 +48,13 @@ std::string Logger::get_time_str_() {
   return oss.str();
 }
 
-std::string Logger::format_msg_(const std::string& msg, const LogLevel level) {
-  std::string time_str = get_time_str_();
+std::string Logger::formatMsg(const std::string& msg, const LogLevel level) {
+  std::string time_str = getTimeStr();
   std::ostringstream msg_format;
 
   msg_format << "[" << to_string(level) << "] "
              << "[" << time_str << "] " << "[thread "
-             << std::this_thread::get_id() << "] "
-             << msg;
+             << std::this_thread::get_id() << "] " << msg;
 
   return msg_format.str();
 }
@@ -64,7 +63,7 @@ void Logger::log(const std::string& msg, const LogLevel level) {
   if (level < level_) return;
   {
     std::lock_guard<std::mutex> lg(mutex_);
-    std::string msg_format = format_msg_(msg, level);
+    std::string msg_format = formatMsg(msg, level);
     messages_.push_back(msg_format);
   }
   cv_.notify_one();

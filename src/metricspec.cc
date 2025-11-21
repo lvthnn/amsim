@@ -16,9 +16,9 @@ std::vector<std::string> label_matrix(
   std::vector<std::string> labels(n * n);
   for (std::size_t i = 0; i < names.size(); ++i)
     for (std::size_t j = 0; j < names.size(); ++j)
-      labels[i * n + j] = (cross)
-                              ? names[i] + "_male::" + names[j] + "_female"
-                              : labels[i * n + j] = names[i] + "::" + names[j];
+      labels[(i * n) + j] =
+          (cross) ? names[i] + "_male::" + names[j] + "_female"
+                  : labels[(i * n) + j] = names[i] + "::" + names[j];
   return labels;
 }
 }  // namespace labels

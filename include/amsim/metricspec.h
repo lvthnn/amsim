@@ -1,8 +1,6 @@
 #ifndef AMSIMCPP_METRICSPEC_H
 #define AMSIMCPP_METRICSPEC_H
 
-#pragma once
-
 #include <amsim/metric.h>
 #include <amsim/simulation_context.h>
 
@@ -26,7 +24,7 @@ class MetricSpec {
         func_(std::move(func)),
         setup_(std::move(setup)) {}
 
-  inline Metric setup(SimulationContext& ctx) const { return setup_(ctx); };
+  Metric setup(SimulationContext& ctx) const { return setup_(ctx); };
 
   const bool require_lat;
 

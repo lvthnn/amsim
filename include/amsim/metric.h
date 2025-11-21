@@ -1,8 +1,6 @@
 #ifndef AMSIMCPP_METRIC_H
 #define AMSIMCPP_METRIC_H
 
-#pragma once
-
 #include <amsim/simulation_context.h>
 
 #include <string>
@@ -14,11 +12,11 @@ class Metric {
  public:
   Metric(
       MetricFunc f,
-      const std::string& name,
-      const std::size_t n_rows,
-      const std::size_t n_cols = 1,
+      std::string name,
+      std::size_t n_rows,
+      std::size_t n_cols = 1,
       std::vector<std::string> labels = {},
-      const bool require_lat = false);
+      bool require_lat = false);
 
   const std::string name;
   const std::size_t n_rows;

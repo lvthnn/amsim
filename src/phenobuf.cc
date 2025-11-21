@@ -21,7 +21,7 @@ PhenoBuf::PhenoBuf(
 }
 
 std::optional<std::size_t> PhenoBuf::unoccupied() const {
-  auto it = std::find(occupied_.begin(), occupied_.end(), false);
+  auto it = std::ranges::find(occupied_, false);
   if (it != occupied_.end()) {
     std::size_t id = std::distance(occupied_.begin(), it);
     return id;

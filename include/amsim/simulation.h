@@ -1,8 +1,6 @@
 #ifndef AMSIMCPP_SIMULATION_H
 #define AMSIMCPP_SIMULATION_H
 
-#pragma once
-
 #include <amsim/genome.h>
 #include <amsim/log_level.h>
 #include <amsim/mating.h>
@@ -20,34 +18,10 @@ namespace amsim {
 
 class Simulation {
  public:
-  Simulation(
+  explicit Simulation(
       const SimulationConfig& config,
       std::optional<std::filesystem::path> out_dir_ = std::nullopt,
       std::optional<std::uint64_t> rng_seed_ = std::nullopt);
-
-  Simulation(
-      std::size_t n_gen,
-      std::size_t n_ind,
-      std::filesystem::path out_dir,
-      std::uint64_t rng_seed,
-      std::size_t n_loc,
-      std::vector<double> v_maf,
-      std::vector<double> v_rec,
-      std::vector<double> v_mut,
-      std::size_t n_pheno,
-      std::vector<std::string> v_name,
-      std::vector<std::size_t> v_n_loc,
-      std::vector<double> v_h2_gen,
-      std::vector<double> v_h2_env,
-      std::vector<double> v_h2_vert,
-      std::vector<double> gen_cor,
-      std::vector<double> env_cor,
-      std::vector<double> mate_cor,
-      std::size_t n_itr,
-      double tmp_init,
-      double tmp_decay,
-      std::vector<MetricSpec> specs,
-      bool require_latent);
 
   Simulation(Simulation&& other) noexcept
       : n_gen(other.n_gen),
@@ -91,14 +65,14 @@ class Simulation {
   std::vector<Metric> metrics_;
   std::vector<std::unique_ptr<std::ofstream>> streams_;
 
-  void stream_(std::size_t gen);
+  void stream(std::size_t gen);
 };
 
 void run_simulations(
     const SimulationConfig& config,
     std::size_t n_replicates,
     std::size_t n_threads,
-    bool summarise = true,
+    bool summarise = false,
     bool log_file = true,
     LogLevel log_level = LogLevel::INFO);
 }  // namespace amsim

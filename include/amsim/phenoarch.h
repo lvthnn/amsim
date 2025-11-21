@@ -1,8 +1,6 @@
 #ifndef AMSIMCPP_PHENOARCH_H
 #define AMSIMCPP_PHENOARCH_H
 
-#pragma once
-
 #include <amsim/rng.h>
 
 #include <cstddef>
@@ -44,10 +42,10 @@ class PhenoArch {
   rng::NormalPolar rng_polar_;
   rng::UniformIntRange rng_unf_;
 
-  std::vector<std::uint64_t> init_mask_();
-  std::vector<double> init_energy_() const;
-  std::vector<double> init_weights_() const;
-  std::vector<std::size_t> init_intersect_(
+  std::vector<std::uint64_t> initMask();
+  std::vector<double> initEnergy() const;
+  std::vector<double> initWeights() const;
+  std::vector<std::size_t> initIntersect(
       const std::vector<std::uint64_t>& mask) const;
 };
 

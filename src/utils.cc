@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <iostream>
 #include <string>
 #include <vector>
 
@@ -13,11 +12,11 @@
 #endif
 
 namespace amsim::utils {
-
 namespace {
 void bitmatrix_swap(
     std::uint64_t matrix[], std::size_t width, std::uint64_t mask) {
-  std::size_t inner, outer;
+  std::size_t inner;
+  std::size_t outer;
   for (outer = 0; outer < 64 / (width * 2); ++outer) {
     for (inner = 0; inner < width; ++inner) {
       std::uint64_t* x = &matrix[(inner) + (outer * width * 2)];
@@ -32,7 +31,7 @@ void bitmatrix_swap(
 
 void bitmatrix_transpose(std::uint64_t* matrix) {
   std::size_t swap_width = 64;
-  std::uint64_t swap_mask = static_cast<std::uint64_t>(-1);
+  auto swap_mask = static_cast<std::uint64_t>(-1);
   while (swap_width != 1) {
     swap_width >>= 1;
     swap_mask = swap_mask ^ (swap_mask >> swap_width);
@@ -40,8 +39,7 @@ void bitmatrix_transpose(std::uint64_t* matrix) {
   }
 }
 
-void assert_probs(
-    const std::size_t N, const double* X, const std::size_t incX) {
+void assert_probs(std::size_t N, const double* X, std::size_t incX) {
   const double* xi = X;
 
   for (std::size_t i = 0; i < N; ++i, xi += incX)
@@ -50,7 +48,7 @@ void assert_probs(
           "invalid element " + std::to_string(i) + "; must be in [0, 1]");
 }
 
-void assert_cors(const std::size_t N, const double* X, const std::size_t incX) {
+void assert_cors(std::size_t N, const double* X, std::size_t incX) {
   const double* xi = X;
 
   for (std::size_t i = 0; i < N; ++i, xi += incX)
@@ -59,7 +57,7 @@ void assert_cors(const std::size_t N, const double* X, const std::size_t incX) {
           "invalid element " + std::to_string(i) + "; must be in [-1, 1]");
 }
 
-void assert_udiag(const std::size_t N, const double* X, const std::size_t ldX) {
+void assert_udiag(std::size_t N, const double* X, std::size_t ldX) {
   const double* xi = X;
 
   for (std::size_t i = 0; i < N; ++i, xi += ldX) {
@@ -70,10 +68,10 @@ void assert_udiag(const std::size_t N, const double* X, const std::size_t ldX) {
   }
 }
 
-void assert_psd(const std::size_t N, const double* X, const std::size_t ldX) {
-  std::vector<double> X_copy(N * N);
+void assert_psd(std::size_t N, const double* X, std::size_t ldX) {
+  std::vector<double> x_copy(N * N);
   std::vector<double> eigvals(N);
-  std::copy_n(X, N * N, X_copy.begin());
+  std::copy_n(X, N * N, x_copy.begin());
 
   const char clpk_job = 'N';
   const char clpk_uplo = 'L';
@@ -88,7 +86,7 @@ void assert_psd(const std::size_t N, const double* X, const std::size_t ldX) {
       &clpk_job,
       &clpk_uplo,
       &clpk_ld,
-      X_copy.data(),
+      x_copy.data(),
       &clpk_ld,
       eigvals.data(),
       &clpk_wkopt,
@@ -115,7 +113,7 @@ void assert_psd(const std::size_t N, const double* X, const std::size_t ldX) {
       &clpk_job,
       &clpk_uplo,
       &clpk_ld,
-      X_copy.data(),
+      x_copy.data(),
       &clpk_ld,
       eigvals.data(),
       clpk_work.data(),
@@ -143,19 +141,18 @@ void assert_psd(const std::size_t N, const double* X, const std::size_t ldX) {
       throw std::invalid_argument("matrix not positive semi-definite");
 }
 
-void assert_cor(const std::size_t N, const double* X, const std::size_t ldX) {
+void assert_cor(std::size_t N, const double* X, std::size_t ldX) {
   assert_cors(N * N, X, 1);
   assert_udiag(N, X, ldX);
   assert_psd(N, X, ldX);
 }
 
-void assert_cross_cor(
-    const std::size_t N, const double* X, const std::size_t ldX) {
+void assert_cross_cor(std::size_t N, const double* X, std::size_t ldX) {
   assert_cors(N * N, X, 1);
 
-  std::vector<double> X_copy(N * N);
+  std::vector<double> x_copy(N * N);
   std::vector<double> svals(N);
-  std::copy_n(X, N * N, X_copy.begin());
+  std::copy_n(X, N * N, x_copy.begin());
 
   const char clpk_job = 'N';
   const int clpk_ld = static_cast<int>(ldX);
@@ -169,7 +166,7 @@ void assert_cross_cor(
       &clpk_job,
       &clpk_ld,
       &clpk_ld,
-      X_copy.data(),
+      x_copy.data(),
       &clpk_ld,
       svals.data(),
       nullptr,
@@ -211,7 +208,7 @@ void assert_cross_cor(
       &clpk_job,
       &clpk_ld,
       &clpk_ld,
-      X_copy.data(),
+      x_copy.data(),
       &clpk_ld,
       svals.data(),
       nullptr,

@@ -10,6 +10,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace amsim {
@@ -24,9 +25,9 @@ SimulationResults::SimulationResults(
     throw std::invalid_argument("specified output directory does not exist");
 
   // infer number of replicates and replicate directories if not suppied
-  infer_replicates_(n_replicates);
-  infer_metrics_(metric_names);
-  encode_values_(metric_names_, metric_map_, inv_metric_map_);
+  inferReplicates(n_replicates);
+  inferMetrics(std::move(metric_names));
+  encodeValues(metric_names_, metric_map_, inv_metric_map_);
 
   // resize class elements
   metric_labels_.resize(metric_names_.size());
@@ -40,8 +41,10 @@ ResultsTable SimulationResults::operator()(const std::string& metric) {
   return index_[metric_map_[metric]];
 }
 
-void SimulationResults::encode_values_(
-    std::vector<std::string> values, KeyMap& map_out, InvKeyMap& invmap_out) {
+void SimulationResults::encodeValues(
+    const std::vector<std::string>& values,
+    KeyMap& map_out,
+    InvKeyMap& invmap_out) {
   map_out.reserve(values.size());
 
   std::size_t cnt = 0;
@@ -52,7 +55,7 @@ void SimulationResults::encode_values_(
   }
 }
 
-void SimulationResults::infer_replicates_(
+void SimulationResults::inferReplicates(
     std::optional<std::size_t> n_replicates) {
   if (!n_replicates) {
     for (const auto& dir_entry :
@@ -71,7 +74,7 @@ void SimulationResults::infer_replicates_(
   }
 }
 
-void SimulationResults::infer_metrics_(
+void SimulationResults::inferMetrics(
     std::optional<std::vector<std::string>> metric_names) {
   if (!metric_names) {
     std::set<std::string> metrics_set;
@@ -87,12 +90,8 @@ void SimulationResults::infer_metrics_(
         metrics_set = std::move(rep_names);
       } else {
         std::set<std::string> isect;
-        std::set_intersection(
-            metrics_set.begin(),
-            metrics_set.end(),
-            rep_names.begin(),
-            rep_names.end(),
-            std::inserter(isect, isect.end()));
+        std::ranges::set_intersection(
+            metrics_set, rep_names, std::inserter(isect, isect.end()));
         metrics_set = std::move(isect);
       }
     }
@@ -104,7 +103,7 @@ void SimulationResults::infer_metrics_(
   n_metrics_ = metric_names_.size();
 }
 
-void SimulationResults::get_labels_(
+void SimulationResults::getLabels(
     std::vector<std::string>& labels, std::vector<std::ifstream>& streams) {
   std::string header_line;
   std::string token;
@@ -127,7 +126,7 @@ void SimulationResults::get_labels_(
   }
 }
 
-void SimulationResults::summarise_metric_(std::string metric) {
+void SimulationResults::summariseMetric(const std::string& metric) {
   std::vector<std::ifstream> streams;
   std::vector<double> stream_buf;
   std::vector<std::string> labels;
@@ -138,7 +137,8 @@ void SimulationResults::summarise_metric_(std::string metric) {
   std::size_t metric_id = metric_map_[metric];
 
   // placerholder string token
-  std::string dummy, token;
+  std::string dummy;
+  std::string token;
 
   // create the ResultsTable to be used
   ResultsTable table;
@@ -153,11 +153,11 @@ void SimulationResults::summarise_metric_(std::string metric) {
   }
 
   // loop over each of the files
-  get_labels_(labels, streams);
-  encode_values_(labels, table.label_map, table.inv_label_map);
+  getLabels(labels, streams);
+  encodeValues(labels, table.label_map, table.inv_label_map);
 
   // summarise cells and push back into columns
-  while (std::all_of(streams.begin(), streams.end(), [](std::ifstream& stream) {
+  while (std::ranges::all_of(streams, [](std::ifstream& stream) {
     return stream.good() && stream.peek() != EOF;
   })) {
     // skip the first column (index) at the start of the row
@@ -181,8 +181,7 @@ void SimulationResults::summarise_metric_(std::string metric) {
 }
 
 void SimulationResults::summarise() {
-  for (const std::string& metric : metric_names_)
-    summarise_metric_(metric);
+  for (const std::string& metric : metric_names_) summariseMetric(metric);
 }
 
 void SimulationResults::save(
@@ -214,12 +213,12 @@ void print_table(ResultsTable& table, std::ostream& ofstream) {
   std::size_t n_cols = table.label_map.size();
 
   ofstream << "gen\tname\tmean\tmedian\tstddev\tstderr\tlower_ci95\tupper_"
-              "ci95\tquant025\tquant975\n";
+              "ci95\tquant_025\tquant_975\n";
 
   ofstream << std::scientific;
   for (std::size_t col = 0; col < n_cols; ++col) {
     for (std::size_t row = 0; row < n_rows; ++row) {
-      std::size_t idx = row * n_cols + col;
+      std::size_t idx = (row * n_cols) + col;
       ofstream << row + 1 << "\t" << table.inv_label_map[col] << "\t"
                << table.data[0][idx] << "\t" << table.data[1][idx] << "\t"
                << table.data[2][idx] << "\t" << table.data[3][idx] << "\t"
