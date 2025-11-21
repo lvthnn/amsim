@@ -1,5 +1,6 @@
 #include <amsim/genome.h>
 #include <amsim/haploview.h>
+#include <amsim/logger.h>
 #include <amsim/rng.h>
 
 #include <cstddef>
@@ -25,7 +26,7 @@ Genome::Genome(
       h0_(n_ind, n_loc),
       h1_(n_ind, n_loc) {};
 
-uint64_t Genome::gamWord(std::uint64_t ind_H0, std::uint64_t ind_H1) noexcept {
+uint64_t Genome::gamWord(std::uint64_t ind_h0, std::uint64_t ind_h1) noexcept {
   std::uint64_t par = bw_.sample();
   bool par0 = bw_.coinflip();
   if (v_rec_[0] < 0.5) {
@@ -37,7 +38,7 @@ uint64_t Genome::gamWord(std::uint64_t ind_H0, std::uint64_t ind_H1) noexcept {
     par ^= par << 32;
     if (par0) par = ~par;
   }
-  return (par & ind_H0) | (~par & ind_H1);
+  return (par & ind_h0) | (~par & ind_h1);
 }
 
 void Genome::generate_haplotypes() noexcept {
@@ -82,7 +83,8 @@ void Genome::compute_mafs() {
         ct_loc += __builtin_popcountll(h1_(loc, bloc));
       }
     }
-    v_lmaf_[loc] = static_cast<double>(ct_loc) / (2.0 * n_ind);
+    v_lmaf_[loc] =
+        static_cast<double>(ct_loc) / (2.0 * static_cast<double>(n_ind));
   }
 }
 

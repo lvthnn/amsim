@@ -30,8 +30,8 @@ class Genome {
   std::size_t n_loc() const noexcept { return h0_.n_loc(); }
   std::size_t n_ind() const noexcept { return h0_.n_ind(); }
   HaploView view() const noexcept { return h0_.view(); }
-  HaploBuf& H0() noexcept { return h0_; }
-  HaploBuf& H1() noexcept { return h1_; }
+  HaploBuf& h0() noexcept { return h0_; }
+  HaploBuf& h1() noexcept { return h1_; }
   void generate_haplotypes() noexcept;
   void transpose() noexcept;
   void compute_mafs();
@@ -48,7 +48,7 @@ class Genome {
   rng::BW16 bw_;
   HaploBuf h0_;
   HaploBuf h1_;
-  uint64_t gamWord(std::uint64_t ind_H0, std::uint64_t ind_H1) noexcept;
+  uint64_t gamWord(std::uint64_t ind_h0, std::uint64_t ind_h1) noexcept;
 };
 
 }  // namespace amsim
