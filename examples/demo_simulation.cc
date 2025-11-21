@@ -15,7 +15,7 @@ int main() {
 
   amsim::SimulationConfig config;
 
-  config.simulation(10, 256000, "amsim_multithread", 1234568ull);
+  config.simulation(10, 256000, "amsim_multithread", 1234568ULL);
 
   config.genome(500, v_maf, v_rec, v_mut);
 
