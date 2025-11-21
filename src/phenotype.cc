@@ -66,8 +66,8 @@ void Phenotype::score_bitwise(Genome& genome) {
   if (genome.view() != HaploView::LOC_MAJOR)
     throw std::runtime_error("Phenotype::score: requires loc-major view.");
 
-  HaploBuf& h0 = genome.H0();
-  HaploBuf& h1 = genome.H1();
+  HaploBuf& h0 = genome.h0();
+  HaploBuf& h1 = genome.h1();
   std::size_t n_words = h0.n_words();
   std::size_t n_ind = h0.n_ind();
 
@@ -108,11 +108,11 @@ void Phenotype::score_bitwise(Genome& genome) {
 }
 
 void Phenotype::score_tiled(Genome& genome) {
-  if (genome.H0().view() != HaploView::LOC_MAJOR)
+  if (genome.h0().view() != HaploView::LOC_MAJOR)
     throw std::runtime_error("Phenotype::score: require LOC_MAJOR view.");
 
-  HaploBuf& h0 = genome.H0();
-  HaploBuf& h1 = genome.H1();
+  HaploBuf& h0 = genome.h0();
+  HaploBuf& h1 = genome.h1();
 
   const std::size_t n_ind = h0.n_ind();
   const std::size_t n_words = h0.n_words();
