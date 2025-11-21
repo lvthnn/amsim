@@ -6,32 +6,32 @@
 
 // Tests for amsim::utils::assert_probs
 
-TEST(Utils, AssertProbs_ValidProbabilities) {
+TEST(Utils, AssertProbsValidProbabilities) {
   std::vector<double> probs = {0.0, 0.5, 1.0, 0.25, 0.75};
   EXPECT_NO_THROW(amsim::utils::assert_probs(probs.size(), probs.data(), 1));
 }
 
-TEST(Utils, AssertProbs_AllZeros) {
+TEST(Utils, AssertProbsAllZeros) {
   std::vector<double> probs = {0.0, 0.0, 0.0};
   EXPECT_NO_THROW(amsim::utils::assert_probs(probs.size(), probs.data(), 1));
 }
 
-TEST(Utils, AssertProbs_AllOnes) {
+TEST(Utils, AssertProbsAllOnes) {
   std::vector<double> probs = {1.0, 1.0, 1.0};
   EXPECT_NO_THROW(amsim::utils::assert_probs(probs.size(), probs.data(), 1));
 }
 
-TEST(Utils, AssertProbs_EmptyArray) {
+TEST(Utils, AssertProbsEmptyArray) {
   std::vector<double> probs;
   EXPECT_NO_THROW(amsim::utils::assert_probs(0, probs.data(), 1));
 }
 
-TEST(Utils, AssertProbs_SingleElement) {
+TEST(Utils, AssertProbsSingleElement) {
   double prob = 0.5;
   EXPECT_NO_THROW(amsim::utils::assert_probs(1, &prob, 1));
 }
 
-TEST(Utils, AssertProbs_NegativeValue) {
+TEST(Utils, AssertProbsNegativeValue) {
   std::vector<double> probs = {0.5, -0.1, 0.3};
   EXPECT_THROW(
       {
@@ -45,7 +45,7 @@ TEST(Utils, AssertProbs_NegativeValue) {
       std::invalid_argument);
 }
 
-TEST(Utils, AssertProbs_ValueGreaterThanOne) {
+TEST(Utils, AssertProbsValueGreaterThanOne) {
   std::vector<double> probs = {0.2, 0.8, 1.1};
   EXPECT_THROW(
       {
@@ -59,7 +59,7 @@ TEST(Utils, AssertProbs_ValueGreaterThanOne) {
       std::invalid_argument);
 }
 
-TEST(Utils, AssertProbs_FirstElementInvalid) {
+TEST(Utils, AssertProbsFirstElementInvalid) {
   std::vector<double> probs = {-0.5, 0.5, 0.8};
   EXPECT_THROW(
       {
@@ -73,12 +73,12 @@ TEST(Utils, AssertProbs_FirstElementInvalid) {
       std::invalid_argument);
 }
 
-TEST(Utils, AssertProbs_WithStride) {
+TEST(Utils, AssertProbsWithStride) {
   std::vector<double> data = {0.3, 999.0, 0.5, 999.0, 0.8};
   EXPECT_NO_THROW(amsim::utils::assert_probs(3, data.data(), 2));
 }
 
-TEST(Utils, AssertProbs_WithStrideInvalid) {
+TEST(Utils, AssertProbsWithStrideInvalid) {
   std::vector<double> data = {0.3, 999.0, 1.5, 999.0, 0.8};
   EXPECT_THROW(
       amsim::utils::assert_probs(3, data.data(), 2), std::invalid_argument);
@@ -86,37 +86,37 @@ TEST(Utils, AssertProbs_WithStrideInvalid) {
 
 // Tests for amsim::utils::assert_cors
 
-TEST(Utils, AssertCors_ValidCorrelations) {
+TEST(Utils, AssertCorsValidCorrelations) {
   std::vector<double> cors = {-1.0, -0.5, 0.0, 0.5, 1.0, 0.75, -0.25};
   EXPECT_NO_THROW(amsim::utils::assert_cors(cors.size(), cors.data(), 1));
 }
 
-TEST(Utils, AssertCors_AllZeros) {
+TEST(Utils, AssertCorsAllZeros) {
   std::vector<double> cors = {0.0, 0.0, 0.0};
   EXPECT_NO_THROW(amsim::utils::assert_cors(cors.size(), cors.data(), 1));
 }
 
-TEST(Utils, AssertCors_AllOnes) {
+TEST(Utils, AssertCorsAllOnes) {
   std::vector<double> cors = {1.0, 1.0, 1.0};
   EXPECT_NO_THROW(amsim::utils::assert_cors(cors.size(), cors.data(), 1));
 }
 
-TEST(Utils, AssertCors_AllNegativeOnes) {
+TEST(Utils, AssertCorsAllNegativeOnes) {
   std::vector<double> cors = {-1.0, -1.0, -1.0};
   EXPECT_NO_THROW(amsim::utils::assert_cors(cors.size(), cors.data(), 1));
 }
 
-TEST(Utils, AssertCors_EmptyArray) {
+TEST(Utils, AssertCorsEmptyArray) {
   std::vector<double> cors;
   EXPECT_NO_THROW(amsim::utils::assert_cors(0, cors.data(), 1));
 }
 
-TEST(Utils, AssertCors_SingleElement) {
+TEST(Utils, AssertCorsSingleElement) {
   double cor = 0.5;
   EXPECT_NO_THROW(amsim::utils::assert_cors(1, &cor, 1));
 }
 
-TEST(Utils, AssertCors_ValueLessThanNegativeOne) {
+TEST(Utils, AssertCorsValueLessThanNegativeOne) {
   std::vector<double> cors = {0.5, -1.1, 0.3};
   EXPECT_THROW(
       {
@@ -130,7 +130,7 @@ TEST(Utils, AssertCors_ValueLessThanNegativeOne) {
       std::invalid_argument);
 }
 
-TEST(Utils, AssertCors_ValueGreaterThanOne) {
+TEST(Utils, AssertCorsValueGreaterThanOne) {
   std::vector<double> cors = {0.2, 0.8, 1.1};
   EXPECT_THROW(
       {
@@ -144,7 +144,7 @@ TEST(Utils, AssertCors_ValueGreaterThanOne) {
       std::invalid_argument);
 }
 
-TEST(Utils, AssertCors_FirstElementInvalid) {
+TEST(Utils, AssertCorsFirstElementInvalid) {
   std::vector<double> cors = {-1.5, 0.5, 0.8};
   EXPECT_THROW(
       {
@@ -158,12 +158,12 @@ TEST(Utils, AssertCors_FirstElementInvalid) {
       std::invalid_argument);
 }
 
-TEST(Utils, AssertCors_WithStride) {
+TEST(Utils, AssertCorsWithStride) {
   std::vector<double> data = {-0.8, 999.0, 0.5, 999.0, 0.9};
   EXPECT_NO_THROW(amsim::utils::assert_cors(3, data.data(), 2));
 }
 
-TEST(Utils, AssertCors_WithStrideInvalid) {
+TEST(Utils, AssertCorsWithStrideInvalid) {
   std::vector<double> data = {0.3, 999.0, -1.5, 999.0, 0.8};
   EXPECT_THROW(
       amsim::utils::assert_cors(3, data.data(), 2), std::invalid_argument);
@@ -171,17 +171,17 @@ TEST(Utils, AssertCors_WithStrideInvalid) {
 
 // Tests for amsim::utils::assert_udiag
 
-TEST(Utils, AssertUDiag_IdentityMatrix) {
+TEST(Utils, AssertUDiagIdentityMatrix) {
   std::vector<double> matrix = {1.0, 0.5, 0.3, 0.5, 1.0, 0.2, 0.3, 0.2, 1.0};
   EXPECT_NO_THROW(amsim::utils::assert_udiag(3, matrix.data(), 3));
 }
 
-TEST(Utils, AssertUDiag_SingleElement) {
+TEST(Utils, AssertUDiagSingleElement) {
   double matrix = 1.0;
   EXPECT_NO_THROW(amsim::utils::assert_udiag(1, &matrix, 1));
 }
 
-TEST(Utils, AssertUDiag_DiagonalNotOne) {
+TEST(Utils, AssertUDiagDiagonalNotOne) {
   std::vector<double> matrix = {1.0, 0.5, 0.3, 0.5, 0.9, 0.2, 0.3, 0.2, 1.0};
   EXPECT_THROW(
       {
@@ -195,7 +195,7 @@ TEST(Utils, AssertUDiag_DiagonalNotOne) {
       std::invalid_argument);
 }
 
-TEST(Utils, AssertUDiag_FirstDiagonalWrong) {
+TEST(Utils, AssertUDiagFirstDiagonalWrong) {
   std::vector<double> matrix = {0.99, 0.5, 0.3, 0.5, 1.0, 0.2, 0.3, 0.2, 1.0};
   EXPECT_THROW(
       {
@@ -209,7 +209,7 @@ TEST(Utils, AssertUDiag_FirstDiagonalWrong) {
       std::invalid_argument);
 }
 
-TEST(Utils, AssertUDiag_LastDiagonalWrong) {
+TEST(Utils, AssertUDiagLastDiagonalWrong) {
   std::vector<double> matrix = {1.0, 0.5, 0.3, 0.5, 1.0, 0.2, 0.3, 0.2, 1.01};
   EXPECT_THROW(
       {
@@ -223,20 +223,20 @@ TEST(Utils, AssertUDiag_LastDiagonalWrong) {
       std::invalid_argument);
 }
 
-TEST(Utils, AssertUDiag_WithinTolerance) {
+TEST(Utils, AssertUDiagWithinTolerance) {
   std::vector<double> matrix = {
       1.0 + 1e-13, 0.5, 0.3, 0.5, 1.0 - 1e-13, 0.2, 0.3, 0.2, 1.0};
   EXPECT_NO_THROW(amsim::utils::assert_udiag(3, matrix.data(), 3));
 }
 
-TEST(Utils, AssertUDiag_OutsideTolerance) {
+TEST(Utils, AssertUDiagOutsideTolerance) {
   std::vector<double> matrix = {
       1.0 + 2e-12, 0.5, 0.3, 0.5, 1.0, 0.2, 0.3, 0.2, 1.0};
   EXPECT_THROW(
       amsim::utils::assert_udiag(3, matrix.data(), 3), std::invalid_argument);
 }
 
-TEST(Utils, AssertUDiag_WithLeadingDimension) {
+TEST(Utils, AssertUDiagWithLeadingDimension) {
   std::vector<double> matrix = {
       1.0, 0.5, 0.3, 999.0, 0.5, 1.0, 0.2, 999.0, 0.3, 0.2, 1.0, 999.0};
   EXPECT_NO_THROW(amsim::utils::assert_udiag(3, matrix.data(), 4));
@@ -244,52 +244,52 @@ TEST(Utils, AssertUDiag_WithLeadingDimension) {
 
 // Tests for amsim::utils::assert_psd
 
-TEST(Utils, AssertPSD_IdentityMatrix) {
+TEST(Utils, AssertPSDIdentityMatrix) {
   std::vector<double> matrix = {1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0};
   EXPECT_NO_THROW(amsim::utils::assert_psd(3, matrix.data(), 3));
 }
 
-TEST(Utils, AssertPSD_PositiveDefiniteMatrix) {
+TEST(Utils, AssertPSDPositiveDefiniteMatrix) {
   // Symmetric positive definite matrix
   std::vector<double> matrix = {4.0, 2.0, 1.0, 2.0, 3.0, 1.0, 1.0, 1.0, 2.0};
   EXPECT_NO_THROW(amsim::utils::assert_psd(3, matrix.data(), 3));
 }
 
-TEST(Utils, AssertPSD_CorrelationMatrix) {
+TEST(Utils, AssertPSDCorrelationMatrix) {
   // Valid correlation matrix
   std::vector<double> matrix = {1.0, 0.8, 0.5, 0.8, 1.0, 0.6, 0.5, 0.6, 1.0};
   EXPECT_NO_THROW(amsim::utils::assert_psd(3, matrix.data(), 3));
 }
 
-TEST(Utils, AssertPSD_SingleElement) {
+TEST(Utils, AssertPSDSingleElement) {
   double matrix = 1.0;
   EXPECT_NO_THROW(amsim::utils::assert_psd(1, &matrix, 1));
 }
 
-TEST(Utils, AssertPSD_TwoByTwo) {
+TEST(Utils, AssertPSDTwoByTwo) {
   std::vector<double> matrix = {1.0, 0.5, 0.5, 1.0};
   EXPECT_NO_THROW(amsim::utils::assert_psd(2, matrix.data(), 2));
 }
 
-TEST(Utils, AssertPSD_ZeroMatrix) {
+TEST(Utils, AssertPSDZeroMatrix) {
   // Zero matrix is positive semi-definite (all eigenvalues are 0)
   std::vector<double> matrix(9, 0.0);
   EXPECT_NO_THROW(amsim::utils::assert_psd(3, matrix.data(), 3));
 }
 
-TEST(Utils, AssertPSD_NegativeEigenvalue) {
+TEST(Utils, AssertPSDNegativeEigenvalue) {
   // Matrix with a negative eigenvalue
   std::vector<double> matrix = {1.0, 2.0, 3.0, 2.0, -1.0, 1.0, 3.0, 1.0, -2.0};
   EXPECT_THROW(
       amsim::utils::assert_psd(3, matrix.data(), 3), std::invalid_argument);
 }
 
-TEST(Utils, AssertCrossCor_Feasible) {
+TEST(Utils, AssertCrossCorFeasible) {
   std::vector<double> matrix(16, 0.2);
   EXPECT_NO_THROW(amsim::utils::assert_cross_cor(4, matrix.data(), 4));
 }
 
-TEST(Utils, AssertCrossCor_Infeasible) {
+TEST(Utils, AssertCrossCorInfeasible) {
   std::vector<double> matrix(25, 0.25);
   EXPECT_THROW(
     amsim::utils::assert_cross_cor(5, matrix.data(), 5), std::invalid_argument);

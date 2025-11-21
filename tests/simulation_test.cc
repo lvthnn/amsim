@@ -1,5 +1,5 @@
-#include <amsim/simulation_config.h>
 #include <amsim/metricspec.h>
+#include <amsim/simulation_config.h>
 #include <gtest/gtest.h>
 
 #include <vector>
@@ -270,44 +270,51 @@ TEST_F(SimulationPhenomeConfig, Phenome_Chaining) {
 // Test SimulationConfig.mating
 
 TEST_F(SimulationMatingConfig, Mating_RandomMating) {
-  EXPECT_NO_THROW(config.mating(amsim::MatingType::RANDOM, std::nullopt,
-                                 std::nullopt, std::nullopt, std::nullopt));
+  EXPECT_NO_THROW(config.random_mating());
   EXPECT_EQ(config.n_itr, 0);
   EXPECT_EQ(config.mate_cor.size(), 4);
 }
 
-TEST_F(SimulationMatingConfig, Mating_AssortativeWithoutCorrelation) {
-  EXPECT_THROW(config.mating(amsim::MatingType::ASSORTATIVE, 100, 1.0, 0.95,
-                             std::nullopt),
-               std::runtime_error);
-}
-
 TEST_F(SimulationMatingConfig, Mating_AssortativeWithValidCorrelation) {
-  EXPECT_NO_THROW(config.mating(amsim::MatingType::ASSORTATIVE, 100, 1.0, 0.95,
-                                 std::vector<double>{0.2, 0.5, 0.3, 0.4}));
-}
-
-TEST_F(SimulationMatingConfig, Mating_NegativeTemperature) {
-  EXPECT_THROW(config.mating(amsim::MatingType::ASSORTATIVE, 100, -1.0, 0.95,
-                             std::vector<double>{0.2, 0.5, 0.3, 0.4}),
-               std::invalid_argument);
-}
-
-TEST_F(SimulationMatingConfig, Mating_NegativeDecay) {
-  EXPECT_THROW(config.mating(amsim::MatingType::ASSORTATIVE, 100, 1.0, -0.95,
-                             std::vector<double>{0.2, 0.5, 0.3, 0.4}),
-               std::invalid_argument);
+  EXPECT_NO_THROW(config.assortative_mating(
+      std::vector<double>{0.2, 0.5, 0.3, 0.4},
+      100,
+      1.0,
+      0.95));
 }
 
 TEST_F(SimulationMatingConfig, Mating_InfeasibleCorrelation) {
-  EXPECT_THROW(config.mating(amsim::MatingType::ASSORTATIVE, 100, 1.0, 0.95,
-                             std::vector<double>{0.99, 0.99, 0.99, 0.99}),
-               std::invalid_argument);
+  EXPECT_THROW(
+      config.assortative_mating(
+          std::vector<double>{0.99, 0.99, 0.99, 0.99},
+          100,
+          1.0,
+          0.95),
+      std::invalid_argument);
+}
+
+TEST_F(SimulationMatingConfig, Mating_NegativeTemperature) {
+  EXPECT_THROW(
+      config.assortative_mating(
+          std::vector<double>{0.2, 0.5, 0.3, 0.4},
+          100,
+          -1.0,
+          0.95),
+      std::invalid_argument);
+}
+
+TEST_F(SimulationMatingConfig, Mating_NegativeDecay) {
+  EXPECT_THROW(
+      config.assortative_mating(
+          std::vector<double>{0.2, 0.5, 0.3, 0.4},
+          100,
+          1.0,
+          -0.95),
+      std::invalid_argument);
 }
 
 TEST_F(SimulationMatingConfig, Mating_Chaining) {
-  auto& ref = config.mating(amsim::MatingType::RANDOM, std::nullopt,
-                            std::nullopt, std::nullopt, std::nullopt);
+  auto& ref = config.random_mating();
   EXPECT_EQ(&ref, &config);
 }
 
