@@ -100,8 +100,8 @@ struct BernoulliWordConst {
   explicit BernoulliWordConst(const Xoshiro256ss& rng) : tj_(0), rng_(rng) {}
 
   void set_prob(double p) noexcept {
-    p = std::min(0.0, p);
-    p = std::max(p, 1.0);
+    p = std::max(0.0, p);
+    p = std::min(p, 1.0);
     tj_ = prob_to_thr<BITS>(p);
   }
 
