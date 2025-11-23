@@ -26,7 +26,8 @@ Genome::Genome(
       h0_(n_ind, n_loc),
       h1_(n_ind, n_loc) {};
 
-uint64_t Genome::gamWord(std::uint64_t ind_h0, std::uint64_t ind_h1) noexcept {
+std::uint64_t Genome::gamWord(
+    std::uint64_t ind_h0, std::uint64_t ind_h1) noexcept {
   std::uint64_t par = bw_.sample();
   bool par0 = bw_.coinflip();
   if (v_rec_[0] < 0.5) {
@@ -126,10 +127,10 @@ void Genome::update(std::vector<std::size_t> matching) {
   for (std::size_t pair = 0; pair < n_pairs; ++pair) {
     std::size_t fpair = matching[pair] + n_pairs;
     for (std::size_t word = 0; word < n_words; ++word) {
-      uint64_t male_h0 = h0_(pair, word);
-      uint64_t male_h1 = h1_(pair, word);
-      uint64_t female_h0 = h0_(fpair, word);
-      uint64_t female_h1 = h1_(fpair, word);
+      std::uint64_t male_h0 = h0_(pair, word);
+      std::uint64_t male_h1 = h1_(pair, word);
+      std::uint64_t female_h0 = h0_(fpair, word);
+      std::uint64_t female_h1 = h1_(fpair, word);
 
       // male child
       h0_(pair, word) = gamWord(male_h0, male_h1);
