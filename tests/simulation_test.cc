@@ -6,42 +6,42 @@
 
 class SimulationInitConfig : public ::testing::Test {
  protected:
-  amsim::SimulationConfig config;
+  amsim::SimulationConfig config_;
 };
 
 class SimulationGenomeConfig : public ::testing::Test {
  protected:
   void SetUp() override {
-    config.simulation(100, 10000, "/tmp/test", 12345ull);
+    config_.simulation(100, 10000, "/tmp/test", 12345ULL);
   }
 
-  amsim::SimulationConfig config;
+  amsim::SimulationConfig config_;
 };
 
 class SimulationPhenomeConfig : public ::testing::Test {
  protected:
   void SetUp() override {
-    config.simulation(100, 10000, "/tmp/test", 12345ull);
-    config.genome(
+    config_.simulation(100, 10000, "/tmp/test", 12345ULL);
+    config_.genome(
         100,
         std::vector<double>(100, 0.5),
         std::vector<double>(100, 0.01),
         std::vector<double>(100, 1e-5));
   }
 
-  amsim::SimulationConfig config;
+  amsim::SimulationConfig config_;
 };
 
 class SimulationMatingConfig : public ::testing::Test {
  protected:
   void SetUp() override {
-    config.simulation(100, 10000, "/tmp/test", 12345ull);
-    config.genome(
+    config_.simulation(100, 10000, "/tmp/test", 12345ULL);
+    config_.genome(
         100,
         std::vector<double>(100, 0.5),
         std::vector<double>(100, 0.01),
         std::vector<double>(100, 1e-5));
-    config.phenome(
+    config_.phenome(
         2,
         {"height", "weight"},
         {50, 50},
@@ -52,74 +52,74 @@ class SimulationMatingConfig : public ::testing::Test {
         {1.0, 0.2, 0.2, 1.0});
   }
 
-  amsim::SimulationConfig config;
+  amsim::SimulationConfig config_;
 };
 
 // Test SimulationConfig.simulation
 
-TEST_F(SimulationInitConfig, Simulation_ValidParameters) {
-  EXPECT_NO_THROW(config.simulation(100, 1000, "/tmp/test", 12345ull));
-  EXPECT_EQ(config.n_gen, 100);
-  EXPECT_EQ(config.n_ind, 1000);
-  EXPECT_EQ(config.out_dir, std::filesystem::path("/tmp/test"));
-  EXPECT_EQ(config.rng_seed, 12345ull);
+TEST_F(SimulationInitConfig, SimulationValidParametrs) {
+  EXPECT_NO_THROW(config_.simulation(100, 1000, "/tmp/test", 12345ULL));
+  EXPECT_EQ(config_.n_gen, 100);
+  EXPECT_EQ(config_.n_ind, 1000);
+  EXPECT_EQ(config_.out_dir, std::filesystem::path("/tmp/test"));
+  EXPECT_EQ(config_.rng_seed, 12345ULL);
 }
 
-TEST_F(SimulationInitConfig, Simulation_RoundsUpOddPopulation) {
-  config.simulation(1, 99, "/tmp/test", 123ull);
-  EXPECT_EQ(config.n_ind, 100);
+TEST_F(SimulationInitConfig, SimulationRoundsUpOddPopulation) {
+  config_.simulation(1, 99, "/tmp/test", 123ULL);
+  EXPECT_EQ(config_.n_ind, 100);
 }
 
-TEST_F(SimulationInitConfig, Simulation_Chaining) {
-  auto& ref = config.simulation(1, 100, "/tmp/test", 1);
-  EXPECT_EQ(&ref, &config);
+TEST_F(SimulationInitConfig, SimulationChaining) {
+  auto& ref = config_.simulation(1, 100, "/tmp/test", 1);
+  EXPECT_EQ(&ref, &config_);
 }
 
 // Test SimulationConfig.genome
 
-TEST_F(SimulationGenomeConfig, Genome_ValidParameters) {
+TEST_F(SimulationGenomeConfig, GenomeValidParameters) {
   EXPECT_NO_THROW(
-      config.genome(3, {0.2, 0.5, 0.3}, {0.1, 0.5, 0.3}, {0.9, 0.7, 0.2}));
+      config_.genome(3, {0.2, 0.5, 0.3}, {0.1, 0.5, 0.3}, {0.9, 0.7, 0.2}));
 }
 
-TEST_F(SimulationGenomeConfig, Genome_MismatchedVectorSizes) {
+TEST_F(SimulationGenomeConfig, GenomeMismatchedVectorSizes) {
   EXPECT_THROW(
-      config.genome(3, {0.2, 0.5}, {0.1, 0.5, 0.3}, {0.9, 0.7, 0.2}),
+      config_.genome(3, {0.2, 0.5}, {0.1, 0.5, 0.3}, {0.9, 0.7, 0.2}),
       std::invalid_argument);
 
   EXPECT_THROW(
-      config.genome(3, {0.2, 0.5, 0.3}, {0.3}, {0.9, 0.7, 0.2}),
+      config_.genome(3, {0.2, 0.5, 0.3}, {0.3}, {0.9, 0.7, 0.2}),
       std::invalid_argument);
 
   EXPECT_THROW(
-      config.genome(3, {0.2, 0.5, 0.3}, {0.3}, {0.9, 0.7}),
+      config_.genome(3, {0.2, 0.5, 0.3}, {0.3}, {0.9, 0.7}),
       std::invalid_argument);
 }
 
-TEST_F(SimulationGenomeConfig, Genome_InvalidMAF) {
-  EXPECT_THROW(config.genome(1, {-0.5}, {0.5}, {0.5}), std::invalid_argument);
-  EXPECT_THROW(config.genome(1, {1.5}, {0.5}, {0.5}), std::invalid_argument);
+TEST_F(SimulationGenomeConfig, GenomeInvalidMAF) {
+  EXPECT_THROW(config_.genome(1, {-0.5}, {0.5}, {0.5}), std::invalid_argument);
+  EXPECT_THROW(config_.genome(1, {1.5}, {0.5}, {0.5}), std::invalid_argument);
 }
 
-TEST_F(SimulationGenomeConfig, Genome_InvalidRecombination) {
-  EXPECT_THROW(config.genome(1, {0.5}, {-0.5}, {0.5}), std::invalid_argument);
-  EXPECT_THROW(config.genome(1, {0.5}, {1.5}, {0.5}), std::invalid_argument);
+TEST_F(SimulationGenomeConfig, GenomeInvalidRecombination) {
+  EXPECT_THROW(config_.genome(1, {0.5}, {-0.5}, {0.5}), std::invalid_argument);
+  EXPECT_THROW(config_.genome(1, {0.5}, {1.5}, {0.5}), std::invalid_argument);
 }
 
-TEST_F(SimulationGenomeConfig, Genome_InvalidMutation) {
-  EXPECT_THROW(config.genome(1, {0.5}, {0.5}, {-0.5}), std::invalid_argument);
-  EXPECT_THROW(config.genome(1, {0.5}, {0.5}, {1.5}), std::invalid_argument);
+TEST_F(SimulationGenomeConfig, GenomeInvalidMutation) {
+  EXPECT_THROW(config_.genome(1, {0.5}, {0.5}, {-0.5}), std::invalid_argument);
+  EXPECT_THROW(config_.genome(1, {0.5}, {0.5}, {1.5}), std::invalid_argument);
 }
 
-TEST_F(SimulationGenomeConfig, Genome_Chaining) {
-  auto& ref = config.genome(1, {0.5}, {0.5}, {0.5});
-  EXPECT_EQ(&ref, &config);
+TEST_F(SimulationGenomeConfig, GenomeChaining) {
+  auto& ref = config_.genome(1, {0.5}, {0.5}, {0.5});
+  EXPECT_EQ(&ref, &config_);
 }
 
 // Test SimulationConfig.phenome
 
-TEST_F(SimulationPhenomeConfig, Phenome_ValidParameters) {
-  EXPECT_NO_THROW(config.phenome(
+TEST_F(SimulationPhenomeConfig, PhenomeValidParameters) {
+  EXPECT_NO_THROW(config_.phenome(
       2,
       {"height", "weight"},
       {50, 50},
@@ -130,9 +130,9 @@ TEST_F(SimulationPhenomeConfig, Phenome_ValidParameters) {
       {1.0, 0.2, 0.2, 1.0}));
 }
 
-TEST_F(SimulationPhenomeConfig, Phenome_WrongNumberOfNames) {
+TEST_F(SimulationPhenomeConfig, PhenomeWrongNumberOfNames) {
   EXPECT_THROW(
-      config.phenome(
+      config_.phenome(
           2,
           {"height"},
           {50, 50},
@@ -144,9 +144,9 @@ TEST_F(SimulationPhenomeConfig, Phenome_WrongNumberOfNames) {
       std::invalid_argument);
 }
 
-TEST_F(SimulationPhenomeConfig, Phenome_WrongNumberOfLoci) {
+TEST_F(SimulationPhenomeConfig, PhenomeWrongNumberOfLoci) {
   EXPECT_THROW(
-      config.phenome(
+      config_.phenome(
           2,
           {"height", "weight"},
           {50},
@@ -158,9 +158,9 @@ TEST_F(SimulationPhenomeConfig, Phenome_WrongNumberOfLoci) {
       std::invalid_argument);
 }
 
-TEST_F(SimulationPhenomeConfig, Phenome_WrongNumberOfH2Gen) {
+TEST_F(SimulationPhenomeConfig, PhenomeWrongNumberOfH2Gen) {
   EXPECT_THROW(
-      config.phenome(
+      config_.phenome(
           2,
           {"height", "weight"},
           {50, 50},
@@ -172,9 +172,9 @@ TEST_F(SimulationPhenomeConfig, Phenome_WrongNumberOfH2Gen) {
       std::invalid_argument);
 }
 
-TEST_F(SimulationPhenomeConfig, Phenome_WrongNumberOfH2Env) {
+TEST_F(SimulationPhenomeConfig, PhenomeWrongNumberOfH2Env) {
   EXPECT_THROW(
-      config.phenome(
+      config_.phenome(
           2,
           {"height", "weight"},
           {50, 50},
@@ -186,9 +186,9 @@ TEST_F(SimulationPhenomeConfig, Phenome_WrongNumberOfH2Env) {
       std::invalid_argument);
 }
 
-TEST_F(SimulationPhenomeConfig, Phenome_WrongNumberOfH2Vert) {
+TEST_F(SimulationPhenomeConfig, PhenomeWrongNumberOfH2Vert) {
   EXPECT_THROW(
-      config.phenome(
+      config_.phenome(
           2,
           {"height", "weight"},
           {50, 50},
@@ -200,42 +200,42 @@ TEST_F(SimulationPhenomeConfig, Phenome_WrongNumberOfH2Vert) {
       std::invalid_argument);
 }
 
-TEST_F(SimulationPhenomeConfig, Phenome_TooManyCausalLoci) {
+TEST_F(SimulationPhenomeConfig, PhenomeTooManyCausalLoci) {
   EXPECT_THROW(
-      config.phenome(1, {"height"}, {200}, {0.5}, {0.3}, {0.2}, {1.0}, {1.0}),
+      config_.phenome(1, {"height"}, {200}, {0.5}, {0.3}, {0.2}, {1.0}, {1.0}),
       std::invalid_argument);
 }
 
-TEST_F(SimulationPhenomeConfig, Phenome_InvalidH2Gen) {
+TEST_F(SimulationPhenomeConfig, PhenomeInvalidH2Gen) {
   EXPECT_THROW(
-      config.phenome(1, {"height"}, {50}, {1.5}, {0.3}, {0.2}, {1.0}, {1.0}),
+      config_.phenome(1, {"height"}, {50}, {1.5}, {0.3}, {0.2}, {1.0}, {1.0}),
       std::invalid_argument);
   EXPECT_THROW(
-      config.phenome(1, {"height"}, {50}, {-0.5}, {0.3}, {0.2}, {1.0}, {1.0}),
-      std::invalid_argument);
-}
-
-TEST_F(SimulationPhenomeConfig, Phenome_InvalidH2Env) {
-  EXPECT_THROW(
-      config.phenome(1, {"height"}, {50}, {0.5}, {1.5}, {0.2}, {1.0}, {1.0}),
-      std::invalid_argument);
-  EXPECT_THROW(
-      config.phenome(1, {"height"}, {50}, {0.5}, {-0.5}, {0.2}, {1.0}, {1.0}),
+      config_.phenome(1, {"height"}, {50}, {-0.5}, {0.3}, {0.2}, {1.0}, {1.0}),
       std::invalid_argument);
 }
 
-TEST_F(SimulationPhenomeConfig, Phenome_InvalidH2Vert) {
+TEST_F(SimulationPhenomeConfig, PhenomeInvalidH2Env) {
   EXPECT_THROW(
-      config.phenome(1, {"height"}, {50}, {0.5}, {0.3}, {1.5}, {1.0}, {1.0}),
+      config_.phenome(1, {"height"}, {50}, {0.5}, {1.5}, {0.2}, {1.0}, {1.0}),
       std::invalid_argument);
   EXPECT_THROW(
-      config.phenome(1, {"height"}, {50}, {0.5}, {0.3}, {-0.5}, {1.0}, {1.0}),
+      config_.phenome(1, {"height"}, {50}, {0.5}, {-0.5}, {0.2}, {1.0}, {1.0}),
       std::invalid_argument);
 }
 
-TEST_F(SimulationPhenomeConfig, Phenome_InvalidGenCor) {
+TEST_F(SimulationPhenomeConfig, PhenomeInvalidH2Vert) {
   EXPECT_THROW(
-      config.phenome(
+      config_.phenome(1, {"height"}, {50}, {0.5}, {0.3}, {1.5}, {1.0}, {1.0}),
+      std::invalid_argument);
+  EXPECT_THROW(
+      config_.phenome(1, {"height"}, {50}, {0.5}, {0.3}, {-0.5}, {1.0}, {1.0}),
+      std::invalid_argument);
+}
+
+TEST_F(SimulationPhenomeConfig, PhenomeInvalidGenCor) {
+  EXPECT_THROW(
+      config_.phenome(
           2,
           {"height", "weight"},
           {50, 50},
@@ -247,9 +247,9 @@ TEST_F(SimulationPhenomeConfig, Phenome_InvalidGenCor) {
       std::invalid_argument);
 }
 
-TEST_F(SimulationPhenomeConfig, Phenome_InvalidEnvCor) {
+TEST_F(SimulationPhenomeConfig, PhenomeInvalidEnvCor) {
   EXPECT_THROW(
-      config.phenome(
+      config_.phenome(
           2,
           {"height", "weight"},
           {50, 50},
@@ -261,77 +261,81 @@ TEST_F(SimulationPhenomeConfig, Phenome_InvalidEnvCor) {
       std::invalid_argument);
 }
 
-TEST_F(SimulationPhenomeConfig, Phenome_Chaining) {
+TEST_F(SimulationPhenomeConfig, PhenomeChaining) {
   auto& ref =
-      config.phenome(1, {"height"}, {50}, {0.5}, {0.3}, {0.2}, {1.0}, {1.0});
-  EXPECT_EQ(&ref, &config);
+      config_.phenome(1, {"height"}, {50}, {0.5}, {0.3}, {0.2}, {1.0}, {1.0});
+  EXPECT_EQ(&ref, &config_);
 }
 
 // Test SimulationConfig.mating
 
-TEST_F(SimulationMatingConfig, Mating_RandomMating) {
-  EXPECT_NO_THROW(config.random_mating());
-  EXPECT_EQ(config.n_itr, 0);
-  EXPECT_EQ(config.mate_cor.size(), 4);
+TEST_F(SimulationMatingConfig, MatingRandomMating) {
+  EXPECT_NO_THROW(config_.random_mating());
+  EXPECT_EQ(config_.n_itr, 0);
+  EXPECT_EQ(config_.mate_cor.size(), 4);
 }
 
-TEST_F(SimulationMatingConfig, Mating_AssortativeWithValidCorrelation) {
-  EXPECT_NO_THROW(config.assortative_mating(
+TEST_F(SimulationMatingConfig, MatingAssortativeWithValidCorrelation) {
+  EXPECT_NO_THROW(config_.assortative_mating(
       std::vector<double>{0.2, 0.5, 0.3, 0.4},
+      1e-6,
       100,
       1.0,
       0.95));
 }
 
-TEST_F(SimulationMatingConfig, Mating_InfeasibleCorrelation) {
+TEST_F(SimulationMatingConfig, MatingInfeasibleCorrelation) {
   EXPECT_THROW(
-      config.assortative_mating(
+      config_.assortative_mating(
           std::vector<double>{0.99, 0.99, 0.99, 0.99},
+          1e-6,
           100,
           1.0,
           0.95),
       std::invalid_argument);
 }
 
-TEST_F(SimulationMatingConfig, Mating_NegativeTemperature) {
+TEST_F(SimulationMatingConfig, MatingNegativeTemperature) {
   EXPECT_THROW(
-      config.assortative_mating(
+      config_.assortative_mating(
           std::vector<double>{0.2, 0.5, 0.3, 0.4},
+          1e-6,
           100,
           -1.0,
           0.95),
       std::invalid_argument);
 }
 
-TEST_F(SimulationMatingConfig, Mating_NegativeDecay) {
+TEST_F(SimulationMatingConfig, MatingNegativeDecay) {
   EXPECT_THROW(
-      config.assortative_mating(
+      config_.assortative_mating(
           std::vector<double>{0.2, 0.5, 0.3, 0.4},
+          1e-6,
           100,
           1.0,
           -0.95),
       std::invalid_argument);
 }
 
-TEST_F(SimulationMatingConfig, Mating_Chaining) {
-  auto& ref = config.random_mating();
-  EXPECT_EQ(&ref, &config);
+TEST_F(SimulationMatingConfig, MatingChaining) {
+  auto& ref = config_.random_mating();
+  EXPECT_EQ(&ref, &config_);
 }
 
 // Test SimulationConfig.metrics
 
-TEST_F(SimulationMatingConfig, Metrics_EmptyList) {
-  config.metrics({});
-  EXPECT_FALSE(config.require_lat);
+TEST_F(SimulationMatingConfig, MetricsEmptyList) {
+  config_.metrics({});
+  EXPECT_FALSE(config_.require_lat);
 }
 
-TEST_F(SimulationMatingConfig, Metrics_WithLatentRequirement) {
+TEST_F(SimulationMatingConfig, MetricsWithLatentRequirement) {
   amsim::MetricSpec spec = amsim::pheno_latent_h2();
-  config.metrics({spec});
-  EXPECT_TRUE(config.require_lat);
+  config_.metrics({spec});
+  EXPECT_TRUE(config_.require_lat);
 }
 
-TEST_F(SimulationMatingConfig, Metrics_Chaining) {
-  auto& ref = config.metrics({});
-  EXPECT_EQ(&ref, &config);
+TEST_F(SimulationMatingConfig, MetricsChaining) {
+  auto& ref = config_.metrics({});
+  EXPECT_EQ(&ref, &config_);
 }
