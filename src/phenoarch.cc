@@ -187,7 +187,7 @@ void PhenoArch::optim_arch(std::size_t max_it, double eps) {
         bool causal_adj = (ptr_pheno_adj[block] & (1ULL << offset)) != 0U;
 
         if (causal_adj) {
-          // convert triangular indices to linear index
+          // convert triangular matrix indices to linear index
           std::size_t i = std::min(pheno, pheno_adj);
           std::size_t j = std::max(pheno, pheno_adj);
           std::size_t idx = (i * n_pheno_) - ((i * (i + 1)) / 2) + (j - i - 1);
