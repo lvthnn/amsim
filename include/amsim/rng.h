@@ -157,8 +157,8 @@ struct BernoulliWordVar {
   }
 
   void set_prob(double p) noexcept {
-    p = std::min(0.0, p);
-    p = std::max(p, 1.0);
+    p = std::max(0.0, p);
+    p = std::min(p, 1.0);
     const T t = prob_to_thr<BITS>(p);
     tj_.fill(t);
   }
@@ -166,8 +166,8 @@ struct BernoulliWordVar {
   void set_probs(const std::array<double, 64>& f) noexcept {
     for (int j = 0; j < 64; ++j) {
       double p = f[j];
-      p = std::min(0.0, p);
-      p = std::max(p, 1.0);
+      p = std::max(0.0, p);
+      p = std::min(p, 1.0);
       tj_[j] = prob_to_thr<BITS>(p);
     }
   }
