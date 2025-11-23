@@ -206,8 +206,8 @@ MetricFunc f_latent_comp_xcor(ComponentType type) {
     // reorder females according to mating
     std::vector<double> latent_female(n_sex * n_pheno);
     for (std::size_t dim = 0; dim < n_pheno; ++dim) {
-      const double* src = latent_female_unordered + dim * lda;
-      double* dst = latent_female.data() + dim * n_sex;
+      const double* src = latent_female_unordered + (dim * lda);
+      double* dst = latent_female.data() + (dim * n_sex);
       for (std::size_t male_idx = 0; male_idx < n_sex; ++male_idx) {
         dst[male_idx] = src[matching[male_idx]];
       }
