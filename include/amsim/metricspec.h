@@ -10,10 +10,21 @@
 
 namespace amsim {
 
+/// @brief Function type for setting up a metric from context
 using MetricSetup = std::function<Metric(const SimulationContext& ctx)>;
 
+/// @brief Specification for creating a metric
+///
+/// MetricSpec stores the information needed to create a Metric instance,
+/// including the computation function, setup function, and metadata.
 class MetricSpec {
  public:
+  /// @brief Construct a MetricSpec
+  ///
+  /// @param name Metric name
+  /// @param func Function computing metric values
+  /// @param setup Function to create Metric from context
+  /// @param require_lat_ Whether metric requires latent phenotypes
   MetricSpec(
       std::string name,
       MetricFunc func,
@@ -24,25 +35,55 @@ class MetricSpec {
         func_(std::move(func)),
         setup_(std::move(setup)) {}
 
+  /// @brief Create a Metric instance from context
+  /// @param ctx Simulation context
+  /// @return Configured Metric instance
   Metric setup(SimulationContext& ctx) const { return setup_(ctx); };
 
-  const bool require_lat;
+  const bool require_lat;  ///< Whether latent phenotypes are required
 
  private:
-  std::string name_;
-  MetricFunc func_;
-  MetricSetup setup_;
+  std::string name_;   ///< Metric name
+  MetricFunc func_;    ///< Metric computation function
+  MetricSetup setup_;  ///< Metric setup function
 };
 
+/// @brief Create spec for phenotype heritability metric
 MetricSpec pheno_h2();
+
+/// @brief Create spec for phenotype component correlation metric
+/// @param type Component type
 MetricSpec pheno_comp_cor(ComponentType type);
+
+/// @brief Create spec for phenotype component cross-correlation metric
+/// @param type Component type
 MetricSpec pheno_comp_xcor(ComponentType type);
+
+/// @brief Create spec for phenotype component mean metric
+/// @param type Component type
 MetricSpec pheno_comp_mean(ComponentType type);
+
+/// @brief Create spec for phenotype component variance metric
+/// @param type Component type
 MetricSpec pheno_comp_var(ComponentType type);
+
+/// @brief Create spec for latent phenotype heritability metric
 MetricSpec pheno_latent_h2();
+
+/// @brief Create spec for latent phenotype component correlation metric
+/// @param type Component type
 MetricSpec pheno_latent_comp_cor(ComponentType type);
+
+/// @brief Create spec for latent phenotype component cross-correlation metric
+/// @param type Component type
 MetricSpec pheno_latent_comp_xcor(ComponentType type);
+
+/// @brief Create spec for latent phenotype component mean metric
+/// @param type Component type
 MetricSpec pheno_latent_comp_mean(ComponentType type);
+
+/// @brief Create spec for latent phenotype component variance metric
+/// @param type Component type
 MetricSpec pheno_latent_comp_var(ComponentType type);
 
 }  // namespace amsim

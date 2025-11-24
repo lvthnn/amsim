@@ -11,7 +11,18 @@
 
 namespace amsim {
 
+/// @brief Context holding references to simulation components
+///
+/// SimulationContext aggregates references to the genome, phenotypes, and
+/// mating model, providing a single object to pass to metric functions.
 struct SimulationContext {
+  /// @brief Construct a SimulationContext
+  ///
+  /// @param genome_ Genome reference
+  /// @param arch_ Phenotype architecture reference
+  /// @param buf_ Phenotype buffer reference
+  /// @param phenotypes_ Phenotype list reference
+  /// @param model_ Mating model reference
   SimulationContext(
       Genome& genome_,
       PhenoArch& arch_,
@@ -35,21 +46,20 @@ struct SimulationContext {
         phenotypes(phenotypes_),
         model(model_) {};
 
-  // general data
-  const std::size_t n_ind;
-  const std::size_t n_sex;
-  const std::size_t n_loc;
-  const std::size_t n_pheno;
-  const std::vector<std::string> pheno_names;
+  const std::size_t n_ind;                     ///< Population size
+  const std::size_t n_sex;                     ///< Individuals per sex
+  const std::size_t n_loc;                     ///< Number of loci
+  const std::size_t n_pheno;                   ///< Number of phenotypes
+  const std::vector<std::string> pheno_names;  ///< Phenotype names
 
-  // simulation components
-  Genome& genome;
-  PhenoArch& arch;
-  PhenoBuf& buf;
-  PhenotypeList& phenotypes;
-  AssortativeModel& model;
+  Genome& genome;             ///< Genome reference
+  PhenoArch& arch;            ///< Phenotype architecture reference
+  PhenoBuf& buf;              ///< Phenotype buffer reference
+  PhenotypeList& phenotypes;  ///< Phenotype list reference
+  AssortativeModel& model;    ///< Mating model reference
 };
 
+/// @brief Function type for computing metrics from simulation context
 using MetricFunc = std::function<std::vector<double>(const SimulationContext&)>;
 
 }  // namespace amsim
