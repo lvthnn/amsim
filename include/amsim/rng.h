@@ -6,7 +6,6 @@
 #include <cmath>
 #include <cstdint>
 #include <type_traits>
-
 #if __cpp_lib_bitops
 #include <bit>
 #endif
@@ -179,7 +178,7 @@ struct BernoulliWord {
           w |= static_cast<std::uint64_t>(-(rv < tj_)) & (1ULL << j);
         }
       }
-    } else {  // 64
+    } else {
       for (int j = 0; j < 64; ++j) {
         std::uint64_t rv = rng_.next();
         w |= static_cast<std::uint64_t>(-(rv < tj_)) & (1ULL << j);
