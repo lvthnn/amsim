@@ -46,8 +46,8 @@ struct ResultsTable {
     data[1].push_back(stats::quantile(0.5, n_elem, ptr, 1));
     data[2].push_back(stats::std(n_elem, ptr, 1, false));
     data[3].push_back(sem);
-    data[4].push_back(mean + (1.96 * sem));
-    data[5].push_back(mean - (1.96 * sem));
+    data[4].push_back(mean - (1.96 * sem));
+    data[5].push_back(mean + (1.96 * sem));
     data[6].push_back(stats::quantile(0.025, n_elem, ptr, 1));
     data[7].push_back(stats::quantile(0.975, n_elem, ptr, 1));
   }
