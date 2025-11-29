@@ -88,7 +88,7 @@ class Simulation {
 /// @param rep_id The replication ID used to shuffle the base seed
 ///
 /// @return The shuffled seed.
-std::uint64_t shuffle_seed(std::size_t rng_seed, std::size_t rep_id);
+std::uint64_t shuffle_seed(std::uint64_t rng_seed, std::size_t rep_id);
 
 /// @brief Run multiple simulation replicates in parallel
 ///
