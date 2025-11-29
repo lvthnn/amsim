@@ -82,6 +82,14 @@ class Simulation {
   void stream(std::size_t gen);
 };
 
+/// @brief Shuffle a seed based on the replicate simulation ID
+/// 
+/// @param rng_seed The base RNG seed used by the simulation
+/// @param rep_id The replication ID used to shuffle the base seed
+///
+/// @return The shuffled seed.
+std::uint64_t shuffle_seed(std::size_t rng_seed, std::size_t rep_id);
+
 /// @brief Run multiple simulation replicates in parallel
 ///
 /// @param config Simulation configuration

@@ -161,6 +161,11 @@ void Simulation::run() {
   }
 }
 
+std::uint64_t shuffle_seed(std::uint64_t rng_seed, std::size_t rep_id) {
+  constexpr std::uint64_t PHI = 0x9E3779B97F4A7C15ULL;
+  return rng_seed + (PHI * rep_id);
+}
+
 void run_simulations(
     const SimulationConfig& config,
     std::size_t n_replicates,
@@ -201,9 +206,8 @@ void run_simulations(
         std::filesystem::path rep_dir =
             config.out_dir / std::format("rep_{:03}", rep_id);
 
-        // adjust replicate rng seed
-        constexpr std::uint64_t PHI = 0x9E3779B97F4A7C15ULL;
-        std::uint64_t rep_seed = config.rng_seed + (PHI * rep_id);
+        // adjust replicate id rng seed
+        std::uint64_t rep_seed = shuffle_seed(config.rng_seed, rep_id);
 
         Simulation rep(config, rep_dir, rep_seed);
 
