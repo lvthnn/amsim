@@ -1,7 +1,7 @@
-#include <fstream>
-
-#include <amsim/logger.h>
 #include <amsim/log_level.h>
+#include <amsim/logger.h>
+
+#include <fstream>
 
 int main() {
   LOG_FILE("test.log", amsim::LogLevel::DEBUG);
