@@ -90,6 +90,21 @@ class Simulation {
 /// @return The shuffled seed.
 std::uint64_t shuffle_seed(std::uint64_t rng_seed, std::size_t rep_id);
 
+/// @brief Run a single simulation
+///
+/// @param config Simulation configuration
+/// @param out_dir_ Overwrite configuration output directory
+/// @param rng_seed_ Overwrite configuration random seed
+/// @param log_file Whether to write log to file
+/// @param log_level Logging verbosity level
+void run_simulation(
+  const SimulationConfig& config,
+  std::optional<std::filesystem::path>& out_dir_,
+  std::optional<std::uint64_t> rng_seed_,
+  bool log_file = false,
+  LogLevel log_level = LogLevel::INFO
+);
+
 /// @brief Run multiple simulation replicates in parallel
 ///
 /// @param config Simulation configuration
