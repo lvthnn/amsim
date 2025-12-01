@@ -39,7 +39,7 @@ cmake --build build
 We highly recommend compiling from source with `DCMAKE_BUILD_TYPE=Release`, as
 simulation performance is significantly improved by the optimisation performed.
 However, the `Debug` flag is useful for development to catch segmentation faults
-and the like since it builds with sanitisiers enabled. To build the Python
+and the like since it builds with sanitisers enabled. To build the Python
 binding `.so` file, specify `-DBUILD_PYTHON=ON` (although this is handled by the
 language itself when installing the package).
 
@@ -47,6 +47,16 @@ To run unit tests:
 ```bash
 cd build
 ctest --rerun-failed --output-on-failure
+```
+
+To build documentation using Doxygen, run
+```
+doxygen Doxyfile
+```
+
+whereupon the documentation can be viewed by running
+```
+open docs/html/index.html
 ```
 
 ### Requirements
