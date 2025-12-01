@@ -13,20 +13,20 @@
 int main() {
   std::string output_dir = "amsim_multithread";
 
-  std::vector<double> v_maf(10000, 0.5);
-  std::vector<double> v_rec(10000, 0.5);
-  std::vector<double> v_mut(10000, 0.0);
+  std::vector<double> v_maf(2000, 0.5);
+  std::vector<double> v_rec(2000, 0.5);
+  std::vector<double> v_mut(2000, 0.0);
 
   amsim::SimulationConfig config;
 
   config.simulation(10, 256000, output_dir, 1234568ULL);
 
-  config.genome(10000, v_maf, v_rec, v_mut);
+  config.genome(2000, v_maf, v_rec, v_mut);
 
   config.phenome(
       2,
       {"height", "weight"},
-      {5000, 5000},
+      {1000, 1000},
       {0.5, 0.5},
       {0.5, 0.5},
       {0.0, 0.0},
