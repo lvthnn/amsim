@@ -190,8 +190,8 @@ void SimulationResults::save(
     bool overwrite) {
   if (!metrics) metrics = metric_names_;
   if (!out_dir) out_dir = out_dir_;
-  if (!std::filesystem::exists(*out_dir))
-    throw std::invalid_argument("specified output directory does not exist!");
+  if (!std::filesystem::exists(*out_dir)) 
+    std::filesystem::create_directory(*out_dir);
 
   for (const std::string& metric : *metrics) {
     std::filesystem::path metric_path = *out_dir / (metric + ".tsv");
