@@ -16,8 +16,8 @@ architectures and mating patterns.
 
 To run simulations, end users should consult the language-specific bindings.
 
-- **Python:** [amsimpy](./python/) - Install locally via `pip` 
-- **R:** [amsimr](./r/) - Install via `devtools::install_github` or locally
+- **Python:** [amsimpy](https://github.com/lvthnn/amsimpy) - Install locally via `pip` 
+- **R:** [amsimr](https://github.com/lvthnn/amsimr) - Install via `devtools::install_github` or locally
 
 *Note: PyPI and CRAN release are planned for future versions.*
 
