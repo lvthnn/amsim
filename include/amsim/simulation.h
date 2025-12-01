@@ -99,8 +99,7 @@ std::uint64_t shuffle_seed(std::uint64_t rng_seed, std::size_t rep_id);
 /// @param log_level Logging verbosity level
 void run_simulation(
   const SimulationConfig& config,
-  std::optional<std::filesystem::path>& out_dir_,
-  std::optional<std::uint64_t> rng_seed_,
+  std::optional<std::filesystem::path> out_dir_,
   bool log_file = false,
   LogLevel log_level = LogLevel::INFO
 );
