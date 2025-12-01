@@ -130,7 +130,7 @@ class Phenotype {
   /// @param matching Vector of mate pair indices
   void transmit_vert(std::vector<std::size_t> matching) {
     if (h2_vert_ == 0.0) return;
-    const double scale = std::sqrt(h2_vert_);
+    const double scale = std::sqrt(h2_vert_ / 2);
     const std::size_t n_sex = n_ind_ / 2;
 
     for (std::size_t ind = 0; ind < n_sex; ++ind) {
