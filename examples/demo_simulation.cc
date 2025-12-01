@@ -1,3 +1,4 @@
+// This example shows the setup and running of a toy simulation configuration
 #include <amsim/component_type.h>
 #include <amsim/mating.h>
 #include <amsim/metricspec.h>
@@ -6,23 +7,26 @@
 #include <amsim/logger.h>
 
 #include <cstddef>
+#include <string>
 #include <vector>
 
 int main() {
+  std::string output_dir = "amsim_multithread";
+
   std::vector<double> v_maf(500, 0.5);
   std::vector<double> v_rec(500, 0.5);
   std::vector<double> v_mut(500, 0.0);
 
   amsim::SimulationConfig config;
 
-  config.simulation(10, 256000, "amsim_multithread", 1234568ULL);
+  config.simulation(10, 256000, output_dir, 1234568ULL);
 
-  config.genome(500, v_maf, v_rec, v_mut);
+  config.genome(10000, v_maf, v_rec, v_mut);
 
   config.phenome(
       2,
       {"height", "weight"},
-      {250, 250},
+      {5000, 5000},
       {0.5, 0.5},
       {0.5, 0.5},
       {0.0, 0.0},

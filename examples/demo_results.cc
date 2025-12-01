@@ -1,9 +1,12 @@
+// This example demonstrates the functionality of the SimulationResults class
 #include <amsim/simulation_results.h>
 
-#include <iostream>
+#include <string>
 
 int main() {
-  const std::filesystem::path out_dir = "amsim_multithread";
+  std::string output_dir = "amsim_multithread";
+
+  const std::filesystem::path out_dir = output_dir;
   amsim::SimulationResults results(out_dir);
   results.summarise();
 

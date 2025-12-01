@@ -1,3 +1,4 @@
+// This example demonstrates the functionality of the simulation logger
 #include <amsim/log_level.h>
 #include <amsim/logger.h>
 
