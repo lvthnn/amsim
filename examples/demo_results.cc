@@ -14,6 +14,6 @@ int main() {
   amsim::ResultsTable pheno_gen_cor = results("pheno_gen_cor");
 
   results.save(
-      std::vector<std::string>({"pheno_h2", "pheno_gen_cor", "pheno_tot_xcor"}),
+      std::vector<std::string>({"pheno_h2", "pheno_gen_cor", "loc_maf"}),
       "amsim_results");
 }

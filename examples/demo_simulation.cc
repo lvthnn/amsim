@@ -13,9 +13,9 @@
 int main() {
   std::string output_dir = "amsim_multithread";
 
-  std::vector<double> v_maf(500, 0.5);
-  std::vector<double> v_rec(500, 0.5);
-  std::vector<double> v_mut(500, 0.0);
+  std::vector<double> v_maf(10000, 0.5);
+  std::vector<double> v_rec(10000, 0.5);
+  std::vector<double> v_mut(10000, 0.0);
 
   amsim::SimulationConfig config;
 
@@ -38,12 +38,8 @@ int main() {
   config.metrics(
       {amsim::pheno_h2(),
        amsim::pheno_comp_cor(amsim::ComponentType::GENETIC),
-       amsim::pheno_comp_cor(amsim::ComponentType::ENVIRONMENTAL),
-       amsim::pheno_comp_xcor(amsim::ComponentType::GENETIC),
-       amsim::pheno_comp_xcor(amsim::ComponentType::TOTAL),
-       amsim::pheno_latent_h2(),
-       amsim::pheno_latent_comp_cor(amsim::ComponentType::GENETIC),
-       amsim::pheno_latent_comp_xcor(amsim::ComponentType::GENETIC)});
+       amsim::loc_maf(),
+       amsim::loc_var()});
 
   std::size_t n_replicates = 100;
   std::size_t n_threads = 10;
