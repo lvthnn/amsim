@@ -167,12 +167,11 @@ std::uint64_t shuffle_seed(std::uint64_t rng_seed, std::size_t rep_id) {
 }
 
 void run_simulation(
-  const SimulationConfig& config,
-  std::optional<std::filesystem::path>& out_dir_,
-  std::optional<std::uint64_t> rng_seed_,
-  bool log_file,
-  LogLevel log_level
-) {
+    const SimulationConfig& config,
+    std::optional<std::filesystem::path>& out_dir_,
+    std::optional<std::uint64_t> rng_seed_,
+    bool log_file,
+    LogLevel log_level) {
   Simulation sim(config, out_dir_, rng_seed_);
 
   if (log_file)
