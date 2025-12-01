@@ -179,6 +179,8 @@ void run_simulation(
     LOG_FILE((out_dir_ ? *out_dir_ : config.out_dir), log_level);
   else
     LOG_STREAM(std::cout, log_level);
+
+  sim.run();
 }
 
 void run_simulations(
