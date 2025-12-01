@@ -23,6 +23,54 @@ std::vector<std::string> label_matrix(
 }
 }  // namespace labels
 
+MetricSpec loc_mean() {
+  std::string name = "loc_mean";
+  MetricFunc func = metrics::genome::floc_mean;
+  MetricSetup setup = [func, name](const SimulationContext& ctx) {
+    const std::size_t n_rows = ctx.n_loc;
+    const std::size_t n_cols = 1;
+
+    std::vector<std::string> labels(ctx.n_loc);
+    for (std::size_t el = 0; el < ctx.n_loc; ++el)
+      labels[el] = "loc" + std::to_string(el + 1);
+
+    return Metric{func, name, n_rows, n_cols, labels};
+  };
+  return MetricSpec{name, func, setup};
+}
+
+MetricSpec loc_var() {
+  std::string name = "loc_var";
+  MetricFunc func = metrics::genome::floc_var;
+  MetricSetup setup = [func, name](const SimulationContext& ctx) {
+    const std::size_t n_rows = ctx.n_loc;
+    const std::size_t n_cols = 1;
+
+    std::vector<std::string> labels(ctx.n_loc);
+    for (std::size_t el = 0; el < ctx.n_loc; ++el)
+      labels[el] = "loc" + std::to_string(el + 1);
+
+    return Metric{func, name, n_rows, n_cols, labels};
+  };
+  return MetricSpec{name, func, setup};
+}
+
+MetricSpec loc_maf() {
+  std::string name = "loc_maf";
+  MetricFunc func = metrics::genome::floc_maf;
+  MetricSetup setup = [func, name](const SimulationContext& ctx) {
+    const std::size_t n_rows = ctx.n_loc;
+    const std::size_t n_cols = 1;
+
+    std::vector<std::string> labels(ctx.n_loc);
+    for (std::size_t el = 0; el < ctx.n_loc; ++el)
+      labels[el] = "loc" + std::to_string(el + 1);
+
+    return Metric{func, name, n_rows, n_cols, labels};
+  };
+  return MetricSpec{name, func, setup};
+}
+
 MetricSpec pheno_h2() {
   std::string name = "pheno_h2";
   MetricFunc func = metrics::phenome::f_pheno_h2;

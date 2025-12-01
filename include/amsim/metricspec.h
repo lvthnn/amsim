@@ -48,6 +48,15 @@ class MetricSpec {
   MetricSetup setup_;  ///< Metric setup function
 };
 
+// @brief Create spec for locus mean metric
+MetricSpec loc_mean();
+
+// @brief Create spec for locus variance metric
+MetricSpec loc_var();
+
+// @brief Create spec for locus MAF metric
+MetricSpec loc_maf();
+
 /// @brief Create spec for phenotype heritability metric
 MetricSpec pheno_h2();
 
