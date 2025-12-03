@@ -142,7 +142,10 @@ void Simulation::run() {
     for (Phenotype& pheno : phenotypes_) {
       pheno.score(genome_);
       pheno.compute_stats();
-      if (gen == 0) pheno.transmit_vert(sib_matching);
+      if (gen == 0) {
+        pheno.transmit_vert(sib_matching);
+        pheno.score_tot();
+      }
     }
 
     if (buf_.has_lat()) buf_.score_latent(model_.cor_U, model_.cor_VT);
@@ -151,7 +154,10 @@ void Simulation::run() {
     model_.update(phenotypes_);
     std::vector<std::size_t> opt_matching = model_.match();
 
-    for (Phenotype& pheno : phenotypes_) pheno.transmit_vert(opt_matching);
+    for (Phenotype& pheno : phenotypes_) {
+      pheno.transmit_vert(opt_matching);
+      pheno.score_tot();
+    }
 
     stream(gen);
 
