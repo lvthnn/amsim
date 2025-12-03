@@ -56,8 +56,6 @@ struct Xoshiro256ss {
   }
 };
 
-/// Implementation details
-namespace detail {
 /// @brief SplitMix64 generator step
 /// @param x State variable (modified in-place)
 /// @return Random value
@@ -67,7 +65,6 @@ inline std::uint64_t splitmix64_step(std::uint64_t& x) noexcept {
   z = (z ^ (z >> 27)) * 0x94d049bb133111ebULL;
   return z ^ (z >> 31);
 }
-}  // namespace detail
 
 /// @brief Seed a Xoshiro256** generator
 /// @param seed Seed value
@@ -75,10 +72,10 @@ inline std::uint64_t splitmix64_step(std::uint64_t& x) noexcept {
 inline Xoshiro256ss seed_xoshiro(std::uint64_t seed) noexcept {
   Xoshiro256ss g{};
   std::uint64_t x = seed ? seed : 0x9e3779b97f4a7c15ULL;
-  g.s[0] = detail::splitmix64_step(x);
-  g.s[1] = detail::splitmix64_step(x);
-  g.s[2] = detail::splitmix64_step(x);
-  g.s[3] = detail::splitmix64_step(x);
+  g.s[0] = splitmix64_step(x);
+  g.s[1] = splitmix64_step(x);
+  g.s[2] = splitmix64_step(x);
+  g.s[3] = splitmix64_step(x);
   if ((g.s[0] | g.s[1] | g.s[2] | g.s[3]) == 0) g.s[0] = 1;
   return g;
 }
