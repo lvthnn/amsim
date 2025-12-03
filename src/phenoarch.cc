@@ -36,10 +36,17 @@ PhenoArch::PhenoArch(
       env_chol_(std::move(env_cor)),
       rng_polar_(rng),
       rng_unf_(rng) {
-  assert(n_loc_.size() == n_pheno_);
-  assert(h2_gen_.size() == n_pheno_);
-  assert(gen_cor_.size() == n_pheno_ * n_pheno_);
-  assert(env_chol_.size() == n_pheno_ * n_pheno_);
+  if (n_loc_.size() != n_pheno)
+    throw std::invalid_argument(
+        "must specify number of causal loci for all phenotypes");
+  if (h2_gen_.size() != n_pheno)
+    throw std::invalid_argument("must specify genetic h2 for all phenotypes");
+  if (gen_cor_.size() != n_pheno_ * n_pheno_)
+    throw std::invalid_argument(
+        "matrix gen_cor must be of size n_pheno * n_pheno");
+  if (env_chol_.size() != n_pheno_ * n_pheno_)
+    throw std::invalid_argument(
+        "matrix env_cor must be of size n_pheno * n_pheno");
 
   // cast to LAPACK-legible form
   char clpk_uplo = 'L';
