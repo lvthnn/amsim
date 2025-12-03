@@ -27,19 +27,33 @@ Genome::Genome(
       h1_(n_ind, n_loc) {};
 
 std::uint64_t Genome::gamWord(
-    std::uint64_t ind_h0, std::uint64_t ind_h1) noexcept {
+    std::uint64_t ind_h0,
+    std::uint64_t ind_h1,
+    const double* v_rec,
+    const double* v_mut) noexcept {
+  // Set recombination probabilities for loci in word
+  bw_.set_probs(v_rec);
+
+  // Sample a 0-1 recombination mask
   std::uint64_t par = bw_.sample();
+
+  // Select the initial parental strand uniformly
   bool par0 = bw_.coinflip();
-  if (v_rec_[0] < 0.5) {
-    par ^= par << 1;
-    par ^= par << 2;
-    par ^= par << 4;
-    par ^= par << 8;
-    par ^= par << 16;
-    par ^= par << 32;
-    if (par0) par = ~par;
-  }
-  return (par & ind_h0) | (~par & ind_h1);
+
+  // Hallis-Steele shift cumulative sum mod 2
+  par ^= par << 1;
+  par ^= par << 2;
+  par ^= par << 4;
+  par ^= par << 8;
+  par ^= par << 16;
+  par ^= par << 32;
+  if (par0) par = ~par;
+
+  // Set mutation probabilities for the loci
+  bw_.set_probs(v_mut);
+  std::uint64_t mut = bw_.sample();
+
+  return ((par & ind_h0) | (~par & ind_h1)) ^ mut;
 }
 
 void Genome::generate_haplotypes() noexcept {
@@ -47,7 +61,10 @@ void Genome::generate_haplotypes() noexcept {
   std::size_t n_words = h0_.n_words();
 
   for (std::size_t loc = 0; loc < n_loc; ++loc) {
+    // Use a single probability with BW generator
     bw_.set_prob(v_maf_[loc]);
+
+    // Row pointers for easy access
     std::uint64_t* word0 = h0_.rowptr(loc);
     std::uint64_t* word1 = h1_.rowptr(loc);
 
@@ -73,17 +90,26 @@ void Genome::compute_mafs() {
   const std::size_t n_bloc_ind = (n_ind + 63) / 64;
 
   for (std::size_t loc = 0; loc < n_loc; ++loc) {
+    // Total locus dosage
     std::size_t ct_loc = 0;
+
     for (std::size_t bloc = 0; bloc < n_bloc_ind; ++bloc) {
       if (bloc == n_bloc_ind - 1 && (n_ind % 64)) {
+        // Mask to trim off padding in last block
         std::uint64_t mask = (1ULL << (n_ind % 64)) - 1ULL;
+
+        // Popcount word for fast total haplotype dosage
         ct_loc += __builtin_popcountll(h0_(loc, bloc) & mask);
         ct_loc += __builtin_popcountll(h1_(loc, bloc) & mask);
+
       } else {
+        // Popcount words for fast total haplotype dosage
         ct_loc += __builtin_popcountll(h0_(loc, bloc));
         ct_loc += __builtin_popcountll(h1_(loc, bloc));
       }
     }
+
+    // Compute the MAF
     v_lmaf_[loc] =
         static_cast<double>(ct_loc) / (2.0 * static_cast<double>(n_ind));
   }
@@ -118,14 +144,15 @@ void Genome::update(std::vector<std::size_t> matching) {
   if (h0_.view() == HaploView::LOC_MAJOR)
     throw std::runtime_error("Update in ind-major view.");
 
+  constexpr std::size_t INC_WORD = 64;
   const std::size_t n_ind = h0_.n_ind();
   const std::size_t n_words = h0_.n_words();
   const std::size_t n_pairs = n_ind / 2;
-  bw_.set_prob(v_rec_[0]);
 
-  // @TODO: integrate mutation
   for (std::size_t pair = 0; pair < n_pairs; ++pair) {
     std::size_t fpair = matching[pair] + n_pairs;
+    const double* rec_ptr = v_rec_.data();
+    const double* mut_ptr = v_mut_.data();
     for (std::size_t word = 0; word < n_words; ++word) {
       std::uint64_t male_h0 = h0_(pair, word);
       std::uint64_t male_h1 = h1_(pair, word);
@@ -133,12 +160,15 @@ void Genome::update(std::vector<std::size_t> matching) {
       std::uint64_t female_h1 = h1_(fpair, word);
 
       // male child
-      h0_(pair, word) = gamWord(male_h0, male_h1);
-      h1_(pair, word) = gamWord(female_h0, female_h1);
+      h0_(pair, word) = gamWord(male_h0, male_h1, rec_ptr, mut_ptr);
+      h1_(pair, word) = gamWord(female_h0, female_h1, rec_ptr, mut_ptr);
 
       // female child
-      h0_(fpair, word) = gamWord(male_h0, male_h1);
-      h1_(fpair, word) = gamWord(female_h0, female_h1);
+      h0_(fpair, word) = gamWord(male_h0, male_h1, rec_ptr, mut_ptr);
+      h1_(fpair, word) = gamWord(female_h0, female_h1, rec_ptr, mut_ptr);
+
+      rec_ptr += INC_WORD;
+      mut_ptr += INC_WORD;
     }
   }
 }

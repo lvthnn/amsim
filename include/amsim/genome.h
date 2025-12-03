@@ -128,7 +128,11 @@ class Genome {
   /// @param ind_h0 Paternal haplotype word index
   /// @param ind_h1 Maternal haplotype word index
   /// @return A 64-bit word representing the gamete genotype
-  uint64_t gamWord(std::uint64_t ind_h0, std::uint64_t ind_h1) noexcept;
+  std::uint64_t gamWord(
+      std::uint64_t ind_h0,
+      std::uint64_t ind_h1,
+      const double* v_rec,
+      const double* v_mut) noexcept;
 };
 
 }  // namespace amsim

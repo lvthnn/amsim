@@ -131,20 +131,29 @@ struct BernoulliWord {
 
   /// @brief Construct generator
   /// @param rng RNG instance
-  explicit BernoulliWord(const Xoshiro256ss& rng) : tj_(0), rng_(rng) {}
+  explicit BernoulliWord(const Xoshiro256ss& rng) : rng_(rng) {}
 
   /// @brief Set success probability
   /// @param p Probability
   void set_prob(double p) noexcept {
     p = std::max(0.0, p);
     p = std::min(p, 1.0);
-    tj_ = prob_to_thr<BITS>(p);
+    T thresh = prob_to_thr<BITS>(p);
+    for (std::size_t j = 0; j < 64; ++j)
+      tj_[j] = thresh;
   }
 
   /// @brief Set per-bit probabilities (uses first value)
   /// @param f Array of probabilities
-  void set_probs(const std::array<double, 64>& f) noexcept {
-    set_prob(f[0]);  // constant-p semantics
+  void set_probs(const double* ptr) noexcept {
+    double p;
+    for (std::size_t j = 0; j < 64; ++j) {
+      p = *(ptr + j);
+      p = std::max(0.0, p);
+      p = std::min(p, 1.0);
+      T thresh = prob_to_thr<BITS>(p);
+      tj_[j] = thresh;
+    }
   }
 
   /// @brief Reseed generator
@@ -166,7 +175,7 @@ struct BernoulliWord {
         for (int k = 0; k < 8 && j < 64; ++k, ++j) {
           auto rv = static_cast<std::uint8_t>(r >> 56);
           r <<= 8;
-          w |= static_cast<std::uint64_t>(-(rv < tj_)) & (1ULL << j);
+          w |= static_cast<std::uint64_t>(-(rv < tj_[j])) & (1ULL << j);
         }
       }
     } else if constexpr (BITS == 16) {
@@ -175,13 +184,13 @@ struct BernoulliWord {
         for (int k = 0; k < 4 && j < 64; ++k, ++j) {
           auto rv = static_cast<std::uint16_t>(r >> 48);
           r <<= 16;
-          w |= static_cast<std::uint64_t>(-(rv < tj_)) & (1ULL << j);
+          w |= static_cast<std::uint64_t>(-(rv < tj_[j])) & (1ULL << j);
         }
       }
     } else {
       for (int j = 0; j < 64; ++j) {
         std::uint64_t rv = rng_.next();
-        w |= static_cast<std::uint64_t>(-(rv < tj_)) & (1ULL << j);
+        w |= static_cast<std::uint64_t>(-(rv < tj_[j])) & (1ULL << j);
       }
     }
     if (valid_bits < 64) w &= lowbits_mask(valid_bits);
@@ -189,7 +198,7 @@ struct BernoulliWord {
   }
 
  private:
-  T tj_;              ///< Probability threshold
+  std::array<T, 64> tj_;              ///< Probability threshold
   Xoshiro256ss rng_;  ///< RNG instance
 };
 
