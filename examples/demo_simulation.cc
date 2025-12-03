@@ -19,7 +19,7 @@ int main() {
 
   amsim::SimulationConfig config;
 
-  config.simulation(10, 256000, output_dir, 1234568ULL);
+  config.simulation(10, 6000, output_dir, 1234568ULL);
 
   config.genome(2000, v_maf, v_rec, v_mut);
 
@@ -28,8 +28,8 @@ int main() {
       {"height", "weight"},
       {1000, 1000},
       {0.5, 0.5},
-      {0.25, 0.25},
-      {0.25, 0.25},
+      {0.5, 0.5},
+      {0.0, 0.0},
       {1.0, 0.5, 0.5, 1.0},
       {1.0, 0.5, 0.5, 1.0});
 
@@ -38,6 +38,8 @@ int main() {
   config.metrics(
       {amsim::pheno_h2(),
        amsim::pheno_comp_cor(amsim::ComponentType::GENETIC),
+       amsim::pheno_comp_var(amsim::ComponentType::TOTAL),
+       amsim::pheno_comp_xcor(amsim::ComponentType::TOTAL),
        amsim::loc_maf(),
        amsim::loc_var()});
 
