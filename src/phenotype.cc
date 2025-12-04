@@ -20,6 +20,7 @@
 #include <amsim/phenobuf.h>
 #include <amsim/phenotype.h>
 #include <amsim/utils.h>
+#include <amsim/stats.h>
 
 namespace amsim {
 
@@ -220,12 +221,9 @@ void Phenotype::compute_stats() {
        comp <= ComponentType::TOTAL;
        ++comp) {
     const double* ptr = (*this)(comp);
+    comp_means_[comp] = stats::mean(n_ind_, ptr, 1);
+    comp_vars_[comp] = stats::var(n_ind_, ptr, 1);
 
-    const double sum_sq = cblas_ddot(n_ind_, ptr, 1, ptr, 1);
-    const double scale = (1.0 / static_cast<double>(n_ind_));
-
-    comp_means_[comp] = scale * cblas_ddot(n_ind_, ptr, 1, ones.data(), 1);
-    comp_vars_[comp] = scale * sum_sq - comp_means_[comp] * comp_means_[comp];
     if (comp == ComponentType::TOTAL) break;
   }
 }
