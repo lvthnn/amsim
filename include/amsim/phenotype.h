@@ -5,6 +5,7 @@
 #include <amsim/genome.h>
 #include <amsim/phenoarch.h>
 #include <amsim/phenobuf.h>
+#include <amsim/utils.h>
 
 #include <array>
 #include <cstddef>
@@ -31,6 +32,9 @@ class Phenotype {
   /// @param h2_gen Narrow-sense heritability (genetic component)
   /// @param h2_env Environmental variance proportion
   /// @param h2_vert Vertical transmission (nurture) variance proportion
+  /// @param rvert_pat Paternal vertical transmission ratio
+  /// @param rvert_mat Maternal vertical transmission ratio
+  /// @param mate_cor Between-mate correlation on this phenotype
   /// @param id Optional phenotype identifier
   Phenotype(
       PhenoBuf& buf,
@@ -39,6 +43,9 @@ class Phenotype {
       double h2_gen,
       double h2_env,
       double h2_vert,
+      double mate_cor = 0.0,
+      double rvert_pat = 0.5,
+      double rvert_mat = 0.5,
       std::optional<std::size_t> id = std::nullopt);
 
   /// @brief Return the phenotype name
@@ -64,6 +71,10 @@ class Phenotype {
   /// @brief Return the environmental variance proportion
   /// @return Environmental variance proportion
   double h2_env() const noexcept { return h2_env_; }
+
+  // @brief Return the calibrated vertical component noise variance
+  // @return Calibrated vertical component noise variance
+  double vert_var() const noexcept { return vert_var_; }
 
   /// @brief Access phenotype component value for an individual
   ///
@@ -113,6 +124,24 @@ class Phenotype {
     __builtin_unreachable();
   }
 
+  /// @brief Access pointer to a mutable phenotype component array
+  ///
+  /// @param type Component type to access
+  /// @return Pointer to the component value array
+  double* operator()(ComponentType type) {
+    switch (type) {
+      case ComponentType::GENETIC:
+        return ptr_gen_;
+      case ComponentType::ENVIRONMENTAL:
+        return ptr_env_;
+      case ComponentType::VERTICAL:
+        return ptr_vert_;
+      case ComponentType::TOTAL:
+        return ptr_tot_;
+    }
+    __builtin_unreachable();
+  }
+
   /// @brief Return mean of a phenotype component
   ///
   /// @param type Component type
@@ -128,16 +157,7 @@ class Phenotype {
   /// @brief Transmit vertical component from parents to offspring
   ///
   /// @param matching Vector of mate pair indices
-  void transmit_vert(std::vector<std::size_t> matching) {
-    if (h2_vert_ == 0.0) return;
-    const double scale = std::sqrt(h2_vert_ / 2);
-    const std::size_t n_sex = n_ind_ / 2;
-
-    for (std::size_t ind = 0; ind < n_sex; ++ind) {
-      ptr_vert_[ind] = scale * (ptr_tot_[ind] + ptr_tot_[matching[ind]]);
-      ptr_vert_[matching[ind]] = ptr_vert_[ind];
-    }
-  }
+  void transmit_vert(std::vector<std::size_t> matching);
 
   /// @brief Compute total phenotype as sum of all components
   void score_tot() {
@@ -170,8 +190,11 @@ class Phenotype {
   const std::vector<std::size_t> loci_;    ///< Loci contributing to trait
   const std::vector<double> loc_effects_;  ///< Effect sizes for each locus
   const double h2_gen_;                    ///< Narrow-sense heritability
-  const double h2_env_;   ///< Environmental variance proportion
-  const double h2_vert_;  ///< Vertical transmission proportion
+  const double h2_env_;     ///< Environmental variance proportion
+  const double h2_vert_;    ///< Vertical transmission proportion
+  const double rvert_pat_;  ///< Paternal vertical transmission proportion
+  const double rvert_mat_;  ///< Maternal vertical transmission proportion
+  const double vert_var_;   ///< Vertical component noise variance
 
   double* ptr_gen_;   ///< Pointer to genetic component values
   double* ptr_env_;   ///< Pointer to environmental component values

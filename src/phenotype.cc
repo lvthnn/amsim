@@ -19,6 +19,7 @@
 #include <amsim/phenoarch.h>
 #include <amsim/phenobuf.h>
 #include <amsim/phenotype.h>
+#include <amsim/utils.h>
 
 namespace amsim {
 
@@ -34,9 +35,12 @@ Phenotype::Phenotype(
     PhenoBuf& buf,
     PhenoArch& arch,
     std::string name,
-    const double h2_gen,
-    const double h2_env,
-    const double h2_vert,
+    double h2_gen,
+    double h2_env,
+    double h2_vert,
+    double mate_cor,
+    double rvert_pat,
+    double rvert_mat,
     const std::optional<std::size_t> id)
     : name_(std::move(name)),
       id_(attach(buf, id)),
@@ -47,6 +51,20 @@ Phenotype::Phenotype(
       h2_gen_(h2_gen),
       h2_env_(h2_env),
       h2_vert_(h2_vert),
+      rvert_pat_(rvert_pat),
+      rvert_mat_(rvert_mat),
+      vert_var_([&]() {
+        if (rvert_pat_ + rvert_mat_ != 1.0)
+          throw std::invalid_argument(
+              "sum of parental vertical transmission ratios must equal one");
+        double vert_scale = (rvert_pat_ * rvert_pat_) +
+                            (2 * mate_cor * rvert_pat_ * rvert_mat_) +
+                            (rvert_mat_ * rvert_mat_);
+        if (h2_vert_ < vert_scale / (1 + vert_scale))
+          throw std::invalid_argument(
+              "infeasible vertical variance proportion");
+        return ((1 + vert_scale) * h2_vert_) - vert_scale;
+      }()),
       ptr_gen_(buf(id_, ComponentType::GENETIC)),
       ptr_env_(buf(id_, ComponentType::ENVIRONMENTAL)),
       ptr_vert_(buf(id_, ComponentType::VERTICAL)),
@@ -60,6 +78,22 @@ Phenotype::Phenotype(
         "sum of phenotype component variances must equal one");
 
   buf.occupy(id_);
+}
+
+void Phenotype::transmit_vert(std::vector<std::size_t> matching) {
+  if (h2_vert_ == 0.0) return;
+  const std::size_t n_sex = n_ind_ / 2;
+  const double scale = std::sqrt(vert_var_);
+
+  for (std::size_t ind = 0; ind < n_sex; ++ind) {
+    double vert_pat = ptr_gen_[ind] + ptr_env_[ind];
+    double vert_mat = ptr_gen_[matching[ind]] + ptr_env_[matching[ind]];
+    double vert_par = (rvert_pat_ * vert_pat) + (rvert_mat_ * vert_mat);
+    std::array<double, 2> env_noise = rng::NormalPolar::two();
+
+    ptr_vert_[ind] = vert_par + scale * env_noise[0];
+    ptr_vert_[matching[ind]] = vert_par + scale * env_noise[1];
+  }
 }
 
 void Phenotype::score_bitwise(Genome& genome) {
