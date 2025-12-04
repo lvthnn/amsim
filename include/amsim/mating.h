@@ -59,7 +59,6 @@ class AssortativeModel : public MatingModel {
   /// @param phenotypes List of phenotypes to use for mate matching
   /// @param cor Vector of target cross-sex phenotypic correlations
   /// @param n_sex Number of individuals in each sex class
-  /// @param rng A seeded RNG instance
   /// @param n_itr Number of iterations for simulated annealing (default: 2e6)
   /// @param temp_init Initial temperature for annealing (default: 0.50)
   /// @param temp_decay Temperature decay factor per iteration (default: 0.9999)
@@ -126,10 +125,6 @@ class AssortativeModel : public MatingModel {
       const std::vector<double>& cur,
       const std::vector<double>& target,
       const std::vector<double>& delta) const;
-
-  rng::NormalPolar fuzz_;      ///< RNG for normal variates
-  rng::UniformIntRange swap_;  ///< RNG for swap index selection
-  rng::UniformRange acc_;      ///< RNG for acceptance probability
 
  public:
   std::vector<double> cor_S;       ///< Singular values from SVD

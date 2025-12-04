@@ -40,7 +40,6 @@ class Simulation {
         n_pheno(other.n_pheno),
         pheno_names(std::move(other.pheno_names)),
         out_dir(std::move(other.out_dir)),
-        rng_(std::move(other.rng_)),
         genome_(std::move(other.genome_)),
         arch_(std::move(other.arch_)),
         buf_(std::move(other.buf_)),
@@ -66,7 +65,6 @@ class Simulation {
   void run();
 
  private:
-  rng::Xoshiro256ss rng_;        ///< RNG state
   Genome genome_;                ///< Genome state
   PhenoArch arch_;               ///< Phenotype architecture
   PhenoBuf buf_;                 ///< Phenotype buffer
@@ -74,8 +72,7 @@ class Simulation {
   AssortativeModel model_;       ///< Mating model
   SimulationContext ctx_;        ///< Simulation context
   std::vector<Metric> metrics_;  ///< Metrics to compute
-  std::vector<std::unique_ptr<std::ofstream>>
-      streams_;  ///< Output file streams
+  std::vector<std::unique_ptr<std::ofstream>> streams_;  ///< Output streams
 
   /// @brief Write metrics for current generation to output streams
   /// @param gen Generation number

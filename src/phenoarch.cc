@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -14,6 +15,7 @@
 #include <lapacke.h>
 #endif
 
+#include <amsim/logger.h>
 #include <amsim/phenoarch.h>
 #include <amsim/rng.h>
 
@@ -25,17 +27,14 @@ PhenoArch::PhenoArch(
     std::vector<double> h2_gen,
     std::vector<double> h2_env,
     std::vector<double> gen_cor,
-    std::vector<double> env_cor,
-    const rng::Xoshiro256ss& rng)
+    std::vector<double> env_cor)
     : n_pheno_(n_pheno),
       n_loc_tot_(n_loc_total),
       n_loc_(std::move(n_loc)),
       h2_gen_(std::move(h2_gen)),
       h2_env_(std::move(h2_env)),
       gen_cor_(std::move(gen_cor)),
-      env_chol_(std::move(env_cor)),
-      rng_polar_(rng),
-      rng_unf_(rng) {
+      env_chol_(std::move(env_cor)) {
   if (n_loc_.size() != n_pheno)
     throw std::invalid_argument(
         "must specify number of causal loci for all phenotypes");
@@ -69,7 +68,7 @@ PhenoArch::PhenoArch(
 }
 
 void PhenoArch::gen_env(double* ptr_env, const std::size_t n_ind) {
-  rng_polar_.fill(ptr_env, n_ind * n_pheno_);
+  amsim::rng::NormalPolar::fill(ptr_env, n_ind * n_pheno_);
   cblas_dtrmm(
       CblasColMajor,
       CblasRight,
@@ -87,6 +86,12 @@ void PhenoArch::gen_env(double* ptr_env, const std::size_t n_ind) {
   // scale environmental components along margins
   for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
     cblas_dscal(n_ind, std::sqrt(h2_env_[pheno]), &ptr_env[pheno * n_ind], 1);
+}
+
+void PhenoArch::gen_vert(double* ptr_vert, std::size_t n_ind, double h2_vert) {
+  if (h2_vert == 0) return;
+  amsim::rng::NormalPolar::fill(ptr_vert, n_ind);
+  cblas_dscal(n_ind, std::sqrt(h2_vert), ptr_vert, 1);
 }
 
 void PhenoArch::print_correlations(
@@ -116,7 +121,7 @@ std::vector<std::uint64_t> PhenoArch::initMask() {
     const std::size_t n_loc_pheno = n_loc_[pheno];
     for (std::size_t r_id = n_loc_tot_ - n_loc_pheno; r_id < n_loc_tot_;
          ++r_id) {
-      const std::size_t l_id = rng_unf_.sample(r_id + 1);
+      const std::size_t l_id = amsim::rng::UniformIntRange::sample(r_id + 1);
       const std::size_t lw = l_id / 64;
       const std::size_t lo = l_id % 64;
       const std::size_t rw = r_id / 64;

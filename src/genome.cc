@@ -2,7 +2,6 @@
 #include <amsim/haploview.h>
 #include <amsim/logger.h>
 #include <amsim/rng.h>
-
 #include <cstddef>
 #include <cstdint>
 #include <stdexcept>
@@ -14,15 +13,14 @@ Genome::Genome(
     std::size_t n_loc,
     std::vector<double> v_mut,
     std::vector<double> v_rec,
-    std::vector<double> v_maf,
-    const rng::Xoshiro256ss& rng)
+    std::vector<double> v_maf)
     : v_mut_(std::move(v_mut)),
       v_rec_(std::move(v_rec)),
       v_maf_(std::move(v_maf)),
       v_lmean_(n_loc),
       v_lvar_(n_loc),
       v_lmaf_(n_loc),
-      bw_(rng),
+      bw_(),
       h0_(n_ind, n_loc),
       h1_(n_ind, n_loc) {};
 

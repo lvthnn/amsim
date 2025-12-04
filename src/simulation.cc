@@ -42,10 +42,7 @@ Simulation::Simulation(
       n_pheno(config.n_pheno),
       pheno_names(config.v_name),
       out_dir(out_dir_ ? *out_dir_ : config.out_dir),
-      rng_(
-          rng::seed_xoshiro(
-              rng::auto_seed(rng_seed_ ? *rng_seed_ : config.rng_seed))),
-      genome_(n_ind, n_loc, config.v_mut, config.v_rec, config.v_maf, rng_),
+      genome_(n_ind, n_loc, config.v_mut, config.v_rec, config.v_maf),
       arch_(
           n_pheno,
           n_loc,
@@ -53,8 +50,7 @@ Simulation::Simulation(
           config.v_h2_gen,
           config.v_h2_env,
           config.gen_cor,
-          config.env_cor,
-          rng_),
+          config.env_cor),
       buf_(n_ind, n_pheno, config.require_lat),
       phenotypes_([&]() {
         PhenotypeList phenotypes;
@@ -74,7 +70,6 @@ Simulation::Simulation(
           phenotypes_,
           config.mate_cor,
           n_ind / 2,
-          rng_,
           config.n_itr,
           config.temp_init,
           config.temp_decay,
@@ -89,6 +84,7 @@ Simulation::Simulation(
       }()) {
   if (!std::filesystem::exists(out_dir))
     std::filesystem::create_directory(out_dir);
+  rng::set_seed(rng::auto_seed(rng_seed_ ? *rng_seed_ : config.rng_seed));
 }
 
 void Simulation::stream(std::size_t gen) {
@@ -141,10 +137,14 @@ void Simulation::run() {
 
     for (Phenotype& pheno : phenotypes_) {
       pheno.score(genome_);
-      pheno.compute_stats();
       if (gen == 0) {
-        pheno.transmit_vert(sib_matching);
+        amsim::PhenoArch::gen_vert(
+            pheno(ComponentType::VERTICAL), n_ind, pheno.h2_vert());
+        LOG_DEBUG(
+            "first value of vertical buffer: " +
+            std::to_string(pheno(ComponentType::VERTICAL)[0]));
         pheno.score_tot();
+        pheno.compute_stats();
       }
     }
 
@@ -157,6 +157,7 @@ void Simulation::run() {
     for (Phenotype& pheno : phenotypes_) {
       pheno.transmit_vert(opt_matching);
       pheno.score_tot();
+      pheno.compute_stats();
     }
 
     stream(gen);

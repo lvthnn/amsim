@@ -29,7 +29,6 @@ class Genome {
   /// @param v_mut Vector of mutation probabilities for genetic loci
   /// @param v_rec Vector of recombination probabilities for genetic loci
   /// @param v_maf vector of locus minor allele frequencies (MAFs)
-  /// @param rng A seeded RNG instance
   ///
   /// @details Allocates two haplotype buffer (`HaploBuf`) instances where
   ///   haplotypes are stored in bit-packed layout initially in locus-major
@@ -44,8 +43,7 @@ class Genome {
       std::size_t n_loc,
       std::vector<double> v_mut,
       std::vector<double> v_rec,
-      std::vector<double> v_maf,
-      const rng::Xoshiro256ss& rng);
+      std::vector<double> v_maf);
 
   /// @brief Return locus means within the current generation
   /// @return A vector of locus means within the current generation

@@ -24,9 +24,9 @@ class PhenoArch {
   /// @param n_loc Number of loci per phenotype
   /// @param h2_gen Narrow-sense heritabilities for each phenotype
   /// @param h2_env Environmental variance proportions
+  /// @param h2_vert Vertical variance proportions
   /// @param gen_cor Target genetic correlation matrix
   /// @param env_cor Target environmental correlation matrix
-  /// @param rng A seeded RNG instance
   PhenoArch(
       std::size_t n_pheno,
       std::size_t n_loc_total,
@@ -34,14 +34,20 @@ class PhenoArch {
       std::vector<double> h2_gen,
       std::vector<double> h2_env,
       std::vector<double> gen_cor,
-      std::vector<double> env_cor,
-      const rng::Xoshiro256ss& rng);
+      std::vector<double> env_cor);
 
   /// @brief Generate correlated environmental effects
   ///
   /// @param ptr_env Pointer to environmental component buffer
-  /// @param n_ind Number of individuals
+  /// @param n_ind Number of individuals in population
   void gen_env(double* ptr_env, std::size_t n_ind);
+
+  /// @brief Generate initial vertical components
+  ///
+  /// @param ptr_vert Pointer to phenotype vertical buffer
+  /// @param n_ind Number of individuals in population
+  /// @param h2_vert Vertical component variance proportion
+  static void gen_vert(double* ptr_vert, std::size_t n_ind, double h2_vert);
 
   /// @brief Optimize locus assignments to achieve target correlations
   ///
@@ -78,9 +84,6 @@ class PhenoArch {
 
   std::vector<double> env_chol_;         ///< Environmental Cholesky factors
   std::vector<std::uint64_t> loc_mask_;  ///< Locus assignment bit masks
-
-  rng::NormalPolar rng_polar_;    ///< RNG for normal variates
-  rng::UniformIntRange rng_unf_;  ///< RNG for uniform integers
 
   /// @brief Initialize random locus assignment masks
   /// @return Vector of locus masks for each phenotype
