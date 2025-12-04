@@ -250,21 +250,6 @@ struct NormalPolar {
     }
     if (i < n) out[i] = two()[0];
   }
-
-  /// @brief Generate batch of N standard normal variates
-  /// @tparam N Number of values (must be even)
-  /// @return Array of N standard normal variates
-  template <std::size_t N>
-  std::array<double, N> batch() noexcept {
-    static_assert(N % 2 == 0, "N must be even");
-    std::array<double, N> a{};
-    for (std::size_t i = 0; i < N; i += 2) {
-      auto z = two();
-      a[i] = z[0];
-      a[i + 1] = z[1];
-    }
-    return a;
-  }
 };
 
 /// @brief Uniform [0,a) generator
@@ -315,6 +300,6 @@ inline void set_seed(std::uint64_t seed) {
   Xoshiro256ss::get_instance().set_seed(seed);
 }
 
-} }  // namespace amsim::rng
+} // namespace amsim::rng
 
 #endif  // AMSIMCPP_RNG_H
