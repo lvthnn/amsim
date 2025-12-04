@@ -62,7 +62,8 @@ Simulation::Simulation(
               pheno_names[pheno],
               config.v_h2_gen[pheno],
               config.v_h2_env[pheno],
-              config.v_h2_vert[pheno]);
+              config.v_h2_vert[pheno],
+              config.mate_cor[(n_pheno * pheno) + pheno]);
         }
         return phenotypes;
       }()),
@@ -122,11 +123,10 @@ void Simulation::run() {
   std::vector<std::size_t> sib_matching(ctx_.n_ind / 2);
   std::iota(sib_matching.begin(), sib_matching.end(), ctx_.n_ind / 2);
 
+  LOG_DEBUG("Generating haplotypes");
   genome_.generate_haplotypes();
-  genome_.compute_mafs();
-  genome_.compute_stats();
 
-  LoggerTimer timer;
+  // LoggerTimer timer;
 
   for (std::size_t gen = 0; gen < n_gen; ++gen) {
     LOG_DEBUG("Simulating generation " + std::to_string(gen));
@@ -152,12 +152,14 @@ void Simulation::run() {
     std::vector<std::size_t> opt_matching = model_.match();
 
     for (Phenotype& pheno : phenotypes_) {
-      pheno.transmit_vert(opt_matching);
       pheno.score_tot();
       pheno.compute_stats();
     }
 
     stream(gen);
+
+    for (Phenotype& pheno : phenotypes_)
+      pheno.transmit_vert(opt_matching);
 
     genome_.transpose();
     genome_.update(opt_matching);
