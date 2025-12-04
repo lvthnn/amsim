@@ -229,16 +229,6 @@ double AssortativeModel::computeDiffEnergy(
          (2.0 * cblas_ddot(dim, diff.data(), 1, delta.data(), 1));
 }
 
-void AssortativeModel::display_cor() {
-  std::vector<double> cor_mat = computeCor();
-  std::cerr << std::setprecision(5);
-  for (std::size_t el = 0; el < cor_mat.size(); ++el) {
-    if (el % n_pheno_ == 0) std::cerr << "\n";
-    std::cerr << cor_mat[el] << "\t";
-  }
-  std::cerr << "\n";
-}
-
 void AssortativeModel::init_state() {
   // compute dominant latent phenotypes
   double latent_cor = cor_S[0];

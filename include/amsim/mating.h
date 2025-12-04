@@ -68,14 +68,10 @@ class AssortativeModel : public MatingModel {
       const PhenotypeList& phenotypes,
       std::vector<double> cor,
       std::size_t n_sex,
-      const rng::Xoshiro256ss& rng,
       std::size_t n_itr = 2e6,
       double temp_init = 0.50,
       double temp_decay = 0.9999,
       double tol_inf = 1e-7);
-
-  /// @brief Display correlation matrices from SVD decomposition
-  void display_cor();
 
   /// @brief Initialize mate pairing state to a random permutation
   void init_state();
