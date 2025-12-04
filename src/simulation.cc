@@ -140,9 +140,6 @@ void Simulation::run() {
       if (gen == 0) {
         amsim::PhenoArch::gen_vert(
             pheno(ComponentType::VERTICAL), n_ind, pheno.h2_vert());
-        LOG_DEBUG(
-            "first value of vertical buffer: " +
-            std::to_string(pheno(ComponentType::VERTICAL)[0]));
         pheno.score_tot();
         pheno.compute_stats();
       }
