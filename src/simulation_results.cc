@@ -190,7 +190,7 @@ void SimulationResults::save(
     bool overwrite) {
   if (!metrics) metrics = metric_names_;
   if (!out_dir) out_dir = out_dir_;
-  if (!std::filesystem::exists(*out_dir)) 
+  if (!std::filesystem::exists(*out_dir))
     std::filesystem::create_directory(*out_dir);
 
   for (const std::string& metric : *metrics) {

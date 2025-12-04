@@ -92,9 +92,9 @@ class Logger {
 /// @brief Initialize logger to write to a file
 /// @param path File path
 /// @param log_level Minimum log level
-#define LOG_FILE(path, log_level)                        \
-  do {                                                   \
-    static std::ofstream __log_file__(path);             \
+#define LOG_FILE(path, log_level)                         \
+  do {                                                    \
+    static std::ofstream __log_file__(path);              \
     amsim::Logger::get_instance(__log_file__, log_level); \
   } while (false)
 

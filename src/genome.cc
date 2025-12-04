@@ -2,6 +2,7 @@
 #include <amsim/haploview.h>
 #include <amsim/logger.h>
 #include <amsim/rng.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <stdexcept>
