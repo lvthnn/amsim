@@ -126,10 +126,9 @@ inline ThrT<BITS> prob_to_thr(double p) noexcept {
   return ThrT<BITS>(t);
 }
 
-/// @brief Bernoulli word generator with constant probability
+/// @brief Bernoulli 64-bit word generator
 ///
-/// Generates 64-bit words where each bit is an independent Bernoulli trial
-/// with the same success probability.
+/// Generates 64-bit words where each bit is an independent Bernoulli trial.
 ///
 /// @tparam BITS Precision for threshold comparisons (8, 16, or 64)
 template <int BITS = 16>
@@ -238,6 +237,10 @@ struct NormalPolar {
     return {u * m, v * m};
   }
 
+  /// @brief Generate a single standard normal variate
+  /// @return A single N(0, 1) variate
+  static double single() noexcept { return two()[0]; }
+
   /// @brief Fill array with standard normal variates
   /// @param out Output array
   /// @param n Number of values to generate
@@ -249,6 +252,15 @@ struct NormalPolar {
       out[i + 1] = z[1];
     }
     if (i < n) out[i] = two()[0];
+  }
+
+  // @brief Generate a vector of standard normal variates
+  // @param n_elem Number of elements to generate
+  // @return A double vector comprised of n_elem N(0, 1) variates
+  static std::vector<double> sample(std::size_t n_elem) noexcept {
+    std::vector<double> out(n_elem);
+    fill(out.data(), n_elem);
+    return out;
   }
 };
 
@@ -300,6 +312,6 @@ inline void set_seed(std::uint64_t seed) {
   Xoshiro256ss::get_instance().set_seed(seed);
 }
 
-} // namespace amsim::rng
+}  // namespace amsim::rng
 
 #endif  // AMSIMCPP_RNG_H
