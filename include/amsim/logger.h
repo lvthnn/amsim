@@ -22,15 +22,15 @@ class Logger {
   /// @param out Output stream
   /// @param level Logging level
   /// @return Reference to singleton Logger instance
-  static Logger& getInstance(std::ostream& out, const LogLevel level) {
+  static Logger& get_instance(std::ostream& out, const LogLevel level) {
     static Logger instance(out, level);
     return instance;
   }
 
   /// @brief Get Logger instance with default settings
   /// @return Reference to singleton Logger instance
-  static Logger& getInstance() {
-    return getInstance(std::cout, LogLevel::INFO);
+  static Logger& get_instance() {
+    return get_instance(std::cout, LogLevel::INFO);
   }
 
   /// @brief Destructor - flushes messages and joins logger thread
@@ -95,34 +95,34 @@ class Logger {
 #define LOG_FILE(path, log_level)                        \
   do {                                                   \
     static std::ofstream __log_file__(path);             \
-    amsim::Logger::getInstance(__log_file__, log_level); \
+    amsim::Logger::get_instance(__log_file__, log_level); \
   } while (false)
 
 /// @brief Initialize logger to write to a stream
 /// @param stream Output stream
 /// @param log_level Minimum log level
 #define LOG_STREAM(stream, log_level) \
-  amsim::Logger::getInstance(stream, log_level);
+  amsim::Logger::get_instance(stream, log_level);
 
 /// @brief Log an informational message
 /// @param msg Message to log
 #define LOG_INFO(msg) \
-  amsim::Logger::getInstance().log(msg, amsim::LogLevel::INFO)
+  amsim::Logger::get_instance().log(msg, amsim::LogLevel::INFO)
 
 /// @brief Log a debug message
 /// @param msg Message to log
 #define LOG_DEBUG(msg) \
-  amsim::Logger::getInstance().log(msg, amsim::LogLevel::DEBUG)
+  amsim::Logger::get_instance().log(msg, amsim::LogLevel::DEBUG)
 
 /// @brief Log a warning message
 /// @param msg Message to log
 #define LOG_WARNING(msg) \
-  amsim::Logger::getInstance().log(msg, amsim::LogLevel::WARNING)
+  amsim::Logger::get_instance().log(msg, amsim::LogLevel::WARNING)
 
 /// @brief Log an error message
 /// @param msg Message to log
 #define LOG_ERROR(msg) \
-  amsim::Logger::getInstance().log(msg, amsim::LogLevel::ERROR)
+  amsim::Logger::get_instance().log(msg, amsim::LogLevel::ERROR)
 
 }  // namespace amsim
 
