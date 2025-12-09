@@ -47,8 +47,13 @@ Simulation::Simulation(
           n_pheno,
           n_loc,
           config.v_n_loc,
+          config.v_name,
           config.v_h2_gen,
           config.v_h2_env,
+          config.v_h2_vert,
+          config.v_rvert_pat,
+          config.v_rvert_env,
+          config.v_rvert_noise,
           config.gen_cor,
           config.env_cor),
       buf_(n_ind, n_pheno, config.require_lat),
@@ -56,14 +61,7 @@ Simulation::Simulation(
         PhenotypeList phenotypes;
         phenotypes.reserve(n_pheno);
         for (std::size_t pheno = 0; pheno < n_pheno; ++pheno) {
-          phenotypes.emplace_back(
-              buf_,
-              arch_,
-              pheno_names[pheno],
-              config.v_h2_gen[pheno],
-              config.v_h2_env[pheno],
-              config.v_h2_vert[pheno],
-              config.mate_cor[(n_pheno * pheno) + pheno]);
+          phenotypes.emplace_back(buf_, arch_, pheno_names[pheno], pheno);
         }
         return phenotypes;
       }()),
@@ -126,8 +124,6 @@ void Simulation::run() {
   LOG_DEBUG("Generating haplotypes");
   genome_.generate_haplotypes();
 
-  // LoggerTimer timer;
-
   for (std::size_t gen = 0; gen < n_gen; ++gen) {
     LOG_DEBUG("Simulating generation " + std::to_string(gen));
     genome_.compute_mafs();
@@ -140,9 +136,9 @@ void Simulation::run() {
       if (gen == 0) {
         amsim::PhenoArch::gen_vert(
             pheno(ComponentType::VERTICAL), n_ind, pheno.h2_vert());
-        pheno.score_tot();
-        pheno.compute_stats();
       }
+      pheno.score_tot();
+      pheno.compute_stats();
     }
 
     if (buf_.has_lat()) buf_.score_latent(model_.cor_U, model_.cor_VT);
@@ -152,17 +148,13 @@ void Simulation::run() {
     std::vector<std::size_t> opt_matching = model_.match();
 
     for (Phenotype& pheno : phenotypes_) {
-      pheno.score_tot();
       pheno.compute_stats();
     }
 
     stream(gen);
 
-    for (Phenotype& pheno : phenotypes_)
-      pheno.transmit_vert(opt_matching);
-
     genome_.transpose();
-    genome_.update(opt_matching);
+    genome_.update(opt_matching, arch_, buf_);
     genome_.transpose();
   }
 }
