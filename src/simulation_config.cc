@@ -63,8 +63,11 @@ SimulationConfig& SimulationConfig::phenome(
     std::vector<double> v_h2_gen_,
     std::vector<double> v_h2_env_,
     std::vector<double> v_h2_vert_,
-    std::vector<double> gen_cor_,
-    std::vector<double> env_cor_) {
+    std::optional<std::vector<double>> gen_cor_,
+    std::optional<std::vector<double>> env_cor_,
+    std::optional<std::vector<double>> v_rvert_pat_,
+    std::optional<std::vector<double>> v_rvert_env_,
+    std::optional<std::vector<double>> v_rvert_noise_) {
   if (v_name_.size() != n_pheno_)
     throw std::invalid_argument("must have equally many names as phenotypes");
   if (v_n_loc_.size() != n_pheno_)
@@ -83,11 +86,30 @@ SimulationConfig& SimulationConfig::phenome(
       throw std::invalid_argument(
           "number of causal loci exceeds number of modelled loci");
 
+  if (!gen_cor_) gen_cor_ = utils::diag(n_pheno_);
+  if (!env_cor_) env_cor_ = utils::diag(n_pheno_);
+  if (!v_rvert_pat_) v_rvert_pat_ = std::vector<double>(n_pheno_, 0.5);
+  if (!v_rvert_env_) v_rvert_env_ = std::vector<double>(n_pheno_, 0.5);
+  if (!v_rvert_noise_) v_rvert_noise_ = std::vector<double>(n_pheno_, 0.5);
+
+  if ((*v_rvert_pat_).size() != n_pheno_)
+    throw std::invalid_argument(
+        "must specify paternal transmission ratio for all phenotypes");
+  if ((*v_rvert_env_).size() != n_pheno_)
+    throw std::invalid_argument(
+        "must specify environmental transmission ratio for all phenotypes");
+  if ((*v_rvert_noise_).size() != n_pheno_)
+    throw std::invalid_argument(
+        "must specify noise transmission ratio for all phenotypes");
+
   utils::assert_probs(n_pheno_, v_h2_gen_.data(), 1);
   utils::assert_probs(n_pheno_, v_h2_env_.data(), 1);
   utils::assert_probs(n_pheno_, v_h2_vert_.data(), 1);
-  utils::assert_cor(n_pheno_, gen_cor_.data(), n_pheno_);
-  utils::assert_cor(n_pheno_, env_cor_.data(), n_pheno_);
+  utils::assert_probs(n_pheno_, (*v_rvert_pat_).data(), 1);
+  utils::assert_probs(n_pheno_, (*v_rvert_env_).data(), 1);
+  utils::assert_probs(n_pheno_, (*v_rvert_noise_).data(), 1);
+  utils::assert_cor(n_pheno_, (*gen_cor_).data(), n_pheno_);
+  utils::assert_cor(n_pheno_, (*env_cor_).data(), n_pheno_);
 
   for (std::size_t el = 0; el < n_pheno_; ++el)
     if (std::abs(v_h2_gen_[el] + v_h2_env_[el] + v_h2_vert_[el] - 1.0) > 1e-12)
@@ -100,8 +122,11 @@ SimulationConfig& SimulationConfig::phenome(
   v_h2_gen = std::move(v_h2_gen_);
   v_h2_env = std::move(v_h2_env_);
   v_h2_vert = std::move(v_h2_vert_);
-  gen_cor = std::move(gen_cor_);
-  env_cor = std::move(env_cor_);
+  gen_cor = std::move(*gen_cor_);
+  env_cor = std::move(*env_cor_);
+  v_rvert_pat = std::move(*v_rvert_pat_);
+  v_rvert_env = std::move(*v_rvert_env_);
+  v_rvert_noise = std::move(*v_rvert_noise_);
   return *this;
 }
 
