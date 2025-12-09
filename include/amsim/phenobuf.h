@@ -2,6 +2,7 @@
 #define AMSIMCPP_PHENOBUF_H
 
 #include <amsim/component_type.h>
+#include <amsim/stats.h>
 
 #include <cstddef>
 #include <optional>
