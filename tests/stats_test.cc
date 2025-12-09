@@ -109,20 +109,22 @@ TEST(Stats, CorVectorConstantX) {
 }
 
 TEST(Stats, CorMatrixCross) {
-  int N = 4, P = 2, Q = 2;
+  int n = 4;
+  int p = 2;
+  int q = 2;
 
-  double X[4 * 2] = {1, 2, 3, 4, 2, 3, 4, 5};
+  double x[4 * 2] = {1, 2, 3, 4, 2, 3, 4, 5};
 
-  double Y[4 * 2] = {2, 4, 6, 8, 1, 2, 3, 4};
+  double y[4 * 2] = {2, 4, 6, 8, 1, 2, 3, 4};
 
-  double R[2 * 2];
+  double r[2 * 2];
 
-  amsim::stats::cor(N, P, Q, X, N, Y, N, R, P);
+  amsim::stats::cor(n, p, q, x, n, y, n, r, p);
 
-  double r00 = R[0 + 0 * P];
-  double r01 = R[0 + 1 * P];
-  double r10 = R[1 + 0 * P];
-  double r11 = R[1 + 1 * P];
+  double r00 = r[0 + (0 * p)];
+  double r01 = r[0 + (1 * p)];
+  double r10 = r[1 + (0 * p)];
+  double r11 = r[1 + (1 * p)];
 
   ASSERT_NEAR(r00, 1.0, tol);
   ASSERT_NEAR(r11, 1.0, tol);
@@ -131,18 +133,19 @@ TEST(Stats, CorMatrixCross) {
 }
 
 TEST(Stats, CorMatrixSelf) {
-  int N = 4, P = 2;
+  int n = 4;
+  int p = 2;
 
-  double X[4 * 2] = {1, 2, 3, 4, 2, 3, 4, 5};
+  double x[4 * 2] = {1, 2, 3, 4, 2, 3, 4, 5};
 
-  double R[2 * 2];
+  double r[2 * 2];
 
-  amsim::stats::cor(N, P, X, N, R, P);
+  amsim::stats::cor(n, p, x, n, r, p);
 
-  ASSERT_NEAR(R[0 + 0 * P], 1.0, tol);
-  ASSERT_NEAR(R[1 + 1 * P], 1.0, tol);
-  ASSERT_NEAR(R[0 + 1 * P], 1.0, tol);
-  ASSERT_NEAR(R[1 + 0 * P], 1.0, tol);
+  ASSERT_NEAR(r[0 + (0 * p)], 1.0, tol);
+  ASSERT_NEAR(r[1 + (1 * p)], 1.0, tol);
+  ASSERT_NEAR(r[0 + (1 * p)], 1.0, tol);
+  ASSERT_NEAR(r[1 + (0 * p)], 1.0, tol);
 }
 
 TEST(Stats, QuantileTest) {

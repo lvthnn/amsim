@@ -48,8 +48,8 @@ class SimulationMatingConfig : public ::testing::Test {
         {0.5, 0.6},
         {0.3, 0.2},
         {0.2, 0.2},
-        {1.0, 0.3, 0.3, 1.0},
-        {1.0, 0.2, 0.2, 1.0});
+        std::vector<double>({1.0, 0.3, 0.3, 1.0}),
+        std::vector<double>({1.0, 0.2, 0.2, 1.0}));
   }
 
   amsim::SimulationConfig config_;
@@ -126,8 +126,11 @@ TEST_F(SimulationPhenomeConfig, PhenomeValidParameters) {
       {0.5, 0.6},
       {0.3, 0.2},
       {0.2, 0.2},
-      {1.0, 0.3, 0.3, 1.0},
-      {1.0, 0.2, 0.2, 1.0}));
+      std::vector<double>({1.0, 0.3, 0.3, 1.0}),
+      std::vector<double>({1.0, 0.2, 0.2, 1.0}),
+      std::vector<double>({0.5, 0.5}),
+      std::vector<double>({0.5, 0.5}),
+      std::vector<double>({0.0, 0.0})));
 }
 
 TEST_F(SimulationPhenomeConfig, PhenomeWrongNumberOfNames) {
@@ -138,9 +141,7 @@ TEST_F(SimulationPhenomeConfig, PhenomeWrongNumberOfNames) {
           {50, 50},
           {0.5, 0.6},
           {0.3, 0.2},
-          {0.2, 0.2},
-          {1.0, 0.3, 0.3, 1.0},
-          {1.0, 0.2, 0.2, 1.0}),
+          {0.2, 0.2}),
       std::invalid_argument);
 }
 
@@ -152,9 +153,7 @@ TEST_F(SimulationPhenomeConfig, PhenomeWrongNumberOfLoci) {
           {50},
           {0.5, 0.6},
           {0.3, 0.2},
-          {0.2, 0.2},
-          {1.0, 0.3, 0.3, 1.0},
-          {1.0, 0.2, 0.2, 1.0}),
+          {0.2, 0.2}),
       std::invalid_argument);
 }
 
@@ -166,9 +165,7 @@ TEST_F(SimulationPhenomeConfig, PhenomeWrongNumberOfH2Gen) {
           {50, 50},
           {0.5},
           {0.3, 0.2},
-          {0.2, 0.2},
-          {1.0, 0.3, 0.3, 1.0},
-          {1.0, 0.2, 0.2, 1.0}),
+          {0.2, 0.2}),
       std::invalid_argument);
 }
 
@@ -180,9 +177,7 @@ TEST_F(SimulationPhenomeConfig, PhenomeWrongNumberOfH2Env) {
           {50, 50},
           {0.5, 0.6},
           {0.3},
-          {0.2, 0.2},
-          {1.0, 0.3, 0.3, 1.0},
-          {1.0, 0.2, 0.2, 1.0}),
+          {0.2, 0.2}),
       std::invalid_argument);
 }
 
@@ -194,42 +189,40 @@ TEST_F(SimulationPhenomeConfig, PhenomeWrongNumberOfH2Vert) {
           {50, 50},
           {0.5, 0.6},
           {0.3, 0.2},
-          {0.2},
-          {1.0, 0.3, 0.3, 1.0},
-          {1.0, 0.2, 0.2, 1.0}),
+          {0.2}),
       std::invalid_argument);
 }
 
 TEST_F(SimulationPhenomeConfig, PhenomeTooManyCausalLoci) {
   EXPECT_THROW(
-      config_.phenome(1, {"height"}, {200}, {0.5}, {0.3}, {0.2}, {1.0}, {1.0}),
+      config_.phenome(1, {"height"}, {200}, {0.5}, {0.3}, {0.2}),
       std::invalid_argument);
 }
 
 TEST_F(SimulationPhenomeConfig, PhenomeInvalidH2Gen) {
   EXPECT_THROW(
-      config_.phenome(1, {"height"}, {50}, {1.5}, {0.3}, {0.2}, {1.0}, {1.0}),
+      config_.phenome(1, {"height"}, {50}, {1.5}, {0.3}, {0.2}),
       std::invalid_argument);
   EXPECT_THROW(
-      config_.phenome(1, {"height"}, {50}, {-0.5}, {0.3}, {0.2}, {1.0}, {1.0}),
+      config_.phenome(1, {"height"}, {50}, {-0.5}, {0.3}, {0.2}),
       std::invalid_argument);
 }
 
 TEST_F(SimulationPhenomeConfig, PhenomeInvalidH2Env) {
   EXPECT_THROW(
-      config_.phenome(1, {"height"}, {50}, {0.5}, {1.5}, {0.2}, {1.0}, {1.0}),
+      config_.phenome(1, {"height"}, {50}, {0.5}, {1.5}, {0.2}),
       std::invalid_argument);
   EXPECT_THROW(
-      config_.phenome(1, {"height"}, {50}, {0.5}, {-0.5}, {0.2}, {1.0}, {1.0}),
+      config_.phenome(1, {"height"}, {50}, {0.5}, {-0.5}, {0.2}),
       std::invalid_argument);
 }
 
 TEST_F(SimulationPhenomeConfig, PhenomeInvalidH2Vert) {
   EXPECT_THROW(
-      config_.phenome(1, {"height"}, {50}, {0.5}, {0.3}, {1.5}, {1.0}, {1.0}),
+      config_.phenome(1, {"height"}, {50}, {0.5}, {0.3}, {1.5}),
       std::invalid_argument);
   EXPECT_THROW(
-      config_.phenome(1, {"height"}, {50}, {0.5}, {0.3}, {-0.5}, {1.0}, {1.0}),
+      config_.phenome(1, {"height"}, {50}, {0.5}, {0.3}, {-0.5}),
       std::invalid_argument);
 }
 
@@ -242,8 +235,8 @@ TEST_F(SimulationPhenomeConfig, PhenomeInvalidGenCor) {
           {0.5, 0.6},
           {0.3, 0.2},
           {0.2, 0.2},
-          {1.0, 1.5, 1.5, 1.0},
-          {1.0, 0.2, 0.2, 1.0}),
+          std::vector<double>({1.0, 1.5, 1.5, 1.0}),
+          std::vector<double>({1.0, 0.2, 0.2, 1.0})),
       std::invalid_argument);
 }
 
@@ -256,14 +249,14 @@ TEST_F(SimulationPhenomeConfig, PhenomeInvalidEnvCor) {
           {0.5, 0.6},
           {0.3, 0.2},
           {0.2, 0.2},
-          {1.0, 0.3, 0.3, 1.0},
-          {1.0, -1.5, -1.5, 1.0}),
+          std::vector<double>({1.0, 0.3, 0.3, 1.0}),
+          std::vector<double>({1.0, -1.5, -1.5, 1.0})),
       std::invalid_argument);
 }
 
 TEST_F(SimulationPhenomeConfig, PhenomeChaining) {
   auto& ref =
-      config_.phenome(1, {"height"}, {50}, {0.5}, {0.3}, {0.2}, {1.0}, {1.0});
+      config_.phenome(1, {"height"}, {50}, {0.5}, {0.3}, {0.2});
   EXPECT_EQ(&ref, &config_);
 }
 
