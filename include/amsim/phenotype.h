@@ -40,25 +40,19 @@ class Phenotype {
       PhenoBuf& buf,
       PhenoArch& arch,
       std::string name,
-      double h2_gen,
-      double h2_env,
-      double h2_vert,
-      double mate_cor = 0.0,
-      double rvert_pat = 0.5,
-      double rvert_mat = 0.5,
       std::optional<std::size_t> id = std::nullopt);
 
   /// @brief Return the phenotype name
   /// @return The phenotype name
   std::string name() const noexcept { return name_; }
 
-  /// @brief Return the loci contributing to this phenotype
-  /// @return Vector of locus indices
-  std::vector<std::size_t> loci() const& noexcept { return loci_; }
-
   /// @brief Return the number of individuals
   /// @return Number of individuals in the population
   std::size_t n_ind() const noexcept { return n_ind_; }
+
+  /// @brief Return the loci contributing to this phenotype
+  /// @return Vector of locus indices
+  std::vector<std::size_t> loci() const& noexcept { return loci_; }
 
   /// @brief Return the narrow-sense heritability
   /// @return Genetic variance proportion
@@ -72,9 +66,11 @@ class Phenotype {
   /// @return Environmental variance proportion
   double h2_env() const noexcept { return h2_env_; }
 
-  // @brief Return the calibrated vertical component noise variance
-  // @return Calibrated vertical component noise variance
-  double vert_var() const noexcept { return vert_var_; }
+  double rvert_pat() const noexcept { return rvert_pat_; }
+
+  double rvert_env() const noexcept { return rvert_env_; }
+
+  double rvert_noise() const noexcept { return rvert_noise_; }
 
   /// @brief Access phenotype component value for an individual
   ///
@@ -184,22 +180,25 @@ class Phenotype {
   void compute_stats();
 
  private:
-  const std::string name_;                 ///< Phenotype name
-  const std::size_t id_;                   ///< Phenotype identifier
-  const std::size_t n_ind_;                ///< Number of individuals
-  const std::vector<std::size_t> loci_;    ///< Loci contributing to trait
-  const std::vector<double> loc_effects_;  ///< Effect sizes for each locus
-  const double h2_gen_;                    ///< Narrow-sense heritability
-  const double h2_env_;     ///< Environmental variance proportion
-  const double h2_vert_;    ///< Vertical transmission proportion
+  const std::string name_;               ///< Phenotype name
+  const std::size_t id_;                 ///< Phenotype identifier
+  const std::size_t n_ind_;              ///< Number of individuals
+  const std::vector<std::size_t> loci_;  ///< Loci contributing to trait
+  const double* loc_effects_;            ///< Effect sizes for each locus
+  const double h2_gen_;                  ///< Narrow-sense heritability
+  const double h2_env_;                  ///< Environmental variance proportion
+  const double h2_vert_;                 ///< Vertical transmission proportion
   const double rvert_pat_;  ///< Paternal vertical transmission proportion
-  const double rvert_mat_;  ///< Maternal vertical transmission proportion
-  const double vert_var_;   ///< Vertical component noise variance
+  const double rvert_env_;  ///< Environmental component transmission proportion
+  const double rvert_noise_;  ///< Transmission noise component proportion
 
   double* ptr_gen_;   ///< Pointer to genetic component values
   double* ptr_env_;   ///< Pointer to environmental component values
   double* ptr_vert_;  ///< Pointer to vertical component values
   double* ptr_tot_;   ///< Pointer to total phenotype values
+
+  double vert_var_;
+  bool vert_lock_ = false;
 
   std::array<double, 4> comp_means_;  ///< Component means
   std::array<double, 4> comp_vars_;   ///< Component variances

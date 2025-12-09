@@ -16,11 +16,12 @@
 #include <amsim/component_type.h>
 #include <amsim/genome.h>
 #include <amsim/haplobuf.h>
+#include <amsim/logger.h>
 #include <amsim/phenoarch.h>
 #include <amsim/phenobuf.h>
 #include <amsim/phenotype.h>
-#include <amsim/utils.h>
 #include <amsim/stats.h>
+#include <amsim/utils.h>
 
 namespace amsim {
 
@@ -36,36 +37,18 @@ Phenotype::Phenotype(
     PhenoBuf& buf,
     PhenoArch& arch,
     std::string name,
-    double h2_gen,
-    double h2_env,
-    double h2_vert,
-    double mate_cor,
-    double rvert_pat,
-    double rvert_mat,
     const std::optional<std::size_t> id)
     : name_(std::move(name)),
       id_(attach(buf, id)),
       n_ind_(buf.n_ind()),
-      loci_(arch.pheno_mask(id_)),
-      loc_effects_(
-          loci_.size(), std::sqrt(h2_gen / static_cast<double>(loci_.size()))),
-      h2_gen_(h2_gen),
-      h2_env_(h2_env),
-      h2_vert_(h2_vert),
-      rvert_pat_(rvert_pat),
-      rvert_mat_(rvert_mat),
-      vert_var_([&]() {
-        if (rvert_pat_ + rvert_mat_ != 1.0)
-          throw std::invalid_argument(
-              "sum of parental vertical transmission ratios must equal one");
-        double vert_scale = (rvert_pat_ * rvert_pat_) +
-                            (2 * mate_cor * rvert_pat_ * rvert_mat_) +
-                            (rvert_mat_ * rvert_mat_);
-        if (h2_vert_ < vert_scale / (1 + vert_scale))
-          throw std::invalid_argument(
-              "infeasible vertical variance proportion");
-        return ((1 + vert_scale) * h2_vert_) - vert_scale;
-      }()),
+      loci_(arch.pheno_loc(id_)),
+      loc_effects_(arch.pheno_effects(id_)),
+      h2_gen_(arch.h2_gen(id_)),
+      h2_env_(arch.h2_env(id_)),
+      h2_vert_(arch.h2_vert(id_)),
+      rvert_pat_(arch.rvert_pat(id_)),
+      rvert_env_(arch.rvert_env(id_)),
+      rvert_noise_(arch.rvert_noise(id_)),
       ptr_gen_(buf(id_, ComponentType::GENETIC)),
       ptr_env_(buf(id_, ComponentType::ENVIRONMENTAL)),
       ptr_vert_(buf(id_, ComponentType::VERTICAL)),
@@ -84,16 +67,32 @@ Phenotype::Phenotype(
 void Phenotype::transmit_vert(std::vector<std::size_t> matching) {
   if (h2_vert_ == 0.0) return;
   const std::size_t n_sex = n_ind_ / 2;
-  const double scale = std::sqrt(vert_var_);
 
   for (std::size_t ind = 0; ind < n_sex; ++ind) {
-    double vert_pat = ptr_gen_[ind] + ptr_env_[ind];
-    double vert_mat = ptr_gen_[matching[ind]] + ptr_env_[matching[ind]];
-    double vert_par = (rvert_pat_ * vert_pat) + (rvert_mat_ * vert_mat);
-    std::array<double, 2> env_noise = rng::NormalPolar::two();
+    ptr_vert_[ind] = rvert_pat_ * (ptr_gen_[ind] + ptr_env_[ind]);
+    ptr_vert_[ind] += (1 - rvert_pat_) * (ptr_gen_[n_sex + matching[ind]] +
+                                          ptr_env_[n_sex + matching[ind]]);
+    ptr_vert_[n_sex + matching[ind]] = ptr_vert_[ind];
+  }
 
-    ptr_vert_[ind] = vert_par + scale * env_noise[0];
-    ptr_vert_[matching[ind]] = vert_par + scale * env_noise[1];
+  double var_vert = stats::var(n_ind_, ptr_vert_, 1);
+  LOG_INFO("var_vert: " + std::to_string(var_vert));
+
+  if (h2_vert_ < var_vert)
+    throw std::runtime_error("infeasible vertical variance noise variance");
+
+  double var_noise = h2_vert_ - var_vert;
+  LOG_INFO("var_noise: " + std::to_string(var_noise));
+
+  if (!vert_lock_) {
+    vert_var_ = std::sqrt(var_noise);
+    vert_lock_ = true;
+  }
+
+  for (std::size_t ind = 0; ind < n_sex; ++ind) {
+    std::array<double, 2> env_noise = rng::NormalPolar::two();
+    ptr_vert_[ind] += vert_var_ * env_noise[0];
+    ptr_vert_[n_sex + matching[ind]] += vert_var_ * env_noise[1];
   }
 }
 
@@ -209,10 +208,7 @@ void Phenotype::score_tiled(Genome& genome) {
   }
 }
 
-void Phenotype::score(Genome& genome) {
-  score_tiled(genome);
-  score_tot();
-}
+void Phenotype::score(Genome& genome) { score_tiled(genome); }
 
 void Phenotype::compute_stats() {
   // compute means and variances of all the components
