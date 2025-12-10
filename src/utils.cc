@@ -250,7 +250,7 @@ void assert_cross_cor(std::size_t N, const double* X, std::size_t ldX) {
 }
 
 std::vector<double> diag(std::size_t N) {
-  std::vector<double> diag(N);
+  std::vector<double> diag(N * N);
   for (std::size_t d = 0; d < N; ++d) diag[(d * N) + d] = 1.0;
   return diag;
 }
