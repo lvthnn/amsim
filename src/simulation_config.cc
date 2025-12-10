@@ -92,6 +92,7 @@ SimulationConfig& SimulationConfig::phenome(
   if (!v_rvert_env_) v_rvert_env_ = std::vector<double>(n_pheno_, 0.5);
   if (!v_rvert_noise_) v_rvert_noise_ = std::vector<double>(n_pheno_, 0.5);
 
+
   if ((*v_rvert_pat_).size() != n_pheno_)
     throw std::invalid_argument(
         "must specify paternal transmission ratio for all phenotypes");
@@ -127,6 +128,7 @@ SimulationConfig& SimulationConfig::phenome(
   v_rvert_pat = std::move(*v_rvert_pat_);
   v_rvert_env = std::move(*v_rvert_env_);
   v_rvert_noise = std::move(*v_rvert_noise_);
+
   return *this;
 }
 

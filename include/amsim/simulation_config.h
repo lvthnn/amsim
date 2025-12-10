@@ -91,10 +91,10 @@ struct SimulationConfig {
   /// @return Reference to this for method chaining
   SimulationConfig& assortative_mating(
       std::vector<double> mate_cor_,
-      std::optional<double> tol_inf_ = 1e-7,
-      std::optional<std::size_t> n_itr_ = 2e6,
-      std::optional<double> temp_init_ = 1.0,
-      std::optional<double> temp_decay_ = 0.999);
+      std::optional<double> tol_inf_ = std::nullopt,
+      std::optional<std::size_t> n_itr_ = std::nullopt,
+      std::optional<double> temp_init_ = std::nullopt,
+      std::optional<double> temp_decay_ = std::nullopt);
 
   /// @brief Set metrics to compute each generation
   ///
@@ -118,18 +118,18 @@ struct SimulationConfig {
   std::vector<double> v_h2_gen;       ///< Narrow-sense heritabilities
   std::vector<double> v_h2_env;       ///< Environmental variance proportions
   std::vector<double> v_h2_vert;      ///< Vertical transmission proportions
+  std::vector<double> gen_cor;        ///< Genetic correlation matrix
+  std::vector<double> env_cor;        ///< Environmental correlation matrix
   std::vector<double> v_rvert_pat;    ///< Paternal transmission ratios
   std::vector<double> v_rvert_env;    ///< Nurture / environment ratios
   std::vector<double> v_rvert_noise;  ///< Vertical noise ratio
-  std::vector<double> gen_cor;        ///< Genetic correlation matrix
-  std::vector<double> env_cor;        ///< Environmental correlation matrix
 
   MatingType mating_type;        ///< Mating model type
   std::vector<double> mate_cor;  ///< Target mate correlations
-  double tol_inf;                ///< Tolerance for infinite values
-  std::size_t n_itr;             ///< Annealing iterations
-  double temp_init;              ///< Initial annealing temperature
-  double temp_decay;             ///< Temperature decay factor
+  double tol_inf = 1e-7;         ///< Tolerance for infinite values
+  std::size_t n_itr = 2e6;       ///< Annealing iterations
+  double temp_init = 1.0;        ///< Initial annealing temperature
+  double temp_decay = 0.99;      ///< Temperature decay factor
 
   std::vector<MetricSpec> specs;  ///< Metric specifications
   bool require_lat;               ///< Whether latent phenotypes are required
