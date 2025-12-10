@@ -147,10 +147,6 @@ void Simulation::run() {
     model_.update(phenotypes_);
     std::vector<std::size_t> opt_matching = model_.match();
 
-    for (Phenotype& pheno : phenotypes_) {
-      pheno.compute_stats();
-    }
-
     stream(gen);
 
     genome_.transpose();
