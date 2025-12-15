@@ -3,6 +3,8 @@
 
 #include <amsim/haplobuf.h>
 #include <amsim/haploview.h>
+#include <amsim/phenoarch.h>
+#include <amsim/phenobuf.h>
 #include <amsim/rng.h>
 
 #include <cstddef>
@@ -108,7 +110,8 @@ class Genome {
   void compute_stats();
 
   /// @brief Advance the population using a mate matching
-  void update(std::vector<std::size_t> matching);
+  void update(
+      std::vector<std::size_t> matching, PhenoArch& arch, PhenoBuf& buf);
 
  private:
   const std::vector<double> v_mut_;  ///< Mutation probabilities
@@ -126,7 +129,7 @@ class Genome {
   /// @param ind_h0 Paternal haplotype word index
   /// @param ind_h1 Maternal haplotype word index
   /// @return A 64-bit word representing the gamete genotype
-  std::uint64_t gamWord(
+  std::array<std::uint64_t, 2> gamWord(
       std::uint64_t ind_h0,
       std::uint64_t ind_h1,
       const double* v_rec,
