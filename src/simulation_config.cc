@@ -66,8 +66,7 @@ SimulationConfig& SimulationConfig::phenome(
     std::optional<std::vector<double>> gen_cor_,
     std::optional<std::vector<double>> env_cor_,
     std::optional<std::vector<double>> v_rvert_pat_,
-    std::optional<std::vector<double>> v_rvert_env_,
-    std::optional<std::vector<double>> v_rvert_noise_) {
+    std::optional<std::vector<double>> v_rvert_env_) {
   if (v_name_.size() != n_pheno_)
     throw std::invalid_argument("must have equally many names as phenotypes");
   if (v_n_loc_.size() != n_pheno_)
@@ -90,8 +89,6 @@ SimulationConfig& SimulationConfig::phenome(
   if (!env_cor_) env_cor_ = utils::diag(n_pheno_);
   if (!v_rvert_pat_) v_rvert_pat_ = std::vector<double>(n_pheno_, 0.5);
   if (!v_rvert_env_) v_rvert_env_ = std::vector<double>(n_pheno_, 0.5);
-  if (!v_rvert_noise_) v_rvert_noise_ = std::vector<double>(n_pheno_, 0.5);
-
 
   if ((*v_rvert_pat_).size() != n_pheno_)
     throw std::invalid_argument(
@@ -99,16 +96,12 @@ SimulationConfig& SimulationConfig::phenome(
   if ((*v_rvert_env_).size() != n_pheno_)
     throw std::invalid_argument(
         "must specify environmental transmission ratio for all phenotypes");
-  if ((*v_rvert_noise_).size() != n_pheno_)
-    throw std::invalid_argument(
-        "must specify noise transmission ratio for all phenotypes");
 
   utils::assert_probs(n_pheno_, v_h2_gen_.data(), 1);
   utils::assert_probs(n_pheno_, v_h2_env_.data(), 1);
   utils::assert_probs(n_pheno_, v_h2_vert_.data(), 1);
   utils::assert_probs(n_pheno_, (*v_rvert_pat_).data(), 1);
   utils::assert_probs(n_pheno_, (*v_rvert_env_).data(), 1);
-  utils::assert_probs(n_pheno_, (*v_rvert_noise_).data(), 1);
   utils::assert_cor(n_pheno_, (*gen_cor_).data(), n_pheno_);
   utils::assert_cor(n_pheno_, (*env_cor_).data(), n_pheno_);
 
@@ -127,7 +120,6 @@ SimulationConfig& SimulationConfig::phenome(
   env_cor = std::move(*env_cor_);
   v_rvert_pat = std::move(*v_rvert_pat_);
   v_rvert_env = std::move(*v_rvert_env_);
-  v_rvert_noise = std::move(*v_rvert_noise_);
 
   return *this;
 }

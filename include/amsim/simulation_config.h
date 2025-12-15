@@ -61,7 +61,6 @@ struct SimulationConfig {
   /// @param env_cor_ Environmental correlation matrix
   /// @param v_rvert_pat_ Paternal / maternal vertical transmission ratio
   /// @param v_rvert_env_ Environmental / parental vertical transmission ratio
-  /// @param v_rvert_noise_ Noise / transmission ratio
   ///
   /// @return Reference to this for method chaining
   SimulationConfig& phenome(
@@ -74,8 +73,7 @@ struct SimulationConfig {
       std::optional<std::vector<double>> gen_cor_ = std::nullopt,
       std::optional<std::vector<double>> env_cor_ = std::nullopt,
       std::optional<std::vector<double>> v_rvert_pat_ = std::nullopt,
-      std::optional<std::vector<double>> v_rvert_env_ = std::nullopt,
-      std::optional<std::vector<double>> v_rvert_noise_ = std::nullopt);
+      std::optional<std::vector<double>> v_rvert_env_ = std::nullopt);
 
   /// @brief Enable random mating
   /// @return Reference to this for method chaining
@@ -122,7 +120,6 @@ struct SimulationConfig {
   std::vector<double> env_cor;        ///< Environmental correlation matrix
   std::vector<double> v_rvert_pat;    ///< Paternal transmission ratios
   std::vector<double> v_rvert_env;    ///< Nurture / environment ratios
-  std::vector<double> v_rvert_noise;  ///< Vertical noise ratio
 
   MatingType mating_type;        ///< Mating model type
   std::vector<double> mate_cor;  ///< Target mate correlations

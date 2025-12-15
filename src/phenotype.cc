@@ -48,7 +48,6 @@ Phenotype::Phenotype(
       h2_vert_(arch.h2_vert(id_)),
       rvert_pat_(arch.rvert_pat(id_)),
       rvert_env_(arch.rvert_env(id_)),
-      rvert_noise_(arch.rvert_noise(id_)),
       ptr_gen_(buf(id_, ComponentType::GENETIC)),
       ptr_env_(buf(id_, ComponentType::ENVIRONMENTAL)),
       ptr_vert_(buf(id_, ComponentType::VERTICAL)),

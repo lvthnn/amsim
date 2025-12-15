@@ -53,7 +53,6 @@ Simulation::Simulation(
           config.v_h2_vert,
           config.v_rvert_pat,
           config.v_rvert_env,
-          config.v_rvert_noise,
           config.gen_cor,
           config.env_cor),
       buf_(n_ind, n_pheno, config.require_lat),

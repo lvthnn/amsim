@@ -70,8 +70,6 @@ class Phenotype {
 
   double rvert_env() const noexcept { return rvert_env_; }
 
-  double rvert_noise() const noexcept { return rvert_noise_; }
-
   /// @brief Access phenotype component value for an individual
   ///
   /// @param id Individual index
@@ -190,7 +188,6 @@ class Phenotype {
   const double h2_vert_;                 ///< Vertical transmission proportion
   const double rvert_pat_;  ///< Paternal vertical transmission proportion
   const double rvert_env_;  ///< Environmental component transmission proportion
-  const double rvert_noise_;  ///< Transmission noise component proportion
 
   double* ptr_gen_;   ///< Pointer to genetic component values
   double* ptr_env_;   ///< Pointer to environmental component values
