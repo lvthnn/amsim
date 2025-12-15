@@ -88,8 +88,14 @@ std::vector<double> f_latent_h2(const SimulationContext&);
 /// @brief Create metric function for component correlations
 MetricFunc f_comp_cor(ComponentType type);
 
+/// @brief Create metric function for cross-component correlations
+MetricFunc f_comp_cor(ComponentType type_l, ComponentType type_r);
+
 /// @brief Create metric function for component cross-correlations
 MetricFunc f_comp_xcor(ComponentType type);
+
+/// @brief Create metric function for cross-component cross-correlations
+MetricFunc f_comp_xcor(ComponentType type_l, ComponentType type_r);
 
 /// @brief Create metric function for component means
 MetricFunc f_comp_mean(ComponentType type);

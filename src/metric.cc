@@ -93,7 +93,30 @@ MetricFunc f_comp_cor(ComponentType type) {
   };
 }
 
-// between-mate phenotype component correlation
+MetricFunc f_comp_cor(ComponentType type_l, ComponentType type_r) {
+  return [type_l, type_r](const SimulationContext& ctx) -> std::vector<double> {
+    const std::size_t n_pheno = ctx.n_pheno;
+    const std::size_t n_ind = ctx.n_ind;
+    const double* buf_l = ctx.buf(type_l);
+    const double* buf_r = ctx.buf(type_r);
+
+    std::vector<double> cor(n_pheno * n_pheno);
+
+    stats::cor(
+        n_ind,
+        n_pheno,
+        n_pheno,
+        buf_l,
+        n_ind,
+        buf_r,
+        n_ind,
+        cor.data(),
+        n_pheno);
+
+    return cor;
+  };
+}
+
 MetricFunc f_comp_xcor(ComponentType type) {
   return [type](const SimulationContext& ctx) -> std::vector<double> {
     const std::size_t n_pheno = ctx.n_pheno;
@@ -103,6 +126,43 @@ MetricFunc f_comp_xcor(ComponentType type) {
 
     const double* buf_male = ctx.phenotypes[0](type);
     const double* buf_female = buf_male + n_sex;
+    const int lda_buf = 2 * n_sex;
+
+    std::vector<double> cor_buf(n_pheno * n_pheno);
+
+    std::vector<double> female_reordered(n_sex * n_pheno);
+    for (std::size_t pheno = 0; pheno < n_pheno; ++pheno) {
+      const double* src = buf_female + (pheno * lda_buf);
+      double* dst = female_reordered.data() + (pheno * n_sex);
+      for (std::size_t male_idx = 0; male_idx < n_sex; ++male_idx) {
+        dst[male_idx] = src[matching[male_idx]];
+      }
+    }
+
+    stats::cor(
+        n_sex,
+        n_pheno,
+        n_pheno,
+        buf_male,
+        lda_buf,
+        female_reordered.data(),
+        n_sex,
+        cor_buf.data(),
+        n_pheno);
+
+    return cor_buf;
+  };
+}
+
+MetricFunc f_comp_xcor(ComponentType type_l, ComponentType type_r) {
+  return [type_l, type_r](const SimulationContext& ctx) -> std::vector<double> {
+    const std::size_t n_pheno = ctx.n_pheno;
+    const std::size_t n_sex = ctx.n_sex;
+
+    const std::vector<std::size_t> matching = ctx.model.state;
+
+    const double* buf_male = ctx.buf(type_l);
+    const double* buf_female = ctx.buf(type_r) + n_sex;
     const int lda_buf = 2 * n_sex;
 
     std::vector<double> cor_buf(n_pheno * n_pheno);
