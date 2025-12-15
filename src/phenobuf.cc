@@ -9,7 +9,6 @@
 #include <cblas.h>
 #endif
 
-#include <amsim/logger.h>
 #include <amsim/phenobuf.h>
 #include <amsim/stats.h>
 
@@ -88,6 +87,7 @@ void PhenoBuf::score_latent(
           1,
           mean_female[pheno],
           std_female[pheno]);
+    }
 
     cblas_dgemm(
         CblasColMajor,
@@ -122,5 +122,5 @@ void PhenoBuf::score_latent(
         n_ind_);
   }
 }
-}
+
 }  // namespace amsim
