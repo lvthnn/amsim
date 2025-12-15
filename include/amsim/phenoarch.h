@@ -1,9 +1,9 @@
 #ifndef AMSIMCPP_PHENOARCH_H
 #define AMSIMCPP_PHENOARCH_H
 
+#include <amsim/logger.h>
 #include <amsim/rng.h>
 #include <amsim/utils.h>
-#include <amsim/logger.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -39,7 +39,6 @@ class PhenoArch {
       std::vector<double> v_h2_vert,
       std::vector<double> v_rvert_pat,
       std::vector<double> v_rvert_env,
-      std::vector<double> v_rvert_noise,
       std::vector<double> gen_cor,
       std::vector<double> env_cor);
 
@@ -98,28 +97,24 @@ class PhenoArch {
     return v_rvert_pat_[pheno_id];
   }
 
-  void calibrate_noise(std::size_t pheno_id, double var_vert) {
-    if (noise_lock_[pheno_id])
+  void calibrate_scale(std::size_t pheno_id, double var_vert) {
+    if (vert_lock_[pheno_id])
       throw std::runtime_error("noise variance is already calibrated");
 
-    double rvert_noise = v_rvert_noise_[pheno_id];
-    double h2_vert = v_h2_vert_[pheno_id];
+    vert_scale_[pheno_id] = std::sqrt(v_h2_vert_[pheno_id] / var_vert);
+    vert_lock_[pheno_id] = true;
 
-    double num = h2_vert - (rvert_noise * rvert_noise * var_vert);
-    double den = (1 - rvert_noise) * (1 - rvert_noise);
-
-    noise_var_[pheno_id] = num / den;
-    noise_lock_[pheno_id] = true;
-
-    LOG_DEBUG("noise var for pheno " + std::to_string(pheno_id) + ": " + std::to_string(noise_var_[pheno_id]));
+    LOG_DEBUG(
+        "scaling factor for pheno " + std::to_string(pheno_id) + ": " +
+        std::to_string(vert_scale_[pheno_id]));
   }
 
-  bool noise_lock(std::size_t pheno_id) const noexcept {
-    return noise_lock_[pheno_id];
+  bool vert_lock(std::size_t pheno_id) const noexcept {
+    return vert_lock_[pheno_id];
   }
 
-  double noise_var(std::size_t pheno_id) const noexcept {
-    return noise_var_[pheno_id];
+  double vert_scale(std::size_t pheno_id) const noexcept {
+    return vert_scale_[pheno_id];
   }
 
   /// @brief Return non-transmitted / environmental vertical transmission ratio
@@ -128,14 +123,6 @@ class PhenoArch {
   /// @return Non-transmitted / environmental ratio of vertical transmission
   double rvert_env(std::size_t pheno_id) const {
     return v_rvert_env_[pheno_id];
-  }
-
-  /// @brief Return transmittance / noise ratio of vertical transmission
-  ///
-  /// @param pheno_id Integer ID of phenotype
-  /// @return Transmittance / noise ratio of vertical transmission
-  double rvert_noise(std::size_t pheno_id) const {
-    return v_rvert_noise_[pheno_id];
   }
 
   /// @brief Return environmental Cholesky decomposition
@@ -168,15 +155,14 @@ class PhenoArch {
   const std::vector<double> v_h2_vert_;    ///< Vertical component variance
   const std::vector<double> v_rvert_pat_;  ///< Paternal vertical proportion
   const std::vector<double> v_rvert_env_;  ///< Environment vertical proportion
-  const std::vector<double> v_rvert_noise_;  ///< Noise vertical proportion
   const std::vector<double> gen_cor_;  ///< Target genetic correlation matrix
 
   std::vector<double> env_chol_;         ///< Environmental Cholesky factors
   std::vector<std::uint64_t> loc_mask_;  ///< Locus assignment bit masks
   std::vector<double> loc_effects_;      ///< Buffer of phenotype effect sizes
 
-  std::vector<bool> noise_lock_;
-  std::vector<double> noise_var_;
+  std::vector<bool> vert_lock_;
+  std::vector<double> vert_scale_;
 
   /// @brief Initialize random locus assignment masks
   /// @return Vector of locus masks for each phenotype

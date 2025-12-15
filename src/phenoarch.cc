@@ -28,7 +28,6 @@ PhenoArch::PhenoArch(
     std::vector<double> v_h2_vert,
     std::vector<double> v_rvert_pat,
     std::vector<double> v_rvert_env,
-    std::vector<double> v_rvert_noise,
     std::vector<double> gen_cor,
     std::vector<double> env_cor)
     : n_pheno_(n_pheno),
@@ -40,7 +39,6 @@ PhenoArch::PhenoArch(
       v_h2_vert_(std::move(v_h2_vert)),
       v_rvert_pat_(std::move(v_rvert_pat)),
       v_rvert_env_(std::move(v_rvert_env)),
-      v_rvert_noise_(std::move(v_rvert_noise)),
       gen_cor_(std::move(gen_cor)),
       env_chol_(std::move(env_cor)) {
   if (v_n_loc_.size() != n_pheno_)
@@ -75,8 +73,8 @@ PhenoArch::PhenoArch(
   optim_arch(1e4);
 
   // setup the noise variance and lock vectors
-  noise_lock_.resize(n_pheno_);
-  noise_var_.resize(n_pheno_);
+  vert_lock_.resize(n_pheno_);
+  vert_scale_.resize(n_pheno_);
 
   // setup effect masks uniformly (random generation / direct interface later)
   std::size_t n_effects = 0;
