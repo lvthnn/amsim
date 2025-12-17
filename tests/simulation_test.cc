@@ -129,8 +129,7 @@ TEST_F(SimulationPhenomeConfig, PhenomeValidParameters) {
       std::vector<double>({1.0, 0.3, 0.3, 1.0}),
       std::vector<double>({1.0, 0.2, 0.2, 1.0}),
       std::vector<double>({0.5, 0.5}),
-      std::vector<double>({0.5, 0.5}),
-      std::vector<double>({0.0, 0.0})));
+      std::vector<double>({0.5, 0.5})));
 }
 
 TEST_F(SimulationPhenomeConfig, PhenomeWrongNumberOfNames) {
