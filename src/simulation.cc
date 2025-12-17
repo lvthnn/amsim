@@ -11,6 +11,7 @@
 #include <format>
 #include <iostream>
 #include <stdexcept>
+#include <string>
 #include <thread>
 
 namespace amsim {
@@ -202,7 +203,7 @@ void run_simulations(
   std::size_t n_metrics = config.specs.size();
 
   // set rlimit or warn user if process hard limit exceeded
-  resolve_rlimit(n_metrics * n_threads);
+  resolve_rlimit((n_metrics * n_threads) + 100);
 
   for (std::size_t ii = 0; ii < n_threads; ++ii) {
     pool.emplace_back([&]() {
