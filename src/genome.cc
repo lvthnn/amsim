@@ -105,11 +105,8 @@ void Genome::compute_mafs() {
       if (bloc == n_bloc_ind - 1 && (n_ind % 64)) {
         // Mask to trim off padding in last block
         std::uint64_t mask = (1ULL << (n_ind % 64)) - 1ULL;
-
-        // Popcount word for fast total haplotype dosage
         ct_loc += __builtin_popcountll(h0_(loc, bloc) & mask);
         ct_loc += __builtin_popcountll(h1_(loc, bloc) & mask);
-
       } else {
         // Popcount words for fast total haplotype dosage
         ct_loc += __builtin_popcountll(h0_(loc, bloc));
@@ -136,8 +133,14 @@ void Genome::compute_stats() {
     std::size_t hom = 0;
     std::size_t het = 0;
     for (std::size_t bloc = 0; bloc < n_bloc_ind; ++bloc) {
-      hom += __builtin_popcountll(h0_(loc, bloc) & h1_(loc, bloc));
-      het += __builtin_popcountll(h0_(loc, bloc) ^ h1_(loc, bloc));
+      if (bloc == n_bloc_ind - 1 && (n_ind % 64)) {
+        std::uint64_t mask = (1ULL << (n_ind % 64)) - 1ULL;
+        hom += __builtin_popcountll(h0_(loc, bloc) & mask);
+        het += __builtin_popcountll(h1_(loc, bloc) & mask);
+      } else {
+        hom += __builtin_popcountll(h0_(loc, bloc) & h1_(loc, bloc));
+        het += __builtin_popcountll(h0_(loc, bloc) ^ h1_(loc, bloc));
+      }
     }
     double mean_loc = static_cast<double>((2.0 * hom) + het) / n_ind;
     double mean_sqloc = static_cast<double>((4.0 * hom) + het) / n_ind;
