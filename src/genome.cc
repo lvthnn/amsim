@@ -135,8 +135,8 @@ void Genome::compute_stats() {
     for (std::size_t bloc = 0; bloc < n_bloc_ind; ++bloc) {
       if (bloc == n_bloc_ind - 1 && (n_ind % 64)) {
         std::uint64_t mask = (1ULL << (n_ind % 64)) - 1ULL;
-        hom += __builtin_popcountll(h0_(loc, bloc) & mask);
-        het += __builtin_popcountll(h1_(loc, bloc) & mask);
+        hom += __builtin_popcountll((h0_(loc, bloc) & h1_(loc, bloc)) & mask);
+        het += __builtin_popcountll((h0_(loc, bloc) ^ h1_(loc, bloc)) & mask);
       } else {
         hom += __builtin_popcountll(h0_(loc, bloc) & h1_(loc, bloc));
         het += __builtin_popcountll(h0_(loc, bloc) ^ h1_(loc, bloc));
