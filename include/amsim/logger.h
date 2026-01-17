@@ -3,6 +3,8 @@
 
 #include <amsim/log_level.h>
 
+#include <condition_variable>
+#include <deque>
 #include <iostream>
 #include <mutex>
 #include <thread>

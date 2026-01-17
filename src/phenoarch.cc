@@ -62,8 +62,8 @@ PhenoArch::PhenoArch(
 #if defined(__APPLE__)
   dpotrf_(&clpk_uplo, &clpk_n_pheno, env_chol_.data(), &clpk_lda, &clpk_out);
 #else
-  LAPACKE_dpotrf(
-      &clpk_uplo_, &clpk_n_pheno_, env_chol_.data(), &clpk_lda_, &clpk_out_);
+  LAPACK_dpotrf(
+      &clpk_uplo, &clpk_n_pheno, env_chol_.data(), &clpk_lda, &clpk_out);
 #endif
 
   for (std::size_t c = 0; c < n_pheno; ++c)

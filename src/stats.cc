@@ -2,6 +2,7 @@
 #include <cmath>
 #include <limits>
 #include <optional>
+#include <vector>
 
 #ifdef __APPLE__
 #include <Accelerate/Accelerate.h>

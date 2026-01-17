@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <numeric>
+#include <vector>
 
 /// Utility functions for simulation operations
 namespace amsim::utils {

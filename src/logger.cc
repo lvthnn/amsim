@@ -2,6 +2,7 @@
 #include <amsim/logger.h>
 
 #include <chrono>
+#include <condition_variable>
 #include <deque>
 #include <iomanip>
 #include <iostream>

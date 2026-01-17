@@ -45,6 +45,7 @@ if (APPLE)
   target_compile_definitions(amsimcpp PUBLIC ACCELERATE_NEW_LAPACK)
   # target_compile_options(amsimcpp PRIVATE -Wno-deprecated-declarations)
 else()
+  include_directories("/usr/include/openblas")
   find_package(BLAS REQUIRED)
   find_package(LAPACK REQUIRED)
 

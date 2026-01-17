@@ -1,5 +1,6 @@
 #include <numeric>
 #include <vector>
+#include <cmath>
 
 #include <amsim/stats.h>
 
