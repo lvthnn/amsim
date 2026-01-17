@@ -12,15 +12,15 @@ namespace labels {
 
 std::vector<std::string> label_matrix(
     const std::vector<std::string>& names,
-  const std::optional<std::vector<std::string>>& suffix = std::nullopt) {
+    const std::optional<std::vector<std::string>>& suffix = std::nullopt) {
   std::size_t n = names.size();
   std::vector<std::string> labels(n * n);
   for (std::size_t i = 0; i < names.size(); ++i)
     for (std::size_t j = 0; j < names.size(); ++j)
       labels[(i * n) + j] = (suffix) ? names[i] + "_" + (*suffix)[0] +
-        "::" + names[j] + "_" + (*suffix)[1]
-        : labels[(i * n) + j] =
-        names[i] + "::" + names[j];
+                                           "::" + names[j] + "_" + (*suffix)[1]
+                                     : labels[(i * n) + j] =
+                                           names[i] + "::" + names[j];
   return labels;
 }
 }  // namespace labels
@@ -93,7 +93,7 @@ MetricSpec pheno_comp_cor(ComponentType type) {
     const std::size_t n_rows = ctx.n_pheno;
     const std::size_t n_cols = ctx.n_pheno;
     const std::vector<std::string> labels =
-      labels::label_matrix(ctx.pheno_names);
+        labels::label_matrix(ctx.pheno_names);
 
     return Metric(func, name, n_rows, n_cols, labels);
   };
@@ -102,14 +102,14 @@ MetricSpec pheno_comp_cor(ComponentType type) {
 
 MetricSpec pheno_comp_cor(ComponentType type_l, ComponentType type_r) {
   std::string name =
-    "pheno_" + to_string(type_l) + "_" + to_string(type_r) + "_cor";
+      "pheno_" + to_string(type_l) + "_" + to_string(type_r) + "_cor";
   std::vector<std::string> suffixes({to_string(type_l), to_string(type_r)});
   MetricFunc func = metrics::phenome::f_comp_cor(type_l, type_r);
   MetricSetup setup = [func, name, suffixes](const SimulationContext& ctx) {
     const std::size_t n_rows = ctx.n_pheno;
     const std::size_t n_cols = ctx.n_pheno;
     const std::vector<std::string> labels =
-      labels::label_matrix(ctx.pheno_names, suffixes);
+        labels::label_matrix(ctx.pheno_names, suffixes);
 
     return Metric(func, name, n_rows, n_cols, labels);
   };
@@ -122,8 +122,8 @@ MetricSpec pheno_comp_xcor(ComponentType type) {
   MetricSetup setup = [func, name](const SimulationContext& ctx) {
     const std::size_t n_rows = ctx.n_pheno;
     const std::size_t n_cols = ctx.n_pheno;
-    const std::vector<std::string> labels =
-      labels::label_matrix(ctx.pheno_names, std::vector<std::string>({"male", "female"}));
+    const std::vector<std::string> labels = labels::label_matrix(
+        ctx.pheno_names, std::vector<std::string>({"male", "female"}));
 
     return Metric(func, name, n_rows, n_cols, labels);
   };
@@ -198,8 +198,8 @@ MetricSpec pheno_latent_comp_xcor(ComponentType type) {
     for (std::size_t el = 0; el < ctx.n_pheno; ++el)
       latent_names[el] = "L" + std::to_string(el + 1);
 
-    const std::vector<std::string> labels =
-      labels::label_matrix(latent_names, std::vector<std::string>({"male", "female"}));
+    const std::vector<std::string> labels = labels::label_matrix(
+        latent_names, std::vector<std::string>({"male", "female"}));
 
     return Metric(func, name, n_rows, n_cols, labels, true);
   };

@@ -110,16 +110,16 @@ struct SimulationConfig {
   std::vector<double> v_rec;  ///< Recombination probabilities
   std::vector<double> v_mut;  ///< Mutation probabilities
 
-  std::size_t n_pheno;                ///< Number of phenotypes
-  std::vector<std::string> v_name;    ///< Phenotype names
-  std::vector<std::size_t> v_n_loc;   ///< Loci per phenotype
-  std::vector<double> v_h2_gen;       ///< Narrow-sense heritabilities
-  std::vector<double> v_h2_env;       ///< Environmental variance proportions
-  std::vector<double> v_h2_vert;      ///< Vertical transmission proportions
-  std::vector<double> gen_cor;        ///< Genetic correlation matrix
-  std::vector<double> env_cor;        ///< Environmental correlation matrix
-  std::vector<double> v_rvert_pat;    ///< Paternal transmission ratios
-  std::vector<double> v_rvert_env;    ///< Nurture / environment ratios
+  std::size_t n_pheno;               ///< Number of phenotypes
+  std::vector<std::string> v_name;   ///< Phenotype names
+  std::vector<std::size_t> v_n_loc;  ///< Loci per phenotype
+  std::vector<double> v_h2_gen;      ///< Narrow-sense heritabilities
+  std::vector<double> v_h2_env;      ///< Environmental variance proportions
+  std::vector<double> v_h2_vert;     ///< Vertical transmission proportions
+  std::vector<double> gen_cor;       ///< Genetic correlation matrix
+  std::vector<double> env_cor;       ///< Environmental correlation matrix
+  std::vector<double> v_rvert_pat;   ///< Paternal transmission ratios
+  std::vector<double> v_rvert_env;   ///< Nurture / environment ratios
 
   MatingType mating_type;        ///< Mating model type
   std::vector<double> mate_cor;  ///< Target mate correlations
