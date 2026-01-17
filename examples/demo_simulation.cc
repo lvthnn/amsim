@@ -30,8 +30,8 @@ int main() {
       {0.5, 0.5},
       {0.5, 0.5},
       {0.0, 0.0},
-      {1.0, 0.5, 0.5, 1.0},
-      {1.0, 0.5, 0.5, 1.0});
+      std::vector<double>({1.0, 0.5, 0.5, 1.0}),
+      std::vector<double>({1.0, 0.5, 0.5, 1.0}));
 
   config.assortative_mating(std::vector<double>{0.4, 0.3, 0.2, 0.5}, 1e-7, 2e6);
 
