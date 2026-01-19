@@ -216,8 +216,8 @@ void PhenoArch::optim_arch(std::size_t max_it, double eps) {
           std::size_t intersect_cur = intersect_prev + (causal ? -1 : 1);
           double target = weights[idx];
 
-          delta += (intersect_cur - target) * (intersect_cur - target) -
-                   (intersect_prev - target) * (intersect_prev - target);
+          delta += ((intersect_cur - target) * (intersect_cur - target)) -
+                   ((intersect_prev - target) * (intersect_prev - target));
         }
       }
 
@@ -280,8 +280,7 @@ std::vector<std::size_t> PhenoArch::pheno_loc(
 
   for (std::size_t word = 0; word < n_words; ++word) {
     for (std::uint64_t mask = ptr_pheno[word]; mask; mask &= (mask - 1)) {
-      const std::size_t offset =
-          static_cast<std::uint64_t>(__builtin_ctzll(mask));
+      const auto offset = static_cast<std::uint64_t>(__builtin_ctzll(mask));
       const std::size_t loc = (64 * word) + offset;
       loci.push_back(loc);
     }
