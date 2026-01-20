@@ -38,28 +38,18 @@ target_include_directories(amsimcpp
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
-# Resolve OS-dependent BLAS / LAPACK imports
+# Use Eigen with BLAS/LAPACK
 if (APPLE)
   find_library(ACCELERATE_FRAMEWORK Accelerate REQUIRED)
   target_link_libraries(amsimcpp PUBLIC ${ACCELERATE_FRAMEWORK})
   target_compile_definitions(amsimcpp PUBLIC ACCELERATE_NEW_LAPACK)
-  # target_compile_options(amsimcpp PRIVATE -Wno-deprecated-declarations)
+  target_compile_definitions(amsimcpp PUBLIC EIGEN_USE_BLAS EIGEN_USE_LAPACKE)
 else()
   include_directories("/usr/include/openblas")
   find_package(BLAS REQUIRED)
   find_package(LAPACK REQUIRED)
-
-  if(TARGET BLAS::BLAS)
-    target_link_libraries(amsimcpp PUBLIC BLAS::BLAS)
-  else()
-    target_link_libraries(amsimcpp PUBLIC ${BLAS_LIBRARIES})
-  endif()
-
-  if(TARGET LAPACK::LAPACK)
-    target_link_libraries(amsimcpp PUBLIC LAPACK::LAPACK)
-  else()
-    target_link_libraries(amsimcpp PUBLIC ${LAPACK_LIBRARIES})
-  endif()
+  target_link_libraries(amsimcpp PUBLIC BLASS::BLAS LAPACK::LAPACK)
+  target_compile_definitions(amsimcpp PUBLIC EIGEN_USE_BLAS EIGEN_USE_LAPACKE)
 endif()
 
 # Python bindings
