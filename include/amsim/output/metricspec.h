@@ -1,8 +1,11 @@
-#ifndef AMSIMCPP_METRICSPEC_H
-#define AMSIMCPP_METRICSPEC_H
+#pragma once
 
-#include <amsim/metric.h>
-#include <amsim/simulation_context.h>
+#include <amsim/data/phenome.h>
+
+#include <amsim/state.h>
+#include <amsim/params.h>
+
+#include <amsim/output/metric.h>
 
 #include <functional>
 #include <optional>
@@ -11,7 +14,8 @@
 namespace amsim {
 
 /// @brief Function type for setting up a metric from context
-using MetricSetup = std::function<Metric(const SimulationContext& ctx)>;
+using MetricSetup = std::function<Metric(const State& s, const Params& p)>;
+using MetricFunc = std::function<std::vector<double>(const State& s, const Params& p)>;
 
 /// @brief Specification for creating a metric
 ///
@@ -38,7 +42,7 @@ class MetricSpec {
   /// @brief Create a Metric instance from context
   /// @param ctx Simulation context
   /// @return Configured Metric instance
-  Metric setup(SimulationContext& ctx) const { return setup_(ctx); };
+  Metric setup(const State& s, const Params& p) const { return setup_(s, p); };
 
   const bool require_lat;  ///< Whether latent phenotypes are required
 
@@ -106,5 +110,3 @@ MetricSpec pheno_latent_comp_mean(ComponentType type);
 MetricSpec pheno_latent_comp_var(ComponentType type);
 
 }  // namespace amsim
-
-#endif  // AMSIMCPP_METRICSPEC_H

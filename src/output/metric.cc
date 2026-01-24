@@ -17,14 +17,12 @@ Metric::Metric(
     std::string name,
     std::size_t n_rows,
     std::size_t n_cols,
-    std::vector<std::string> labels,
-    bool require_lat)
+    std::vector<std::string> labels)
     : name(std::move(name)),
       n_rows(n_rows),
       n_cols(n_cols),
-      require_lat(require_lat),
       f_(std::move(f)),
-      buf_(n_rows * n_cols),
+      data_(n_rows * n_cols),
       labels_(std::move(labels)) {}
 
 std::string Metric::header() {
@@ -36,8 +34,8 @@ std::string Metric::header() {
   return header;
 }
 
-std::string Metric::stream(const SimulationContext& ctx) {
-  buf_ = f_(ctx);
+std::string Metric::stream(const State& s, const Params& p) {
+  buf_ = f_(s, p);
   std::string res;
   for (std::size_t el = 0; el < buf_.size(); ++el)
     res += std::to_string(buf_[el]) + ((el < (buf_.size() - 1)) ? "\t" : "");

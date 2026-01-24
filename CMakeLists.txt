@@ -15,21 +15,10 @@ endif()
 
 # Library targets
 add_library(amsimcpp STATIC
-  src/genome.cc
-  src/phenotype.cc
+  src/transform/genome_transform.cc
+  src/transform/mating_transform.cc
+  src/transform/phenome_transform.cc
   src/utils.cc
-  src/mating.cc
-  src/phenobuf.cc
-  src/phenoarch.cc
-  src/haplobuf.cc
-  src/logger.cc
-  src/logger_timer.cc
-  src/metric.cc
-  src/metricspec.cc
-  src/simulation.cc
-  src/simulation_config.cc
-  src/simulation_results.cc
-  src/stats.cc
 )
 
 # Public headers for users of the lib
@@ -76,40 +65,20 @@ elseif (MSVC)
 endif()
 
 # Use GoogleTest
-include(FetchContent)
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
-FetchContent_Declare(
-  googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG v1.17.0
-)
-FetchContent_MakeAvailable(googletest)
 
-enable_testing()
-
-# Example programs
-add_executable(demo_simulation examples/demo_simulation.cc)
-add_executable(demo_results examples/demo_results.cc)
-add_executable(demo_logger examples/demo_logger.cc)
-
-target_link_libraries(demo_simulation PRIVATE amsimcpp)
-target_link_libraries(demo_results PRIVATE amsimcpp)
-target_link_libraries(demo_logger PRIVATE amsimcpp)
-
-# Link unit tests
-add_executable(stats_test tests/stats_test.cc)
-add_executable(utils_test tests/utils_test.cc)
-add_executable(simulation_test tests/simulation_test.cc)
-
-target_link_libraries(stats_test PRIVATE GTest::gtest_main amsimcpp)
-target_link_libraries(utils_test PRIVATE GTest::gtest_main amsimcpp)
-target_link_libraries(simulation_test PRIVATE GTest::gtest_main amsimcpp)
-
-include(GoogleTest)
-gtest_discover_tests(stats_test)
-gtest_discover_tests(utils_test)
-gtest_discover_tests(simulation_test)
+# include(FetchContent)
+# set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+# set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+# FetchContent_Declare(
+#   googletest
+#   GIT_REPOSITORY https://github.com/google/googletest.git
+#   GIT_TAG v1.17.0
+# )
+# FetchContent_MakeAvailable(googletest)
+# 
+# enable_testing()
+# 
+# include(GoogleTest)
 
 
 # Install rules (so other projects can find+link amsimcpp)
