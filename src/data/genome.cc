@@ -1,5 +1,4 @@
 #include <amsim/data/genome.h>
-
 #include <amsim/utils.h>
 
 #include <cstddef>
@@ -114,7 +113,8 @@ void GenoBuf::transpose() noexcept {
 
 void GenoBuf::compute_mafs() {
   if (h0_.view() != HaploView::LOC_MAJOR)
-    throw std::runtime_error("Compute MAFs in locus-major view.");
+    throw std::runtime_error(
+        "GenoBuf::compute_mafs: compute MAFs in locus-major view.");
 
   std::size_t n_ind = h0_.n_ind();
   std::size_t n_loc = h0_.n_loc();
@@ -146,7 +146,8 @@ void GenoBuf::compute_mafs() {
 
 void GenoBuf::compute_stats() {
   if (h0_.view() != HaploView::LOC_MAJOR)
-    throw std::runtime_error("Compute stats in loc-major view.");
+    throw std::runtime_error(
+        "GenoBuf::compute_stats: compute stats in loc-major view.");
 
   std::size_t n_ind = h0_.n_ind();
   std::size_t n_loc = h0_.n_loc();
@@ -175,4 +176,39 @@ void GenoBuf::compute_stats() {
   }
 }
 
-}  // namespace amsim
+void GenoBuf::decompress(
+    std::size_t ind_start,
+    std::size_t ind_end,
+    const std::vector<std::size_t>& loc,
+    Eigen::MatrixXd& out,
+    bool standardise) {
+  if (view() != HaploView::LOC_MAJOR)
+    throw std::runtime_error("GenoBuf::decompress: require loc-major view");
+  if (ind_end > n_ind())
+    throw std::runtime_error(
+        "GenoBuf::decompress: argument ind_end exceeds number of individuals");
+
+  std::size_t n_loc = loc.size();
+  std::size_t start = ind_start / 64;
+  std::size_t end = (ind_end + 63) / 64;
+
+  for (std::size_t el = 0; el < n_loc; ++el) {
+    double scl = 1.0 / std::sqrt(v_lvar_[loc[el]]);
+    double cen = -v_lmean_[loc[el]] * scl;
+    for (std::size_t word = start; word < end; ++word) {
+      std::size_t bit_lo = (word == start) ? (ind_start % 64) : 0;
+      std::size_t bit_hi = (word == end - 1) ? ((ind_end - 1) % 64) + 1 : 64;
+      std::uint64_t h0 = h0_(loc[el], word);
+      std::uint64_t h1 = h1_(loc[el], word);
+
+      for (std::size_t bit = bit_lo; bit < bit_hi; ++bit) {
+        out((64 * word) + bit - ind_start, el) =
+            (standardise)
+                ? (scl * (((h0 >> bit) & 1ULL) + ((h1 >> bit) & 1ULL))) + cen
+                : ((h0 >> bit) & 1ULL) + ((h1 >> bit) & 1ULL);
+      }
+    }
+  }
+}
+
+}  // namespace amsim::genome

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <amsim/rng.h>
-
 #include <amsim/utils.h>
 
 #include <Eigen/Dense>
@@ -87,6 +86,13 @@ class GenoBuf {
   void compute_mafs();
   void compute_stats();
 
+  void decompress(
+      std::size_t ind_start,
+      std::size_t ind_end,
+      const std::vector<std::size_t>& loc,
+      Eigen::MatrixXd& out,
+      bool standardise = false);
+
  private:
   const Eigen::VectorXd v_mut_;
   const Eigen::VectorXd v_rec_;
@@ -97,7 +103,6 @@ class GenoBuf {
   rng::BernoulliWord<16> bw_;
   HaploBuf h0_;
   HaploBuf h1_;
-
 };
 
-}
+}  // namespace amsim::genome
