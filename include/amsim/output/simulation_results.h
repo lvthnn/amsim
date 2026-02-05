@@ -3,6 +3,7 @@
 
 #include <amsim/stats.h>
 
+#include <array>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -10,7 +11,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <array>
 
 namespace amsim {
 
