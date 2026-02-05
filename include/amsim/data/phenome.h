@@ -129,8 +129,24 @@ class PhenoBuf {
     return Eigen::Map<const Eigen::VectorXd>(pos, n_sex_);
   }
 
-  // Compute means and variances of phenotype components
+  // means and variances of phenotype components
   void compute_stats();
+
+  double comp_mean(std::size_t pheno_id, ComponentType type) const {
+    return comp_mean_(static_cast<int>(type), pheno_id);
+  }
+
+  double comp_var(std::size_t pheno_id, ComponentType type) const {
+    return comp_var_(static_cast<int>(type), pheno_id);
+  }
+
+  Eigen::Ref<const Eigen::VectorXd> comp_mean(ComponentType type) const {
+    return comp_mean_.row(static_cast<int>(type));
+  }
+
+  Eigen::Ref<const Eigen::VectorXd> comp_var(ComponentType type) const {
+    return comp_var_.row(static_cast<int>(type));
+  }
 
  private:
   const std::size_t n_ind_;  ///< Number of individuals
