@@ -1,7 +1,8 @@
 #pragma once
 
-#include <amsim/state.h>
+#include <amsim/output/estimator.h>
 #include <amsim/params.h>
+#include <amsim/state.h>
 
 #include <filesystem>
 
@@ -16,11 +17,12 @@ void simulation_preprocess(Params& params);
 void simulation_run(
     State& state,
     const Params& params,
+    const Estimators& estimators,
     std::size_t n_gen,
-    std::filesystem::path out_dir);
+    std::optional<std::size_t> rep_id = std::nullopt);
 
 void simulation_single();
 
 void simulation_multithread();
 
-}
+}  // namespace amsim

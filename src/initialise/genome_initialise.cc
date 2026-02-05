@@ -1,7 +1,6 @@
-#include <amsim/state.h>
+#include <amsim/initialise.h>
 #include <amsim/params.h>
-
-#include  <amsim/initialise.h>
+#include <amsim/state.h>
 
 namespace amsim::genome {
 
@@ -17,7 +16,7 @@ void HaplotypeGeneratorIID::generate_haplotypes(GenoBuf& buf) {
   for (std::size_t loc = 0; loc < n_loc; ++loc) {
     // set probability of bernoulli generator
     bw_.set_prob(v_maf_(loc));
-    
+
     // row pointers for easy access
     std::uint64_t* word0 = h0.rowptr(loc);
     std::uint64_t* word1 = h1.rowptr(loc);
@@ -29,4 +28,4 @@ void HaplotypeGeneratorIID::generate_haplotypes(GenoBuf& buf) {
   }
 }
 
-} // namespace amsim::genome
+}  // namespace amsim::genome

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <amsim/output/log_level.h>
-
 #include <Eigen/Dense>
 #include <cstddef>
 #include <filesystem>
@@ -44,7 +42,7 @@ struct GenomeParams {
 
   bool has_ld() const { return ld_cor.has_value(); }
 };
-} // namespace genome
+}  // namespace genome
 
 namespace phenome {
 /// ---------------------------------------------------------------------------
@@ -87,25 +85,26 @@ struct PhenomeParams {
             rnur_env_ ? std::move(*rnur_env_)
                       : Eigen::VectorXd::Constant(n_pheno, 0.5)) {};
 
-  std::size_t n_pheno;             ///< Number of phenotypes
-  std::vector<std::string> names;  ///< Vector of phenotype names
-  std::vector<std::size_t> n_locs; ///< Vector of number of loci per phenotype
+  std::size_t n_pheno;              ///< Number of phenotypes
+  std::vector<std::string> names;   ///< Vector of phenotype names
+  std::vector<std::size_t> n_locs;  ///< Vector of number of loci per phenotype
 
-  Eigen::VectorXd h2_gen; ///< Vector of genetic component variances
-  Eigen::VectorXd h2_env; ///< Vector of environmental component variances
-  Eigen::VectorXd h2_nur; ///< Vector of nurture component variances
+  Eigen::VectorXd h2_gen;  ///< Vector of genetic component variances
+  Eigen::VectorXd h2_env;  ///< Vector of environmental component variances
+  Eigen::VectorXd h2_nur;  ///< Vector of nurture component variances
 
-  Eigen::MatrixXd gen_cor; ///< Genetic component correlation matrix
-  Eigen::MatrixXd env_cor; ///< Environmental component correlation matrix
+  Eigen::MatrixXd gen_cor;  ///< Genetic component correlation matrix
+  Eigen::MatrixXd env_cor;  ///< Environmental component correlation matrix
 
-  Eigen::MatrixXd pheno_effects;       ///< Matrix with effect column vectors 
-  std::vector<std::size_t> causal_loc; ///< Vector of causal loci for phenotypes
+  std::vector<Eigen::VectorXd>
+      pheno_effects;  ///< Matrix with effect column vectors
+  std::vector<std::vector<std::size_t>>
+      causal_loc;  ///< Vector of causal loci for phenotypes
 
-  Eigen::VectorXd rnur_pat; ///< Paternal ratio in nurture effect
-  Eigen::VectorXd rnur_env; ///< Environmental ratio in nurture effect
+  Eigen::VectorXd rnur_pat;  ///< Paternal ratio in nurture effect
+  Eigen::VectorXd rnur_env;  ///< Environmental ratio in nurture effect
 };
-} // namespace phenome
-
+}  // namespace phenome
 
 namespace mating {
 /// ---------------------------------------------------------------------------
@@ -125,16 +124,13 @@ struct MatingParams {
         temp_decay(temp_decay_) {};
 
   Eigen::MatrixXd mate_cor;
-  Eigen::MatrixXd cor_U;
-  Eigen::MatrixXd cor_S;
-  Eigen::MatrixXd cor_VT;
 
   double tol_inf;
   std::size_t max_itr;
   double temp_init;
   double temp_decay;
 };
-} // namespace mating
+}  // namespace mating
 
 /// ---------------------------------------------------------------------------
 /// Simulation parameters
@@ -146,7 +142,7 @@ struct SimulationParams {
 
   std::filesystem::path out_dir;
 
-  LogLevel log_level;
+  std::string log_level;
   bool log_to_file = false;
 };
 

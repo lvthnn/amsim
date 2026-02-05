@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include <amsim/params.h>
 
@@ -12,4 +12,4 @@ void calibrate_ld_matrix(Params& params);
 // correlation structure
 void optimise_phenotype_arch(Params& params);
 
-} // namespace amsim
+}  // namespace amsim::preprocess

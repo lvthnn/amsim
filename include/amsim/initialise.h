@@ -1,7 +1,7 @@
 #pragma once
 
-#include <amsim/state.h>
 #include <amsim/params.h>
+#include <amsim/state.h>
 
 namespace amsim {
 
@@ -17,15 +17,13 @@ class HaplotypeGenerator {
 class HaplotypeGeneratorIID : public HaplotypeGenerator {
  public:
   explicit HaplotypeGeneratorIID(const Params& params)
-    : v_maf_(params.geno.v_maf),
-      bw_() {};
+      : v_maf_(params.geno.v_maf), bw_() {};
   void generate_haplotypes(GenoBuf& buf) override;
 
  private:
   const Eigen::VectorXd& v_maf_;
   rng::BernoulliWord<16> bw_;
 };
-
 
 // Class to initialise founder population genotypes with linkage structure
 class HaploGeneratorLD : public HaplotypeGenerator {
@@ -41,23 +39,19 @@ class HaploGeneratorLD : public HaplotypeGenerator {
   std::size_t n_ld_blocks_;
 };
 
-} // namespace genome
-
+}  // namespace genome
 
 namespace phenome {
 
 // assign phenotype effect vectors to produce
 class PhenotypeEffects {
  public:
-
  private:
   Eigen::VectorXd h2_gen_;
   Eigen::MatrixXd ld_cor_;
   Eigen::MatrixXd gen_cor_;
 };
 
+}  // namespace phenome
 
-} // namespace phenome
-
-
-} // namespace amsim
+}  // namespace amsim
