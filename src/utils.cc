@@ -3,7 +3,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <algorithm>
 #include <numeric>
 
 namespace amsim::utils {

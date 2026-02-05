@@ -13,4 +13,6 @@ std::vector<std::size_t> order(const Eigen::VectorXd& v);
 
 Eigen::MatrixXd standardise(const Eigen::MatrixXd& mat);
 
+Eigen::MatrixXd cor(const Eigen::MatrixXd& X, const Eigen::MatrixXd& Y);
+
 }  // namespace amsim::utils
