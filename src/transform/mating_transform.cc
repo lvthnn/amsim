@@ -42,7 +42,7 @@ void AssortativeMating::computeCor() {
   for (std::size_t pair = 0; pair < n_sex_; ++pair)
     cor_.noalias() +=
         std_male_.row(pair).transpose() * std_female_.row(match_cur_[pair]);
-  cor_ /= n_sex_;
+  cor_ /= static_cast<double>(n_sex_);
 }
 
 void AssortativeMating::proposeState() {
@@ -57,7 +57,8 @@ void AssortativeMating::proposeState() {
   delta_cur_ /= n_sex_;
 
   // compute the energy differential
-  alpha_cur_ = delta_cur_.squaredNorm() + 2 * delta_cur_.cwiseProduct(ell_cur_).sum();
+  alpha_cur_ =
+      delta_cur_.squaredNorm() + 2 * delta_cur_.cwiseProduct(ell_cur_).sum();
 }
 
 void AssortativeMating::updateState() {
@@ -80,27 +81,29 @@ void AssortativeMating::updateState() {
   }
 }
 
-Matching AssortativeMating::operator()(
-    const Eigen::MatrixXd& pheno_male, const Eigen::MatrixXd& pheno_female) {
+void AssortativeMating::operator()(State& state) {
+  const Eigen::MatrixXd& pheno_male = state.pheno.male();
+  const Eigen::MatrixXd& pheno_female = state.pheno.female();
+
   // generate a random matching using Fisher-Yates shuffling
   randomiseMatching();
 
   // if max_itr_ has been assigned zero, we are doing random mating
   if (max_itr_ == 0) {
     n_itr_ = 0;
-    return match_cur_;
+    return;
   }
 
   n_itr_ = max_itr_;
 
-  // Standardise the supplied matrices
+  // standardise the supplied matrices
   std_male_ = utils::standardise(pheno_male);
   std_female_ = utils::standardise(pheno_female);
 
   latentMatching();
   computeCor();
 
-  // Initialise values for this run
+  // initialise values for this run
   match_opt_ = match_cur_;
   temp_cur_ = temp_init_;
   ell_cur_ = cor_ - mate_cor_;
@@ -108,7 +111,7 @@ Matching AssortativeMating::operator()(
   err_l2_opt_ = ell_cur_.norm();
   err_linfty_opt_ = ell_cur_.array().abs().maxCoeff();
 
-  // Perform annealing routine
+  // annealing routine
   for (std::size_t itr = 0; itr < max_itr_; ++itr) {
     proposeState();
     updateState();
@@ -122,7 +125,7 @@ Matching AssortativeMating::operator()(
 
   cor_ = ell_opt_ + mate_cor_;
 
-  return match_opt_;
+  state.matching = match_opt_;
 }
 
 }  // namespace amsim::mating
