@@ -1,68 +1,89 @@
-#include <amsim/state.h>
-#include <amsim/params.h>
-
-#include <amsim/preprocess.h>
-#include <amsim/transform.h>
 #include <amsim/initialise.h>
+#include <amsim/output/estimator.h>
+#include <amsim/params.h>
+#include <amsim/preprocess.h>
+#include <amsim/state.h>
+#include <amsim/transform.h>
 
-#include <memory>
 #include <filesystem>
+#include <iostream>
 
 namespace amsim {
 
 void setup_output(const std::filesystem::path& out_dir) {
   if (std::filesystem::exists(out_dir))
-    throw std::runtime_error("directory " + out_dir.string() + " already exists!");
+    throw std::runtime_error(
+        "directory " + out_dir.string() + " already exists!");
   std::filesystem::create_directory(out_dir);
 }
 
-void simulation_preprocess(Params& params) {
-  preprocess::calibrate_ld_matrix(params);
-  preprocess::optimise_phenotype_arch(params);
-}
+// void simulation_preprocess(Params& params) {
+//   preprocess::calibrate_ld_matrix(params);
+//   preprocess::optimise_phenotype_arch(params);
+// }
 
+// runs a single-threaded simulation
+// this should be used multithreaded controller
 void simulation_run(
     State& state,
     const Params& params,
+    const Estimators& estimators,
     std::size_t n_gen,
-    const std::filesystem::path& out_dir) {
-  // Set up the output directory
-  setup_output(out_dir);
+    std::optional<std::size_t> rep_id) {
+  // set up output directory
+  setup_output(params.sim.out_dir);
 
-  // Founder haplotype initialiser
-  std::unique_ptr<genome::HaplotypeGenerator> haplo;
-  if (params.geno.has_ld()) {
-    haplo = std::make_unique<genome::HaploGeneratorLD>(params); // then grapple with this demon
-  } else {
-    haplo = std::make_unique<genome::HaplotypeGeneratorIID>(params); // implement this first
-  }
+  rng::set_seed(rng::auto_seed(params.sim.rng_seed));
 
-  // Set up required transformers
-  phenome::PhenotypeScorer score(params); // needs to be implemented
-  mating::AssortativeMating mate(params); // ready
-  genome::GenomeUpdater update(params); // needs to be implemented
+  // founder haplotype initialiser
+  genome::HaplotypeGeneratorIID haplo(params);
 
-  // Generate the initial state
-  haplo->generate_haplotypes(state.geno);
+  // set up required transformers
+  phenome::ScorePhenotypes score(params);
+  mating::AssortativeMating mate(params);
+  genome::UpdateGenome update(params);
 
-  for (std::size_t gen = 0; gen < n_gen; ++gen) {
-    // Compute genome mean and variances
+  // estimator super-transformer
+  ComputeEstimates estimate(params, estimators, rep_id);
+
+  // generate the initial state
+  std::cout << "generating haplotypes\n";
+  haplo.generate_haplotypes(state.geno);
+
+  // stream headers to estimator files
+  estimate.headers();
+
+  while (state.gen < n_gen) {
     state.geno.compute_mafs();
     state.geno.compute_stats();
 
-    // Score phenotypes using operator()
-    score(state.pheno);
+    // score phenotypes using operator()
+    score(state);
     state.pheno.compute_stats();
 
-    // Match mates
-    auto match = mate(state.pheno.male(), state.pheno.female());
+    // match mates
+    mate(state);
+
+    // TODO(karihlynsson): Produce subviews / sample the population
+    //     for (each view of the population)
+    //       std::size_t view_mask = view->sample(state);
+    //       estimate(state, view);
+
+    // compute metrics for everything
+    estimate(state);
 
     // Update the genome
+    state.geno.transpose();
     update(state);
+    state.geno.transpose();
 
-    // Produce subviews / sample the population
+    ++state.gen;
   }
 }
 
-}
+// void simulations_run(
+//   State& state,
+//
+// )
 
+}  // namespace amsim
