@@ -3,25 +3,38 @@
 #include <amsim/params.h>
 #include <amsim/state.h>
 
+#include <ranges>
+#include <vector>
+
 namespace amsim {
 
 namespace genome {
 
 // Class to update the genome
-class GenomeUpdater {
+class UpdateGenome {
  public:
-  explicit GenomeUpdater(const Params& params);
+  explicit UpdateGenome(const Params& params)
+      : n_ind_(params.geno.n_ind),
+        n_sex_(n_ind_ / 2),
+        v_rec_(params.geno.v_rec),
+        v_mut_(params.geno.v_mut),
+        bw_() {};
   void operator()(State& state);
 
  private:
-  Eigen::VectorXd& v_rec_;
-  Eigen::VectorXd& v_mut_;
+  const std::size_t n_ind_;
+  const std::size_t n_sex_;
+  const Eigen::VectorXd& v_rec_;
+  const Eigen::VectorXd& v_mut_;
+  const double* ptr_rec_;
+  const double* ptr_mut_;
   std::vector<std::uint64_t> transmit_chunk_;
   rng::BernoulliWord<16> bw_;
 
+  std::array<std::uint64_t, 2> gamWord(std::uint64_t h0, std::uint64_t h1);
+
   void updateGenome(State& state);
   void updateNurture(State& state);
-  std::array<std::uint64_t, 2> gamWord(std::uint64_t h0, std::uint64_t h1);
 };
 
 }  // namespace genome
@@ -29,16 +42,49 @@ class GenomeUpdater {
 namespace phenome {
 
 // Scores phenotypes using GenoBuf and PhenoBuf
-class PhenotypeScorer {
+class ScorePhenotypes {
  public:
-  explicit PhenotypeScorer(const Params& params);
-  void operator()(PhenoBuf& buf);
+  explicit ScorePhenotypes(const Params& params)
+      : n_ind_(params.geno.n_ind),
+        n_pheno_(params.pheno.n_pheno),
+        pheno_effects_(params.pheno.pheno_effects),
+        pheno_loc_(params.pheno.causal_loc),
+        h2_gen_(params.pheno.h2_gen),
+        h2_env_(params.pheno.h2_env),
+        h2_nur_(params.pheno.h2_nur),
+        rnur_pat_(params.pheno.rnur_pat),
+        rnur_env_(params.pheno.rnur_env),
+        env_cor_(params.pheno.env_cor) {
+    env_chol_ = env_cor_.llt().matrixL();
+
+    std::size_t max_size = std::ranges::max(
+        pheno_loc_ | std::views::transform(&std::vector<std::size_t>::size));
+
+    gen_tile_.resize(IND_TILE, max_size);
+  };
+
+  void operator()(State& state);
 
  private:
-  Eigen::MatrixXd pheno_effects_;
-  std::vector<double> h2_gen_;
-  std::vector<double> h2_env_;
-  std::vector<double> h2_nur_;
+  const std::size_t n_ind_;
+  const std::size_t n_pheno_;
+
+  const std::vector<Eigen::VectorXd>& pheno_effects_;
+  const std::vector<std::vector<std::size_t>>& pheno_loc_;
+  const Eigen::VectorXd& h2_gen_;
+  const Eigen::VectorXd& h2_env_;
+  const Eigen::VectorXd& h2_nur_;
+  const Eigen::VectorXd& rnur_pat_;
+  const Eigen::VectorXd& rnur_env_;
+
+  static constexpr std::size_t IND_TILE = 512;
+  Eigen::MatrixXd gen_tile_;
+  Eigen::MatrixXd env_chol_;
+  const Eigen::MatrixXd& env_cor_;
+
+  void scoreGenetic(State& state);
+  void scoreEnvironmental(State& state);
+  void scoreTotal(State& state);
 };
 
 }  // namespace phenome
@@ -57,7 +103,7 @@ class AssortativeMating {
         mate_cor_(std::move(p.mate.mate_cor)),
         match_cur_(n_sex_),
         match_opt_(n_sex_),
-        n_itr_(p.mate.max_itr),
+        max_itr_(p.mate.max_itr),
         temp_init_(p.mate.temp_init),
         temp_decay_(p.mate.temp_decay),
         tol_inf_(p.mate.tol_inf) {
@@ -70,8 +116,7 @@ class AssortativeMating {
     mate_cor_V1_ = svd.matrixV().col(0);
   };
 
-  Matching operator()(
-      const Eigen::MatrixXd& pheno_male, const Eigen::MatrixXd& pheno_female);
+  void operator()(State& state);
 
   // optimal matching
   Matching matching() const { return match_opt_; };
@@ -118,8 +163,6 @@ class AssortativeMating {
   double temp_decay_;
   double temp_cur_;
   double tol_inf_;
-
-  double diff_energy_;
 
   // shuffle the internal matching using Fisher-Yates
   void randomiseMatching();
