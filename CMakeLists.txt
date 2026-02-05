@@ -15,10 +15,15 @@ endif()
 
 # Library targets
 add_library(amsimcpp STATIC
+  src/utils.cc
+  src/data/genome.cc
+  src/data/phenome.cc
+  src/initialise/genome_initialise.cc
   src/transform/genome_transform.cc
   src/transform/mating_transform.cc
   src/transform/phenome_transform.cc
-  src/utils.cc
+  src/output/estimator.cc
+  src/simulation.cc
 )
 
 # Public headers for users of the lib
@@ -32,7 +37,7 @@ if (APPLE)
   find_library(ACCELERATE_FRAMEWORK Accelerate REQUIRED)
   target_link_libraries(amsimcpp PUBLIC ${ACCELERATE_FRAMEWORK})
   target_compile_definitions(amsimcpp PUBLIC ACCELERATE_NEW_LAPACK)
-  target_compile_definitions(amsimcpp PUBLIC EIGEN_USE_BLAS EIGEN_USE_LAPACKE)
+  target_compile_definitions(amsimcpp PUBLIC EIGEN_USE_BLAS EIGEN_USE_LAPACK)
 else()
   include_directories("/usr/include/openblas")
   find_package(BLAS REQUIRED)
@@ -80,6 +85,14 @@ endif()
 # 
 # include(GoogleTest)
 
+
+# Examples
+option(BUILD_EXAMPLES "Build example applications" ON)
+
+if (BUILD_EXAMPLES)
+  add_executable(demo_simulation examples/demo_simulation.cc)
+  target_link_libraries(demo_simulation PRIVATE amsimcpp)
+endif()
 
 # Install rules (so other projects can find+link amsimcpp)
 include(GNUInstallDirs)
