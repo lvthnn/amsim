@@ -17,16 +17,17 @@ void setup_output(const std::filesystem::path& out_dir) {
   std::filesystem::create_directory(out_dir);
 }
 
-// void simulation_preprocess(Params& params) {
-//   preprocess::calibrate_ld_matrix(params);
-//   preprocess::optimise_phenotype_arch(params);
-// }
+void simulation_preprocess(Params& params) {
+  preprocess::OptimisePhenotypeArchitecture opt(params);
+
+  opt();
+}
 
 // runs a single-threaded simulation
-// this should be used multithreaded controller
+// this should be used by multithreaded controller
 void simulation_run(
     State& state,
-    const Params& params,
+    Params& params,
     const Estimators& estimators,
     std::size_t n_gen,
     std::optional<std::size_t> rep_id) {
@@ -34,6 +35,8 @@ void simulation_run(
   setup_output(params.sim.out_dir);
 
   rng::set_seed(rng::auto_seed(params.sim.rng_seed));
+
+  simulation_preprocess(params);
 
   // founder haplotype initialiser
   genome::HaplotypeGeneratorIID haplo(params);
