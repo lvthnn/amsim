@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -53,6 +54,8 @@ struct PhenomeParams {
       std::size_t n_pheno_,
       std::vector<std::string> names_,
       std::vector<std::size_t> n_locs_,
+      std::optional<std::vector<Eigen::VectorXd>> pheno_effects_ = std::nullopt,
+      std::optional<std::vector<std::vector<std::size_t>>> pheno_loc_ = std::nullopt,
       std::optional<Eigen::VectorXd> h2_gen_ = std::nullopt,
       std::optional<Eigen::VectorXd> h2_env_ = std::nullopt,
       std::optional<Eigen::VectorXd> h2_nur_ = std::nullopt,
@@ -63,31 +66,57 @@ struct PhenomeParams {
       : n_pheno(n_pheno_),
         names(std::move(names_)),
         n_locs(std::move(n_locs_)),
+        pheno_effects(
+            pheno_effects_ ? std::move(pheno_effects_.value())
+                           : [&](){
+              std::vector<Eigen::VectorXd> effects(n_pheno);
+              for (std::size_t pheno = 0; pheno < n_pheno; ++pheno)
+                effects[pheno] = Eigen::VectorXd::Constant(
+                    n_locs[pheno], 1 / std::sqrt(n_locs[pheno]));
+              return effects;
+            }()),
+        pheno_loc(
+            pheno_loc_ ? std::move(pheno_loc_.value())
+                       : [&](){
+              // return empty but correctly sized lists
+              std::vector<std::vector<std::size_t>> locs(n_pheno);
+              for (std::size_t pheno = 0; pheno < n_pheno; ++pheno) {
+                std::size_t n_locs_pheno = n_locs[pheno];
+                locs.resize(n_locs_pheno);
+              }
+              return locs;
+            }()
+        ),
         h2_gen(
-            h2_gen_ ? std::move(*h2_gen_)
+            h2_gen_ ? std::move(h2_gen_.value())
                     : Eigen::VectorXd::Constant(n_pheno, 0.5)),
         h2_env(
-            h2_env_ ? std::move(*h2_env_)
+            h2_env_ ? std::move(h2_env_.value())
                     : Eigen::VectorXd::Constant(n_pheno, 0.5)),
         h2_nur(
-            h2_nur_ ? std::move(*h2_nur_)
+            h2_nur_ ? std::move(h2_nur_.value())
                     : Eigen::VectorXd::Constant(n_pheno, 0.0)),
         gen_cor(
-            gen_cor_ ? std::move(*gen_cor_)
+            gen_cor_ ? std::move(gen_cor_.value())
                      : Eigen::MatrixXd::Identity(n_pheno, n_pheno)),
         env_cor(
-            env_cor_ ? std::move(*env_cor_)
+            env_cor_ ? std::move(env_cor_.value())
                      : Eigen::MatrixXd::Identity(n_pheno, n_pheno)),
         rnur_pat(
-            rnur_pat_ ? std::move(*rnur_pat_)
+            rnur_pat_ ? std::move(rnur_pat_.value())
                       : Eigen::VectorXd::Constant(n_pheno, 0.5)),
         rnur_env(
-            rnur_env_ ? std::move(*rnur_env_)
+            rnur_env_ ? std::move(rnur_env_.value())
                       : Eigen::VectorXd::Constant(n_pheno, 0.5)) {};
 
   std::size_t n_pheno;              ///< Number of phenotypes
   std::vector<std::string> names;   ///< Vector of phenotype names
   std::vector<std::size_t> n_locs;  ///< Vector of number of loci per phenotype
+
+  std::vector<Eigen::VectorXd>
+      pheno_effects;  ///< Matrix with effect column vectors
+  std::vector<std::vector<std::size_t>>
+      pheno_loc;  ///< Vector of causal loci for phenotypes
 
   Eigen::VectorXd h2_gen;  ///< Vector of genetic component variances
   Eigen::VectorXd h2_env;  ///< Vector of environmental component variances
@@ -95,11 +124,6 @@ struct PhenomeParams {
 
   Eigen::MatrixXd gen_cor;  ///< Genetic component correlation matrix
   Eigen::MatrixXd env_cor;  ///< Environmental component correlation matrix
-
-  std::vector<Eigen::VectorXd>
-      pheno_effects;  ///< Matrix with effect column vectors
-  std::vector<std::vector<std::size_t>>
-      causal_loc;  ///< Vector of causal loci for phenotypes
 
   Eigen::VectorXd rnur_pat;  ///< Paternal ratio in nurture effect
   Eigen::VectorXd rnur_env;  ///< Environmental ratio in nurture effect
