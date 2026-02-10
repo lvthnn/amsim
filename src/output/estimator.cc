@@ -1,9 +1,6 @@
 #include <amsim/output/estimator.h>
 #include <amsim/params.h>
 #include <amsim/state.h>
-
-#include <iostream>
-
 #include <amsim/utils.h>
 
 namespace amsim {
@@ -26,35 +23,27 @@ std::vector<std::string> label_matrix(
   return labels;
 }
 
-class EstimatorPhenoHeritability : public EstimatorImpl {
+class EstimatorPhenotypeHeritability : public EstimatorImpl {
  public:
-  explicit EstimatorPhenoHeritability(const Params& params)
+  explicit EstimatorPhenotypeHeritability(const Params& params)
       : EstimatorImpl("pheno_h2", params.pheno.names, params.pheno.n_pheno) {
     n_pheno_ = params.pheno.n_pheno;
   }
 
   void compute(const State& state) override {
-    for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno) {
-      std::cout << "phenotype " << labels_[pheno] << " gen var: "
-                << state.pheno.comp_var(pheno, phenome::ComponentType::GENETIC)
-                << " env var: "
-                << state.pheno.comp_var(
-                       pheno, phenome::ComponentType::ENVIRONMENTAL)
-                << "\n";
-
+    for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
       data_(pheno, 0) =
           state.pheno.comp_var(pheno, phenome::ComponentType::GENETIC) /
           state.pheno.comp_var(pheno, phenome::ComponentType::TOTAL);
-    }
   }
 
  private:
   std::size_t n_pheno_;
 };
 
-class EstimatorPhenoComponentMean : public EstimatorImpl {
+class EstimatorPhenotypeComponentMean : public EstimatorImpl {
  public:
-  explicit EstimatorPhenoComponentMean(
+  explicit EstimatorPhenotypeComponentMean(
       const Params& params, phenome::ComponentType type)
       : EstimatorImpl(
             "pheno_" + phenome::to_string(type) + "_mean",
@@ -73,9 +62,9 @@ class EstimatorPhenoComponentMean : public EstimatorImpl {
   std::size_t n_pheno_;
 };
 
-class EstimatorPhenoComponentVar : public EstimatorImpl {
+class EstimatorPhenotypeComponentVar : public EstimatorImpl {
  public:
-  explicit EstimatorPhenoComponentVar(
+  explicit EstimatorPhenotypeComponentVar(
       const Params& params, phenome::ComponentType type)
       : EstimatorImpl(
             "pheno_" + phenome::to_string(type) + "_var",
@@ -94,9 +83,9 @@ class EstimatorPhenoComponentVar : public EstimatorImpl {
   std::size_t n_pheno_;
 };
 
-class EstimatorPhenoComponentCor : public EstimatorImpl {
+class EstimatorPhenotypeComponentCor : public EstimatorImpl {
  public:
-  explicit EstimatorPhenoComponentCor(
+  explicit EstimatorPhenotypeComponentCor(
       const Params& params,
       phenome::ComponentType type_l,
       std::optional<phenome::ComponentType> type_r)
@@ -167,29 +156,30 @@ class EstimatorMateCorrelation : public EstimatorImpl {
   Eigen::MatrixXd std_female_;
 };
 
-Estimator PhenoHeritability() {
+Estimator PhenotypeHeritability() {
   return [](const Params& params) {
-    return std::make_unique<EstimatorPhenoHeritability>(params);
+    return std::make_unique<EstimatorPhenotypeHeritability>(params);
   };
 }
 
-Estimator PhenoComponentMean(phenome::ComponentType type) {
+Estimator PhenotypeComponentMean(phenome::ComponentType type) {
   return [type](const Params& params) {
-    return std::make_unique<EstimatorPhenoComponentMean>(params, type);
+    return std::make_unique<EstimatorPhenotypeComponentMean>(params, type);
   };
 }
 
-Estimator PhenoComponentVar(phenome::ComponentType type) {
+Estimator PhenotypeComponentVar(phenome::ComponentType type) {
   return [type](const Params& params) {
-    return std::make_unique<EstimatorPhenoComponentVar>(params, type);
+    return std::make_unique<EstimatorPhenotypeComponentVar>(params, type);
   };
 }
 
-Estimator PhenoComponentCor(
+Estimator PhenotypeComponentCor(
     phenome::ComponentType type_l,
     std::optional<phenome::ComponentType> type_r) {
   return [type_l, type_r](const Params& params) {
-    return std::make_unique<EstimatorPhenoComponentCor>(params, type_l, type_r);
+    return std::make_unique<EstimatorPhenotypeComponentCor>(
+        params, type_l, type_r);
   };
 }
 
@@ -219,10 +209,8 @@ ComputeEstimates::ComputeEstimates(
   streams_.resize(n_est);
 
   for (std::size_t el = 0; el < n_est; ++el) {
-    std::cout << "processing estimator " << el << "\n";
     estimators_[el] = estimators[el](params);
     auto path = out_dir / (estimators_[el]->name() + ".tsv");
-    std::cout << "path: " << path.string() << "\n";
 
     streams_[el] = std::ofstream(path);
 
