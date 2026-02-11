@@ -48,7 +48,7 @@ class ScorePhenotypes {
       : n_ind_(params.geno.n_ind),
         n_pheno_(params.pheno.n_pheno),
         pheno_effects_(params.pheno.pheno_effects),
-        pheno_loc_(params.pheno.causal_loc),
+        pheno_loc_(params.pheno.pheno_loc),
         h2_gen_(params.pheno.h2_gen),
         h2_env_(params.pheno.h2_env),
         h2_nur_(params.pheno.h2_nur),
@@ -84,6 +84,7 @@ class ScorePhenotypes {
 
   void scoreGenetic(State& state);
   void scoreEnvironmental(State& state);
+  void scoreNurture(State& state);
   void scoreTotal(State& state);
 };
 
@@ -91,22 +92,37 @@ class ScorePhenotypes {
 
 namespace mating {
 
+class RandomMating {
+ public:
+  explicit RandomMating(const Params& params)
+    : n_sex_(params.geno.n_ind / 2),
+      match_cur_(n_sex_) {}
+
+  void operator()(State& state);
+
+ private:
+  std::size_t n_sex_;
+  Matching match_cur_; 
+
+  void randomiseMatching();
+};
+
 class AssortativeMating {
  public:
   AssortativeMating(const AssortativeMating&) = default;
   AssortativeMating(AssortativeMating&&) = default;
   AssortativeMating& operator=(const AssortativeMating&) = default;
   AssortativeMating& operator=(AssortativeMating&&) = default;
-  explicit AssortativeMating(const Params& p)
-      : n_sex_(p.geno.n_ind / 2),
-        n_pheno_(p.pheno.n_pheno),
-        mate_cor_(std::move(p.mate.mate_cor)),
+  explicit AssortativeMating(const Params& params)
+      : n_sex_(params.geno.n_ind / 2),
+        n_pheno_(params.pheno.n_pheno),
+        mate_cor_(std::move(params.mate.mate_cor)),
         match_cur_(n_sex_),
         match_opt_(n_sex_),
-        max_itr_(p.mate.max_itr),
-        temp_init_(p.mate.temp_init),
-        temp_decay_(p.mate.temp_decay),
-        tol_inf_(p.mate.tol_inf) {
+        max_itr_(params.mate.max_itr),
+        temp_init_(params.mate.temp_init),
+        temp_decay_(params.mate.temp_decay),
+        tol_inf_(params.mate.tol_inf) {
     // initialise rank-one SVD components
     Eigen::JacobiSVD<Eigen::MatrixXd> svd(
         mate_cor_, Eigen::ComputeThinU | Eigen::ComputeThinV);

@@ -1,6 +1,5 @@
 #include <Eigen/Dense>
 #include <algorithm>
-#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <numeric>
