@@ -16,15 +16,15 @@ namespace amsim::rng {
 /// @brief Return seed or generate one from system clock
 /// @param seed Input seed (0 to auto-generate)
 /// @return Seed value
-inline uint64_t auto_seed(uint64_t seed) {
-  if (seed != 0) return seed;
+inline uint64_t auto_seed(std::optional<uint64_t> seed) {
+  if (seed.has_value()) return seed.value();
   return static_cast<uint64_t>(
       std::chrono::high_resolution_clock::now().time_since_epoch().count());
 }
 
 /// @brief Xoshiro256** pseudorandom number generator
 ///
-/// Fast, high-quality PRNG with 256-bit state and excellent statistical
+/// Fast, high-quality pseudo-RNG with 256-bit state and excellent statistical
 /// properties.
 class Xoshiro256ss {
  public:
@@ -294,17 +294,34 @@ struct UniformIntRange {
   /// @brief Sample uniform integer in [0,n)
   /// @param n Upper bound
   /// @return Uniform integer
-  static std::size_t sample(const std::size_t n) {
-    if (n == 0) return 0;
+  static std::size_t sample(const std::size_t hi) {
+    if (hi == 0) return 0;
 
-    const std::size_t thresh = UINT64_MAX - (UINT64_MAX % n);
+    const std::size_t thresh = UINT64_MAX - (UINT64_MAX % hi);
     std::size_t x;
 
     do {
       x = Xoshiro256ss::get_instance().next();
     } while (x >= thresh);
 
-    return x % n;
+    return (x % hi);
+  }
+
+  /// @brief Sample uniform integer in [lo,hi)
+  /// @param n Upper bound
+  /// @return Uniform integer
+  static std::size_t sample(const std::size_t lo, const std::size_t hi) {
+    if (hi < lo) throw std::runtime_error("[hi, lo) must be non-empty");
+    if (hi == lo) return lo;
+
+    const std::size_t thresh = UINT64_MAX - (UINT64_MAX % (hi - lo));
+    std::size_t x;
+
+    do {
+      x = Xoshiro256ss::get_instance().next();
+    } while (x >= thresh);
+
+    return (x % (hi - lo)) + lo;
   }
 };
 

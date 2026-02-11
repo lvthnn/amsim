@@ -15,21 +15,18 @@ endif()
 
 # Library targets
 add_library(amsimcpp STATIC
-  src/genome.cc
-  src/phenotype.cc
   src/utils.cc
-  src/mating.cc
-  src/phenobuf.cc
-  src/phenoarch.cc
-  src/haplobuf.cc
-  src/logger.cc
-  src/logger_timer.cc
-  src/metric.cc
-  src/metricspec.cc
+  src/data/genome.cc
+  src/data/phenome.cc
+  src/initialise/genome_initialise.cc
+  src/preprocess/phenome_preprocess.cc
+  src/transform/genome_transform.cc
+  src/transform/mating_transform.cc
+  src/transform/phenome_transform.cc
+  src/output/estimator.cc
   src/simulation.cc
-  src/simulation_config.cc
-  src/simulation_results.cc
-  src/stats.cc
+  src/state.cc
+  src/spec.cc
 )
 
 # Public headers for users of the lib
@@ -43,7 +40,7 @@ if (APPLE)
   find_library(ACCELERATE_FRAMEWORK Accelerate REQUIRED)
   target_link_libraries(amsimcpp PUBLIC ${ACCELERATE_FRAMEWORK})
   target_compile_definitions(amsimcpp PUBLIC ACCELERATE_NEW_LAPACK)
-  target_compile_definitions(amsimcpp PUBLIC EIGEN_USE_BLAS EIGEN_USE_LAPACKE)
+  target_compile_definitions(amsimcpp PUBLIC EIGEN_USE_BLAS EIGEN_USE_LAPACK)
 else()
   include_directories("/usr/include/openblas")
   find_package(BLAS REQUIRED)
@@ -76,41 +73,29 @@ elseif (MSVC)
 endif()
 
 # Use GoogleTest
-include(FetchContent)
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
-FetchContent_Declare(
-  googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG v1.17.0
-)
-FetchContent_MakeAvailable(googletest)
 
-enable_testing()
+# include(FetchContent)
+# set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+# set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+# FetchContent_Declare(
+#   googletest
+#   GIT_REPOSITORY https://github.com/google/googletest.git
+#   GIT_TAG v1.17.0
+# )
+# FetchContent_MakeAvailable(googletest)
+# 
+# enable_testing()
+# 
+# include(GoogleTest)
 
-# Example programs
-add_executable(demo_simulation examples/demo_simulation.cc)
-add_executable(demo_results examples/demo_results.cc)
-add_executable(demo_logger examples/demo_logger.cc)
 
-target_link_libraries(demo_simulation PRIVATE amsimcpp)
-target_link_libraries(demo_results PRIVATE amsimcpp)
-target_link_libraries(demo_logger PRIVATE amsimcpp)
+# Examples
+option(BUILD_EXAMPLES "Build example applications" ON)
 
-# Link unit tests
-add_executable(stats_test tests/stats_test.cc)
-add_executable(utils_test tests/utils_test.cc)
-add_executable(simulation_test tests/simulation_test.cc)
-
-target_link_libraries(stats_test PRIVATE GTest::gtest_main amsimcpp)
-target_link_libraries(utils_test PRIVATE GTest::gtest_main amsimcpp)
-target_link_libraries(simulation_test PRIVATE GTest::gtest_main amsimcpp)
-
-include(GoogleTest)
-gtest_discover_tests(stats_test)
-gtest_discover_tests(utils_test)
-gtest_discover_tests(simulation_test)
-
+if (BUILD_EXAMPLES)
+  add_executable(demo_simulation examples/demo_simulation.cc)
+  target_link_libraries(demo_simulation PRIVATE amsimcpp)
+endif()
 
 # Install rules (so other projects can find+link amsimcpp)
 include(GNUInstallDirs)
