@@ -9,6 +9,19 @@
 
 namespace amsim::mating {
 
+void RandomMating::randomiseMatching() {
+  std::iota(match_cur_.begin(), match_cur_.end(), 0);
+  for (std::size_t el = 0; el < n_sex_; ++el) {
+    std::size_t le = rng::UniformIntRange::sample(el, n_sex_);
+    std::swap(match_cur_[el], match_cur_[le]);
+  }
+}
+
+void RandomMating::operator()(State& state) {
+  randomiseMatching();
+  state.matching() = match_cur_;
+}
+
 void AssortativeMating::randomiseMatching() {
   std::iota(match_cur_.begin(), match_cur_.end(), 0);
   for (std::size_t el = 0; el < n_sex_; ++el) {
@@ -82,8 +95,8 @@ void AssortativeMating::updateState() {
 }
 
 void AssortativeMating::operator()(State& state) {
-  const Eigen::MatrixXd& pheno_male = state.pheno.male();
-  const Eigen::MatrixXd& pheno_female = state.pheno.female();
+  const Eigen::MatrixXd& pheno_male = state.pheno().male();
+  const Eigen::MatrixXd& pheno_female = state.pheno().female();
 
   // generate a random matching using Fisher-Yates shuffling
   randomiseMatching();
@@ -123,9 +136,9 @@ void AssortativeMating::operator()(State& state) {
     }
   }
 
+  n_itr_ = max_itr_;
   cor_ = ell_opt_ + mate_cor_;
-
-  state.matching = match_opt_;
+  state.matching() = match_opt_;
 }
 
 }  // namespace amsim::mating
