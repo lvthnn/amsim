@@ -33,8 +33,8 @@ class EstimatorPhenotypeHeritability : public EstimatorImpl {
   void compute(const State& state) override {
     for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
       data_(pheno, 0) =
-          state.pheno.comp_var(pheno, phenome::ComponentType::GENETIC) /
-          state.pheno.comp_var(pheno, phenome::ComponentType::TOTAL);
+          state.pheno().comp_var(pheno, phenome::ComponentType::GENETIC) /
+          state.pheno().comp_var(pheno, phenome::ComponentType::TOTAL);
   }
 
  private:
@@ -54,7 +54,7 @@ class EstimatorPhenotypeComponentMean : public EstimatorImpl {
 
   void compute(const State& state) override {
     for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
-      data_(pheno) = state.pheno.comp_mean(pheno, type_);
+      data_(pheno) = state.pheno().comp_mean(pheno, type_);
   }
 
  private:
@@ -75,7 +75,7 @@ class EstimatorPhenotypeComponentVar : public EstimatorImpl {
 
   void compute(const State& state) override {
     for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
-      data_(pheno) = state.pheno.comp_var(pheno, type_);
+      data_(pheno) = state.pheno().comp_var(pheno, type_);
   }
 
  private:
@@ -107,8 +107,8 @@ class EstimatorPhenotypeComponentCor : public EstimatorImpl {
         std_r_(n_ind_, n_pheno_) {}
 
   void compute(const State& state) override {
-    std_l_ = utils::standardise(state.pheno(type_l_));
-    std_r_ = utils::standardise(state.pheno(type_r_));
+    std_l_ = utils::standardise(state.pheno()(type_l_));
+    std_r_ = utils::standardise(state.pheno()(type_r_));
     data_ = (std_l_.transpose() * std_r_) / static_cast<double>(n_ind_);
   }
 
@@ -138,13 +138,13 @@ class EstimatorMateCorrelation : public EstimatorImpl {
         std_female_(n_sex_, n_pheno_) {}
 
   void compute(const State& state) override {
-    std_male_ = utils::standardise(state.pheno.male(type_));
-    std_female_ = utils::standardise(state.pheno.female(type_));
+    std_male_ = utils::standardise(state.pheno().male(type_));
+    std_female_ = utils::standardise(state.pheno().female(type_));
     data_.setZero();
 
     for (std::size_t pair = 0; pair < n_sex_; ++pair)
       data_.noalias() += std_male_.row(pair).transpose() *
-                         std_female_.row(state.matching[pair]);
+                         std_female_.row(state.matching()[pair]);
     data_ /= static_cast<double>(n_sex_);
   }
 

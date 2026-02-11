@@ -60,12 +60,12 @@ using Estimator =
 
 using Estimators = std::vector<Estimator>;
 
-Estimator PhenoHeritability();
-Estimator PhenoComponentMean(
+Estimator PhenotypeHeritability();
+Estimator PhenotypeComponentMean(
     phenome::ComponentType type = phenome::ComponentType::TOTAL);
-Estimator PhenoComponentVar(
+Estimator PhenotypeComponentVar(
     phenome::ComponentType type = phenome::ComponentType::TOTAL);
-Estimator PhenoComponentCor(
+Estimator PhenotypeComponentCor(
     phenome::ComponentType type_l = phenome::ComponentType::TOTAL,
     std::optional<phenome::ComponentType> type_r = std::nullopt);
 Estimator MateCorrelation(
