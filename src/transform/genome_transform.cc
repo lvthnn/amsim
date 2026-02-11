@@ -32,15 +32,17 @@ std::array<std::uint64_t, 2> UpdateGenome::gamWord(
 }
 
 void UpdateGenome::operator()(State& state) {
-  if (state.geno.view() != HaploView::IND_MAJOR)
+  if (state.geno().view() != HaploView::IND_MAJOR)
     throw std::runtime_error("update genome requires ind-major view");
 
   constexpr std::size_t INC_WORD = 64;
-  const std::size_t n_words = state.geno.n_words();
+  const std::size_t n_words = state.geno().n_words();
 
-  HaploBuf& h0 = state.geno.h0();
-  HaploBuf& h1 = state.geno.h1();
-  const mating::Matching& matching = state.matching;
+  HaploBuf& h0 = state.geno().h0();
+  HaploBuf& h1 = state.geno().h1();
+  HaploBuf& h0_off = state.geno_par().h0();
+  HaploBuf& h1_off = state.geno_par().h1();
+  const mating::Matching& matching = state.matching();
 
   for (std::size_t pair = 0; pair < n_sex_; ++pair) {
     std::size_t fpair = matching[pair] + n_sex_;
@@ -55,14 +57,14 @@ void UpdateGenome::operator()(State& state) {
       // male child
       auto [mask_mm, gam_mm] = gamWord(male_h0, male_h1);
       auto [mask_fm, gam_fm] = gamWord(female_h0, female_h1);
-      h0(pair, word) = gam_mm;
-      h1(pair, word) = gam_fm;
+      h0_off(pair, word) = gam_mm;
+      h1_off(pair, word) = gam_fm;
 
       // female child
       auto [mask_mf, gam_mf] = gamWord(male_h0, male_h1);
       auto [mask_ff, gam_ff] = gamWord(female_h0, female_h1);
-      h0(fpair, word) = gam_mf;
-      h1(fpair, word) = gam_ff;
+      h0_off(fpair, word) = gam_mf;
+      h1_off(fpair, word) = gam_ff;
 
       ptr_rec_ += INC_WORD;
       ptr_mut_ += INC_WORD;
