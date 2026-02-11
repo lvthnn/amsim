@@ -1,5 +1,6 @@
 #include <amsim/data/genome.h>
 #include <amsim/utils.h>
+#include <amsim/params.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -9,8 +10,8 @@ namespace amsim::genome {
 HaploBuf::HaploBuf(std::size_t n_ind, std::size_t n_loc)
     : n_ind_(n_ind),
       n_loc_(n_loc),
-      n_rows_((n_loc + 63) & ~static_cast<std::size_t>(63)),
-      n_words_((n_ind + 63) / 64),
+      n_rows_((n_loc_ + 63) & ~static_cast<std::size_t>(63)),
+      n_words_((n_ind_ + 63) / 64),
       view_(HaploView::LOC_MAJOR) {
   buf_.resize(n_rows_ * n_words_);
 }
@@ -60,21 +61,16 @@ void HaploBuf::transpose() noexcept {
                                           : HaploView::LOC_MAJOR;
 }
 
-GenoBuf::GenoBuf(
-    std::size_t n_ind,
-    std::size_t n_loc,
-    Eigen::VectorXd& v_mut,
-    Eigen::VectorXd& v_rec,
-    Eigen::VectorXd& v_maf)
-    : v_mut_(std::move(v_mut)),
-      v_rec_(std::move(v_rec)),
-      v_maf_(std::move(v_maf)),
-      v_lmean_(n_loc),
-      v_lvar_(n_loc),
-      v_lmaf_(n_loc),
+GenoBuf::GenoBuf(const Params& params)
+    : v_mut_(std::move(params.geno.v_mut)),
+      v_rec_(std::move(params.geno.v_rec)),
+      v_maf_(std::move(params.geno.v_maf)),
+      v_lmean_(params.geno.n_loc),
+      v_lvar_(params.geno.n_loc),
+      v_lmaf_(params.geno.n_loc),
       bw_(),
-      h0_(n_ind, n_loc),
-      h1_(n_ind, n_loc) {};
+      h0_(params.geno.n_ind, params.geno.n_loc),
+      h1_(params.geno.n_ind, params.geno.n_loc) {};
 
 std::array<std::uint64_t, 2> GenoBuf::gam_word(
     std::uint64_t ind_h0,
