@@ -19,11 +19,14 @@ add_library(amsimcpp STATIC
   src/data/genome.cc
   src/data/phenome.cc
   src/initialise/genome_initialise.cc
+  src/preprocess/phenome_preprocess.cc
   src/transform/genome_transform.cc
   src/transform/mating_transform.cc
   src/transform/phenome_transform.cc
   src/output/estimator.cc
   src/simulation.cc
+  src/state.cc
+  src/spec.cc
 )
 
 # Public headers for users of the lib
