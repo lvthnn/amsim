@@ -2,6 +2,7 @@
 
 #include <amsim/rng.h>
 #include <amsim/utils.h>
+#include <amsim/params.h>
 
 #include <Eigen/Dense>
 #include <cstddef>
@@ -14,7 +15,7 @@ enum class HaploView : bool { LOC_MAJOR, IND_MAJOR };
 
 class HaploBuf {
  public:
-  HaploBuf(std::size_t n_ind, std::size_t n_loc);
+  explicit HaploBuf(std::size_t n_ind, std::size_t n_loc);
 
   std::size_t n_ind() const noexcept { return n_ind_; }
   std::size_t n_loc() const noexcept { return n_loc_; }
@@ -50,12 +51,7 @@ class HaploBuf {
 
 class GenoBuf {
  public:
-  GenoBuf(
-      std::size_t n_ind,
-      std::size_t n_loc,
-      Eigen::VectorXd& v_mut,
-      Eigen::VectorXd& v_rec,
-      Eigen::VectorXd& v_maf);
+  explicit GenoBuf(const Params& params);
 
   Eigen::VectorXd& v_lmean() noexcept { return v_lmean_; }
   Eigen::VectorXd& v_lvar() noexcept { return v_lvar_; }

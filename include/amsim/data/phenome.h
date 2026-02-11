@@ -1,12 +1,14 @@
 #pragma once
 
+#include <amsim/params.h>
+
 #include <Eigen/Dense>
 #include <cstddef>
 #include <vector>
 
 namespace amsim::phenome {
 
-enum ComponentType { GENETIC = 0, ENVIRONMENTAL = 1, VERTICAL = 2, TOTAL = 3 };
+enum ComponentType { GENETIC = 0, ENVIRONMENTAL = 1, NURTURE = 2, TOTAL = 3 };
 
 inline ComponentType operator++(ComponentType& type, int) {
   ComponentType old = type;
@@ -29,7 +31,7 @@ inline std::string to_string(ComponentType type) {
       return "genetic";
     case ComponentType::ENVIRONMENTAL:
       return "environ";
-    case ComponentType::VERTICAL:
+    case ComponentType::NURTURE:
       return "nurture";
     case ComponentType::TOTAL:
       return "total";
@@ -44,7 +46,7 @@ inline std::ostream& operator<<(std::ostream& os, ComponentType type) {
 // Buffer structure to store phenotype data
 class PhenoBuf {
  public:
-  PhenoBuf(std::size_t n_ind, std::size_t n_pheno);
+  explicit PhenoBuf(const Params& params);
 
   // Retrieve const matrix of values for specified component
   Eigen::Map<const Eigen::MatrixXd> operator()(ComponentType type) const {
