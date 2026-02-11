@@ -16,8 +16,8 @@ namespace amsim::rng {
 /// @brief Return seed or generate one from system clock
 /// @param seed Input seed (0 to auto-generate)
 /// @return Seed value
-inline uint64_t auto_seed(uint64_t seed) {
-  if (seed != 0) return seed;
+inline uint64_t auto_seed(std::optional<uint64_t> seed) {
+  if (seed.has_value()) return seed.value();
   return static_cast<uint64_t>(
       std::chrono::high_resolution_clock::now().time_since_epoch().count());
 }
