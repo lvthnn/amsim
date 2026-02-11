@@ -19,7 +19,6 @@ void setup_output(const std::filesystem::path& out_dir) {
 
 void simulation_preprocess(Params& params) {
   preprocess::OptimisePhenotypeArchitecture opt(params);
-
   opt();
 }
 
@@ -33,36 +32,49 @@ void simulation_run(
     std::optional<std::size_t> rep_id) {
   // set up output directory
   setup_output(params.sim.out_dir);
-
   rng::set_seed(rng::auto_seed(params.sim.rng_seed));
-
+  
+  // preprocess the simulation
   simulation_preprocess(params);
 
   // founder haplotype initialiser
   genome::HaplotypeGeneratorIID haplo(params);
-
-  // set up required transformers
+  mating::RandomMating random_mate(params);
   phenome::ScorePhenotypes score(params);
   mating::AssortativeMating mate(params);
   genome::UpdateGenome update(params);
 
-  // estimator super-transformer
+  // estimator transformer
   ComputeEstimates estimate(params, estimators, rep_id);
-
-  // generate the initial state
-  std::cout << "generating haplotypes\n";
-  haplo.generate_haplotypes(state.geno);
-
-  // stream headers to estimator files
   estimate.headers();
 
-  while (state.gen < n_gen) {
-    state.geno.compute_mafs();
-    state.geno.compute_stats();
+  // generate the initial state
+  haplo.generate_haplotypes(state.geno());
+  state.geno().compute_mafs();
+  state.geno().compute_stats();
+
+  score(state);
+  state.pheno().compute_stats();
+
+  random_mate(state);
+
+  state.transpose();
+  update(state);
+  state.transpose();
+
+  state.advance();
+  std::cout << "advanced\n";
+
+  // run the core simulation loop
+  std::cout << "here we go!\n";
+  while (state.gen <= n_gen) {
+    std::cout << "generation: " << std::to_string(state.gen) << "\n";
+    state.geno().compute_mafs();
+    state.geno().compute_stats();
 
     // score phenotypes using operator()
     score(state);
-    state.pheno.compute_stats();
+    state.pheno().compute_stats();
 
     // match mates
     mate(state);
@@ -76,17 +88,12 @@ void simulation_run(
     estimate(state);
 
     // Update the genome
-    state.geno.transpose();
+    state.transpose();
     update(state);
-    state.geno.transpose();
+    state.transpose();
 
-    ++state.gen;
+    state.advance();
   }
 }
-
-// void simulations_run(
-//   State& state,
-//
-// )
 
 }  // namespace amsim
