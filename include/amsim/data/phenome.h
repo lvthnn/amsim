@@ -1,12 +1,12 @@
 #pragma once
 
-#include <amsim/params.h>
+#include <amsim/core/params.h>
 
 #include <Eigen/Dense>
 #include <cstddef>
 #include <vector>
 
-namespace amsim::phenome {
+namespace amsim {
 
 enum Component { Genetic = 0, Environmental = 1, Nurture = 2, Total = 3 };
 
@@ -170,4 +170,4 @@ class PhenoBuf {
   Eigen::MatrixXd comp_var_;
 };
 
-}  // namespace amsim::phenome
+}  // namespace amsim

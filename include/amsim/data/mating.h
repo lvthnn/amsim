@@ -3,8 +3,8 @@
 #include <cstddef>
 #include <vector>
 
-namespace amsim::mating {
+namespace amsim {
 
 using Matching = std::vector<std::size_t>;
 
-}
+} // namespace amsim

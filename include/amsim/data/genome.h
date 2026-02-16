@@ -1,15 +1,15 @@
 #pragma once
 
-#include <amsim/rng.h>
-#include <amsim/utils.h>
-#include <amsim/params.h>
+#include <amsim/core/rng.h>
+#include <amsim/core/params.h>
+#include <amsim/core/utils.h>
 
 #include <Eigen/Dense>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
 
-namespace amsim::genome {
+namespace amsim {
 
 enum class HaploView : bool { LocusMajor, IndividualMajor };
 
@@ -101,4 +101,4 @@ class GenoBuf {
   HaploBuf h1_;
 };
 
-}  // namespace amsim::genome
+}  // namespace amsim
