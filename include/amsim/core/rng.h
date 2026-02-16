@@ -1,5 +1,4 @@
-#ifndef AMSIMCPP_RNG_H
-#define AMSIMCPP_RNG_H
+#pragma once
 
 #include <array>
 #include <chrono>
@@ -330,5 +329,3 @@ inline void set_seed(std::uint64_t seed) {
 }
 
 }  // namespace amsim::rng
-
-#endif  // AMSIMCPP_RNG_H

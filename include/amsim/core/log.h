@@ -1,5 +1,4 @@
-#ifndef AMSIMCPP_LOGGER_H
-#define AMSIMCPP_LOGGER_H
+#pragma once
 
 #include <condition_variable>
 #include <deque>
@@ -181,5 +180,3 @@ class Logger {
   amsim::Logger::get_instance().log(msg, amsim::LogLevel::Error)
 
 }  // namespace amsim
-
-#endif  // AMSIMCPP_LOGGER_H
