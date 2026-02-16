@@ -1,9 +1,8 @@
 #pragma once
 
-#include <amsim/output/estimator.h>
-#include <amsim/params.h>
-#include <amsim/state.h>
-#include <amsim/setup.h>
+#include <amsim/core.h>
+#include <amsim/estimate.h>
+#include <amsim/init.h>
 
 #include <filesystem>
 
