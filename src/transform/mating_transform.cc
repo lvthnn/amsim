@@ -20,6 +20,8 @@ void RandomMating::randomiseMatching() {
 void RandomMating::operator()(State& state) {
   randomiseMatching();
   state.matching() = match_cur_;
+  for (std::size_t ind = 0; ind < n_sex_; ++ind)
+    state.inv_matching()[ind] = state.matching()[ind];
 }
 
 void AssortativeMating::randomiseMatching() {
@@ -139,6 +141,9 @@ void AssortativeMating::operator()(State& state) {
   n_itr_ = max_itr_;
   cor_ = ell_opt_ + mate_cor_;
   state.matching() = match_opt_;
+
+  for (std::size_t ind = 0; ind < n_sex_; ++ind)
+    state.inv_matching()[ind] = state.matching()[ind];
 }
 
 }  // namespace amsim::mating
