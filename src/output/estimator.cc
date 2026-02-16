@@ -23,11 +23,14 @@ std::vector<std::string> label_matrix(
   return labels;
 }
 
-class EstimatorHeritability : public EstimatorStrategy {
+class EstimatorHeritability : public PopulationEstimatorStrategy {
  public:
   explicit EstimatorHeritability(const Params& params)
-      : EstimatorStrategy(
-            "pheno_h2", params.pheno.names, params.pheno.n_pheno) {
+      : PopulationEstimatorStrategy(
+            params.sim.out_dir,
+            "pheno_h2",
+            params.pheno.names,
+            params.pheno.n_pheno) {
     n_pheno_ = params.pheno.n_pheno;
   }
 
@@ -42,11 +45,12 @@ class EstimatorHeritability : public EstimatorStrategy {
   std::size_t n_pheno_;
 };
 
-class EstimatorComponentMean : public EstimatorStrategy {
+class EstimatorComponentMean : public PopulationEstimatorStrategy {
  public:
   explicit EstimatorComponentMean(
       const Params& params, phenome::Component type)
-      : EstimatorStrategy(
+      : PopulationEstimatorStrategy(
+            params.sim.out_dir,
             "pheno_" + phenome::to_string(type) + "_mean",
             params.pheno.names,
             params.pheno.n_pheno),
@@ -63,11 +67,12 @@ class EstimatorComponentMean : public EstimatorStrategy {
   std::size_t n_pheno_;
 };
 
-class EstimatorComponentVar : public EstimatorStrategy {
+class EstimatorComponentVar : public PopulationEstimatorStrategy {
  public:
   explicit EstimatorComponentVar(
       const Params& params, phenome::Component type)
-      : EstimatorStrategy(
+      : PopulationEstimatorStrategy(
+            params.sim.out_dir,
             "pheno_" + phenome::to_string(type) + "_var",
             params.pheno.names,
             params.pheno.n_pheno),
@@ -84,13 +89,14 @@ class EstimatorComponentVar : public EstimatorStrategy {
   std::size_t n_pheno_;
 };
 
-class EstimatorComponentCor : public EstimatorStrategy {
+class EstimatorComponentCor : public PopulationEstimatorStrategy {
  public:
   explicit EstimatorComponentCor(
       const Params& params,
       phenome::Component type_l,
       std::optional<phenome::Component> type_r)
-      : EstimatorStrategy(
+      : PopulationEstimatorStrategy(
+            params.sim.out_dir,
             "pheno_" + phenome::to_string(type_l) + "_" +
                 phenome::to_string(type_r.value_or(type_l)) + "_cor",
             label_matrix(
@@ -122,11 +128,12 @@ class EstimatorComponentCor : public EstimatorStrategy {
   Eigen::MatrixXd std_r_;
 };
 
-class EstimatorMateCor : public EstimatorStrategy {
+class EstimatorMateCor : public PopulationEstimatorStrategy {
  public:
   explicit EstimatorMateCor(
       const Params& params, phenome::Component type)
-      : EstimatorStrategy(
+      : PopulationEstimatorStrategy(
+            params.sim.out_dir,
             "mate_" + phenome::to_string(type) + "_cor",
             label_matrix(
                 params.pheno.names, params.pheno.names, "_male", "_female"),
@@ -157,25 +164,25 @@ class EstimatorMateCor : public EstimatorStrategy {
   Eigen::MatrixXd std_female_;
 };
 
-Estimator Heritability() {
+PopulationEstimator PopulationHeritability() {
   return [](const Params& params) {
     return std::make_unique<EstimatorHeritability>(params);
   };
 }
 
-Estimator ComponentMean(phenome::Component type) {
+PopulationEstimator PopulationComponentMean(phenome::Component type) {
   return [type](const Params& params) {
     return std::make_unique<EstimatorComponentMean>(params, type);
   };
 }
 
-Estimator ComponentVar(phenome::Component type) {
+PopulationEstimator PopulationComponentVar(phenome::Component type) {
   return [type](const Params& params) {
     return std::make_unique<EstimatorComponentVar>(params, type);
   };
 }
 
-Estimator ComponentCor(
+PopulationEstimator PopulationComponentCor(
     phenome::Component type_l,
     std::optional<phenome::Component> type_r) {
   return [type_l, type_r](const Params& params) {
@@ -184,15 +191,15 @@ Estimator ComponentCor(
   };
 }
 
-Estimator MateCor(phenome::Component type) {
+PopulationEstimator PopulationMateCor(phenome::Component type) {
   return [type](const Params& params) {
     return std::make_unique<EstimatorMateCor>(params, type);
   };
 }
 
-ComputeEstimates::ComputeEstimates(
+ComputePopulationEstimates::ComputePopulationEstimates(
     const Params& params,
-    const Estimators& estimators,
+    const PopulationEstimators& estimators,
     std::optional<std::size_t> rep_id)
     : rep_id_(std::move(rep_id)) {
   auto out_dir =
@@ -205,32 +212,12 @@ ComputeEstimates::ComputeEstimates(
         "replicate directory " + out_dir.string() + " already exists!");
   std::filesystem::create_directory(out_dir);
 
-  std::size_t n_est = estimators.size();
-  estimators_.resize(n_est);
-  streams_.resize(n_est);
-
-  for (std::size_t el = 0; el < n_est; ++el) {
-    estimators_[el] = estimators[el](params);
-    auto path = out_dir / (estimators_[el]->name() + ".tsv");
-
-    streams_[el] = std::ofstream(path);
-
-    if (!streams_[el].is_open())
-      throw std::runtime_error(
-          "estimator output " + path.string() + " could not be opened!");
-  }
+  for (const auto& factory : estimators)
+    estimators_.emplace_back(factory(params));
 }
 
-void ComputeEstimates::headers() {
-  for (std::size_t el = 0; el < estimators_.size(); ++el)
-    streams_[el] << estimators_[el]->header() << "\n";
-}
-
-void ComputeEstimates::operator()(const State& state) {
-  for (std::size_t el = 0; el < estimators_.size(); ++el) {
-    estimators_[el]->compute(state);
-    streams_[el] << estimators_[el]->stream(state) << "\n";
-  }
+void ComputePopulationEstimates::operator()(const State& state) {
+  for (auto& estimator : estimators_) (*estimator)(state);
 }
 
 }  // namespace amsim
