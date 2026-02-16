@@ -3,10 +3,8 @@
 #include <Eigen/Dense>
 #include <cstddef>
 #include <filesystem>
-#include <optional>
 #include <string>
-#include <unordered_set>
-#include <utility>
+#include <unordered_map>
 #include <vector>
 
 namespace amsim {
@@ -32,6 +30,7 @@ struct PhenomeParams {
   std::size_t n_pheno;              ///< Number of phenotypes
   std::vector<std::string> names;   ///< Vector of phenotype names
   std::vector<std::size_t> n_locs;  ///< Vector of number of loci per phenotype
+  std::unordered_map<std::string, std::size_t> pheno_ids; ///< Name-ID map
 
   std::vector<Eigen::VectorXd> pheno_effects;  ///< Matrix of effect vectors
   std::vector<std::vector<std::size_t>> pheno_loc;  ///< Phenotype causal loci

@@ -22,6 +22,7 @@ struct Genome {
 struct Phenotype {
   std::string name;
   std::size_t n_causal_loci;
+  std::unordered_map<std::string, std::size_t> ids;
   
   std::optional<Eigen::VectorXd> effects;
   std::optional<std::vector<std::size_t>> causal_loci;
@@ -46,14 +47,15 @@ struct Mating {
 struct Simulation {
   std::size_t n_individuals;
 
- Genome genome;
+  Genome genome;
   std::vector<Phenotype> phenotypes;
   std::optional<Eigen::MatrixXd> genetic_component_cor;
   std::optional<Eigen::MatrixXd> environmental_component_cor;
 
   Mating mating;
 
-  Estimators estimators;
+  // Samples samples; // subpopulations and estimators to run on them
+  Estimators estimators; // population-wide estimators
 
   std::size_t n_replicates = 1;
   std::size_t n_threads = 1;

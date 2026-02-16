@@ -3,7 +3,7 @@
 #include <amsim/output/estimator.h>
 #include <amsim/params.h>
 #include <amsim/state.h>
-#include <amsim/spec.h>
+#include <amsim/setup.h>
 
 #include <filesystem>
 

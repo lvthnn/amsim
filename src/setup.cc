@@ -1,5 +1,5 @@
 #include <amsim/params.h>
-#include <amsim/spec.h>
+#include <amsim/setup.h>
 
 #include <Eigen/Dense>
 
@@ -25,11 +25,15 @@ phenome::PhenomeParams build_pheno_params(const Simulation& simulation) {
 
   std::vector<std::string> names(n_pheno);
   std::vector<std::size_t> n_locs(n_pheno);
+  std::unordered_map<std::string, std::size_t> pheno_ids(n_pheno);
+
   std::vector<Eigen::VectorXd> pheno_effects(n_pheno);
   std::vector<std::vector<std::size_t>> pheno_loc(n_pheno);
+
   Eigen::VectorXd h2_gen(n_pheno);
   Eigen::VectorXd h2_env(n_pheno);
   Eigen::VectorXd h2_nur(n_pheno);
+
   Eigen::VectorXd rnur_pat(n_pheno);
   Eigen::VectorXd rnur_env(n_pheno);
 
@@ -38,6 +42,7 @@ phenome::PhenomeParams build_pheno_params(const Simulation& simulation) {
 
     names[pheno] = pheno_data.name;
     n_locs[pheno] = pheno_data.n_causal_loci;
+    pheno_ids[pheno_data.name] = pheno;
 
     if (!pheno_data.effects.has_value())
       pheno_effects[pheno] =
@@ -89,6 +94,7 @@ phenome::PhenomeParams build_pheno_params(const Simulation& simulation) {
       .n_pheno = n_pheno,
       .names = std::move(names),
       .n_locs = std::move(n_locs),
+      .pheno_ids = std::move(pheno_ids),
       .pheno_effects = std::move(pheno_effects),
       .pheno_loc = std::move(pheno_loc),
       .h2_gen = h2_gen,

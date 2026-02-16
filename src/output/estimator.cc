@@ -23,29 +23,30 @@ std::vector<std::string> label_matrix(
   return labels;
 }
 
-class EstimatorPhenotypeHeritability : public EstimatorImpl {
+class EstimatorHeritability : public EstimatorStrategy {
  public:
-  explicit EstimatorPhenotypeHeritability(const Params& params)
-      : EstimatorImpl("pheno_h2", params.pheno.names, params.pheno.n_pheno) {
+  explicit EstimatorHeritability(const Params& params)
+      : EstimatorStrategy(
+            "pheno_h2", params.pheno.names, params.pheno.n_pheno) {
     n_pheno_ = params.pheno.n_pheno;
   }
 
   void compute(const State& state) override {
     for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
       data_(pheno, 0) =
-          state.pheno().comp_var(pheno, phenome::ComponentType::GENETIC) /
-          state.pheno().comp_var(pheno, phenome::ComponentType::TOTAL);
+          state.pheno().comp_var(pheno, phenome::Component::Genetic) /
+          state.pheno().comp_var(pheno, phenome::Component::Total);
   }
 
  private:
   std::size_t n_pheno_;
 };
 
-class EstimatorPhenotypeComponentMean : public EstimatorImpl {
+class EstimatorComponentMean : public EstimatorStrategy {
  public:
-  explicit EstimatorPhenotypeComponentMean(
-      const Params& params, phenome::ComponentType type)
-      : EstimatorImpl(
+  explicit EstimatorComponentMean(
+      const Params& params, phenome::Component type)
+      : EstimatorStrategy(
             "pheno_" + phenome::to_string(type) + "_mean",
             params.pheno.names,
             params.pheno.n_pheno),
@@ -58,15 +59,15 @@ class EstimatorPhenotypeComponentMean : public EstimatorImpl {
   }
 
  private:
-  phenome::ComponentType type_;
+  phenome::Component type_;
   std::size_t n_pheno_;
 };
 
-class EstimatorPhenotypeComponentVar : public EstimatorImpl {
+class EstimatorComponentVar : public EstimatorStrategy {
  public:
-  explicit EstimatorPhenotypeComponentVar(
-      const Params& params, phenome::ComponentType type)
-      : EstimatorImpl(
+  explicit EstimatorComponentVar(
+      const Params& params, phenome::Component type)
+      : EstimatorStrategy(
             "pheno_" + phenome::to_string(type) + "_var",
             params.pheno.names,
             params.pheno.n_pheno),
@@ -79,17 +80,17 @@ class EstimatorPhenotypeComponentVar : public EstimatorImpl {
   }
 
  private:
-  phenome::ComponentType type_;
+  phenome::Component type_;
   std::size_t n_pheno_;
 };
 
-class EstimatorPhenotypeComponentCor : public EstimatorImpl {
+class EstimatorComponentCor : public EstimatorStrategy {
  public:
-  explicit EstimatorPhenotypeComponentCor(
+  explicit EstimatorComponentCor(
       const Params& params,
-      phenome::ComponentType type_l,
-      std::optional<phenome::ComponentType> type_r)
-      : EstimatorImpl(
+      phenome::Component type_l,
+      std::optional<phenome::Component> type_r)
+      : EstimatorStrategy(
             "pheno_" + phenome::to_string(type_l) + "_" +
                 phenome::to_string(type_r.value_or(type_l)) + "_cor",
             label_matrix(
@@ -115,17 +116,17 @@ class EstimatorPhenotypeComponentCor : public EstimatorImpl {
  private:
   std::size_t n_ind_;
   std::size_t n_pheno_;
-  phenome::ComponentType type_l_;
-  phenome::ComponentType type_r_;
+  phenome::Component type_l_;
+  phenome::Component type_r_;
   Eigen::MatrixXd std_l_;
   Eigen::MatrixXd std_r_;
 };
 
-class EstimatorMateCorrelation : public EstimatorImpl {
+class EstimatorMateCor : public EstimatorStrategy {
  public:
-  explicit EstimatorMateCorrelation(
-      const Params& params, phenome::ComponentType type)
-      : EstimatorImpl(
+  explicit EstimatorMateCor(
+      const Params& params, phenome::Component type)
+      : EstimatorStrategy(
             "mate_" + phenome::to_string(type) + "_cor",
             label_matrix(
                 params.pheno.names, params.pheno.names, "_male", "_female"),
@@ -149,43 +150,43 @@ class EstimatorMateCorrelation : public EstimatorImpl {
   }
 
  private:
-  phenome::ComponentType type_;
+  phenome::Component type_;
   std::size_t n_sex_;
   std::size_t n_pheno_;
   Eigen::MatrixXd std_male_;
   Eigen::MatrixXd std_female_;
 };
 
-Estimator PhenotypeHeritability() {
+Estimator Heritability() {
   return [](const Params& params) {
-    return std::make_unique<EstimatorPhenotypeHeritability>(params);
+    return std::make_unique<EstimatorHeritability>(params);
   };
 }
 
-Estimator PhenotypeComponentMean(phenome::ComponentType type) {
+Estimator ComponentMean(phenome::Component type) {
   return [type](const Params& params) {
-    return std::make_unique<EstimatorPhenotypeComponentMean>(params, type);
+    return std::make_unique<EstimatorComponentMean>(params, type);
   };
 }
 
-Estimator PhenotypeComponentVar(phenome::ComponentType type) {
+Estimator ComponentVar(phenome::Component type) {
   return [type](const Params& params) {
-    return std::make_unique<EstimatorPhenotypeComponentVar>(params, type);
+    return std::make_unique<EstimatorComponentVar>(params, type);
   };
 }
 
-Estimator PhenotypeComponentCor(
-    phenome::ComponentType type_l,
-    std::optional<phenome::ComponentType> type_r) {
+Estimator ComponentCor(
+    phenome::Component type_l,
+    std::optional<phenome::Component> type_r) {
   return [type_l, type_r](const Params& params) {
-    return std::make_unique<EstimatorPhenotypeComponentCor>(
+    return std::make_unique<EstimatorComponentCor>(
         params, type_l, type_r);
   };
 }
 
-Estimator MateCorrelation(phenome::ComponentType type) {
+Estimator MateCor(phenome::Component type) {
   return [type](const Params& params) {
-    return std::make_unique<EstimatorMateCorrelation>(params, type);
+    return std::make_unique<EstimatorMateCor>(params, type);
   };
 }
 

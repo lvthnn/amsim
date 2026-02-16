@@ -272,7 +272,7 @@ struct UniformRange {
   /// @brief Sample uniform value in [0,a)
   /// @param a Upper bound
   /// @return Uniform value
-  static double sample(double a) noexcept {
+  static double sample(double a = 1.0) noexcept {
     return a * u01_53(Xoshiro256ss::get_instance().next());
   }
 
@@ -280,7 +280,7 @@ struct UniformRange {
   /// @param out Output array
   /// @param n Number of values
   /// @param a Upper bound
-  static void fill(double* out, std::size_t n, double a) noexcept {
+  static void fill(double* out, std::size_t n, double a = 1.0) noexcept {
     for (std::size_t i = 0; i < n; ++i)
       out[i] = a * u01_53(Xoshiro256ss::get_instance().next());
   }

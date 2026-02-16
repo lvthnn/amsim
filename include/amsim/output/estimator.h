@@ -2,17 +2,16 @@
 
 #include <amsim/params.h>
 #include <amsim/state.h>
+#include <amsim/utils.h>
 
 #include <Eigen/Dense>
 #include <fstream>
 
-#include <amsim/utils.h>
-
 namespace amsim {
 
-class EstimatorImpl {
+class EstimatorStrategy {
  public:
-  EstimatorImpl(
+  EstimatorStrategy(
       std::string name,
       std::vector<std::string> labels,
       std::size_t n_rows,
@@ -23,7 +22,7 @@ class EstimatorImpl {
         n_cols_(std::move(n_cols)),
         data_(n_rows_, n_cols_) {};
 
-  virtual ~EstimatorImpl() = default;
+  virtual ~EstimatorStrategy() = default;
   virtual void compute(const State& state) = 0;
 
   std::string header() {
@@ -37,10 +36,8 @@ class EstimatorImpl {
 
   std::string stream(const State& state) {
     std::string res = std::to_string(state.gen) + "\t";
-    for (std::size_t row = 0; row < n_rows_; ++row)
-      for (std::size_t col = 0; col < n_cols_; ++col)
-        res += std::to_string(data_(row, col)) +
-               (row * col < ((n_rows_ * n_cols_) - 1) ? "\t" : "");
+    for (Eigen::Index el = 0; el < data_.size(); ++el)
+      res += "\t" + std::to_string(data_(el));
 
     return res;
   }
@@ -55,21 +52,20 @@ class EstimatorImpl {
   Eigen::MatrixXd data_;
 };
 
-using Estimator =
-    std::function<std::unique_ptr<EstimatorImpl>(const Params& params)>;
+using Estimator = std::function<std::unique_ptr<EstimatorStrategy>(
+    const Params& params)>;
 
 using Estimators = std::vector<Estimator>;
 
-Estimator PhenotypeHeritability();
-Estimator PhenotypeComponentMean(
-    phenome::ComponentType type = phenome::ComponentType::TOTAL);
-Estimator PhenotypeComponentVar(
-    phenome::ComponentType type = phenome::ComponentType::TOTAL);
-Estimator PhenotypeComponentCor(
-    phenome::ComponentType type_l = phenome::ComponentType::TOTAL,
-    std::optional<phenome::ComponentType> type_r = std::nullopt);
-Estimator MateCorrelation(
-    phenome::ComponentType type = phenome::ComponentType::TOTAL);
+Estimator Heritability();
+Estimator ComponentMean(
+    phenome::Component type = phenome::Component::Total);
+Estimator ComponentVar(
+    phenome::Component type = phenome::Component::Total);
+Estimator ComponentCor(
+    phenome::Component type_l = phenome::Component::Total,
+    std::optional<phenome::Component> type_r = std::nullopt);
+Estimator MateCor(phenome::Component type = phenome::Component::Total);
 
 // macro class to manage all estimators simultaneously in simulation loop
 class ComputeEstimates {
@@ -83,7 +79,7 @@ class ComputeEstimates {
   void operator()(const State& state);
 
  private:
-  std::vector<std::unique_ptr<EstimatorImpl>> estimators_;
+  std::vector<std::unique_ptr<EstimatorStrategy>> estimators_;
   std::vector<std::ofstream> streams_;
   std::optional<std::size_t> rep_id_;
 };

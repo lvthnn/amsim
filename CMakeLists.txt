@@ -26,7 +26,7 @@ add_library(amsimcpp STATIC
   src/output/estimator.cc
   src/simulation.cc
   src/state.cc
-  src/spec.cc
+  src/setup.cc
 )
 
 # Public headers for users of the lib
