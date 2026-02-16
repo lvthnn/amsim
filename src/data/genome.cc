@@ -1,6 +1,6 @@
 #include <amsim/data/genome.h>
-#include <amsim/utils.h>
 #include <amsim/params.h>
+#include <amsim/utils.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -12,7 +12,7 @@ HaploBuf::HaploBuf(std::size_t n_ind, std::size_t n_loc)
       n_loc_(n_loc),
       n_rows_((n_loc_ + 63) & ~static_cast<std::size_t>(63)),
       n_words_((n_ind_ + 63) / 64),
-      view_(HaploView::LOC_MAJOR) {
+      view_(HaploView::LocusMajor) {
   buf_.resize(n_rows_ * n_words_);
 }
 
@@ -23,11 +23,11 @@ void HaploBuf::transpose() noexcept {
 
   // post-transpose
   const std::size_t dst_rows =
-      (view_ == HaploView::LOC_MAJOR)
+      (view_ == HaploView::LocusMajor)
           ? ((n_ind_ + 63) & ~static_cast<std::size_t>(63))
           : ((n_loc_ + 63) & ~static_cast<std::size_t>(63));
 
-  const std::size_t dst_cols_w = (view_ == HaploView::LOC_MAJOR)
+  const std::size_t dst_cols_w = (view_ == HaploView::LocusMajor)
                                      ? ((n_loc_ + 63) / 64)
                                      : ((n_ind_ + 63) / 64);
 
@@ -57,8 +57,8 @@ void HaploBuf::transpose() noexcept {
   buf_.swap(out);
   n_rows_ = dst_rows;
   n_words_ = dst_cols_w;
-  view_ = (view_ == HaploView::LOC_MAJOR) ? HaploView::IND_MAJOR
-                                          : HaploView::LOC_MAJOR;
+  view_ = (view_ == HaploView::LocusMajor) ? HaploView::IndividualMajor
+                                           : HaploView::LocusMajor;
 }
 
 GenoBuf::GenoBuf(const Params& params)
@@ -108,7 +108,7 @@ void GenoBuf::transpose() noexcept {
 }
 
 void GenoBuf::compute_mafs() {
-  if (h0_.view() != HaploView::LOC_MAJOR)
+  if (h0_.view() != HaploView::LocusMajor)
     throw std::runtime_error(
         "GenoBuf::compute_mafs: compute MAFs in locus-major view.");
 
@@ -141,7 +141,7 @@ void GenoBuf::compute_mafs() {
 }
 
 void GenoBuf::compute_stats() {
-  if (h0_.view() != HaploView::LOC_MAJOR)
+  if (h0_.view() != HaploView::LocusMajor)
     throw std::runtime_error(
         "GenoBuf::compute_stats: compute stats in loc-major view.");
 
@@ -178,7 +178,7 @@ void GenoBuf::decompress(
     const std::vector<std::size_t>& loc,
     Eigen::MatrixXd& out,
     bool standardise) {
-  if (view() != HaploView::LOC_MAJOR)
+  if (view() != HaploView::LocusMajor)
     throw std::runtime_error("GenoBuf::decompress: require loc-major view");
   if (ind_end > n_ind())
     throw std::runtime_error(

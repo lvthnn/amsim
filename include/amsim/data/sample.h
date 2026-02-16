@@ -1,6 +1,5 @@
 #pragma once
 
-#include <amsim/output/estimator.h>
 #include <amsim/params.h>
 #include <amsim/state.h>
 
@@ -45,6 +44,31 @@ enum class Family : uint8_t {
   Females = Mother | Daughter
 };
 
+
+constexpr uint8_t operator&(Individual a, Individual b) {
+  return static_cast<uint8_t>(a) & static_cast<uint8_t>(b);
+}
+
+constexpr uint8_t operator&(Mate a, Mate b) {
+  return static_cast<uint8_t>(a) & static_cast<uint8_t>(b);
+}
+
+constexpr uint8_t operator&(Family a, Family b) {
+  return static_cast<uint8_t>(a) & static_cast<uint8_t>(b);
+}
+
+constexpr Individual operator|(Individual a, Individual b) {
+  return static_cast<Individual>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+}
+
+constexpr Mate operator|(Mate a, Mate b) {
+  return static_cast<Mate>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+}
+
+constexpr Family operator|(Family a, Family b) {
+  return static_cast<Family>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+}
+
 // aggregator types — functions to reduce a proband subtype into a statistics
 // that can enter into a sampling probability transformer
 enum class Aggregator { Max, Mean, Min, Identity };
@@ -82,6 +106,6 @@ struct ProbandData<Proband::Family> {
 // weighting functions are functions that act on aggregate proband data
 // and return
 using WeightFunction =
-    std::function<void(const Eigen::VectorXd&, Eigen::VectorXd&)>;
+    std::function<void(const Eigen::MatrixXd&, Eigen::VectorXd&)>;
 
 }  // namespace amsim

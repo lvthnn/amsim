@@ -4,11 +4,11 @@
 namespace amsim::phenome {
 
 void ScorePhenotypes::scoreGenetic(State& state) {
-  if (state.geno().view() != genome::HaploView::LOC_MAJOR)
+  if (state.geno().view() != genome::HaploView::LocusMajor)
     throw std::runtime_error("phenotype scoring requires loc-major view");
 
   auto& geno_buf = state.geno();
-  auto pheno_gen_buf = state.pheno()(ComponentType::GENETIC);
+  auto pheno_gen_buf = state.pheno()(Component::Genetic);
 
   for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno) {
     const std::vector<std::size_t>& pheno_loc = pheno_loc_[pheno];
@@ -31,9 +31,9 @@ void ScorePhenotypes::scoreGenetic(State& state) {
 }
 
 void ScorePhenotypes::scoreEnvironmental(State& state) {
-  auto pheno_env_buf = state.pheno()(ComponentType::ENVIRONMENTAL);
+  auto pheno_env_buf = state.pheno()(Component::Environmental);
   rng::NormalPolar::fill(
-      state.pheno()(ComponentType::ENVIRONMENTAL).data(), n_ind_ * n_pheno_);
+      state.pheno()(Component::Environmental).data(), n_ind_ * n_pheno_);
   pheno_env_buf = pheno_env_buf * env_chol_.transpose();
 
   for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
@@ -48,21 +48,21 @@ void ScorePhenotypes::scoreNurture(State& state) {
   // hard to compute everything at once, but we can do each phenotype at a time
   if (state.gen == 0) {
     for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno) {
-      auto pheno_nur_buf = state.pheno()(pheno, ComponentType::NURTURE);
+      auto pheno_nur_buf = state.pheno()(pheno, Component::Nurture);
       rng::NormalPolar::fill(pheno_nur_buf.data(), n_ind_);
       pheno_nur_buf *= std::sqrt(h2_nur_[pheno]);
     }
   } else {
-    auto pheno_gen_buf = state.pheno()(ComponentType::GENETIC);
-    auto pheno_par_gen_buf = state.pheno_par()(ComponentType::GENETIC);
-    state.pheno()(ComponentType::NURTURE) = pheno_par_gen_buf - pheno_gen_buf;
+    auto pheno_gen_buf = state.pheno()(Component::Genetic);
+    auto pheno_par_gen_buf = state.pheno_par()(Component::Genetic);
+    state.pheno()(Component::Nurture) = pheno_par_gen_buf - pheno_gen_buf;
   }
 }
 
 void ScorePhenotypes::scoreTotal(State& state) {
-  state.pheno()(ComponentType::TOTAL).noalias() =
-      state.pheno()(ComponentType::GENETIC) +
-      state.pheno()(ComponentType::ENVIRONMENTAL);
+  state.pheno()(Component::Total).noalias() =
+      state.pheno()(Component::Genetic) +
+      state.pheno()(Component::Environmental);
 }
 
 void ScorePhenotypes::operator()(State& state) {

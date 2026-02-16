@@ -32,10 +32,10 @@ std::array<std::uint64_t, 2> UpdateGenome::gamWord(
 }
 
 void UpdateGenome::operator()(State& state) {
-  if (state.geno().view() != HaploView::IND_MAJOR)
+  if (state.geno().view() != HaploView::IndividualMajor)
     throw std::runtime_error("update genome requires ind-major view");
 
-  constexpr std::size_t INC_WORD = 64;
+  constexpr std::size_t IncWord = 64;
   const std::size_t n_words = state.geno().n_words();
 
   HaploBuf& h0 = state.geno().h0();
@@ -66,8 +66,8 @@ void UpdateGenome::operator()(State& state) {
       h0_off(fpair, word) = gam_mf;
       h1_off(fpair, word) = gam_ff;
 
-      ptr_rec_ += INC_WORD;
-      ptr_mut_ += INC_WORD;
+      ptr_rec_ += IncWord;
+      ptr_mut_ += IncWord;
     }
   }
 }

@@ -5,7 +5,7 @@
 namespace amsim::genome {
 
 void HaplotypeGeneratorIID::generate_haplotypes(GenoBuf& buf) {
-  if (buf.view() != HaploView::LOC_MAJOR)
+  if (buf.view() != HaploView::LocusMajor)
     throw std::runtime_error("generate haplotypes in loc-major view");
 
   HaploBuf& h0 = buf.h0();

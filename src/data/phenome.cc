@@ -14,11 +14,11 @@ PhenoBuf::PhenoBuf(const Params& params)
       comp_var_(4, n_pheno_) {};
 
 void PhenoBuf::compute_stats() {
-  for (ComponentType type :
-       {ComponentType::GENETIC,
-        ComponentType::ENVIRONMENTAL,
-        ComponentType::NURTURE,
-        ComponentType::TOTAL}) {
+  for (Component type :
+       {Component::Genetic,
+        Component::Environmental,
+        Component::Nurture,
+        Component::Total}) {
     Eigen::Index col_type = static_cast<int>(type);
     comp_mean_.row(col_type) = (*this)(type).colwise().mean();
     comp_var_.row(col_type) =
