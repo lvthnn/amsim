@@ -12,16 +12,14 @@ enum Component { Genetic = 0, Environmental = 1, Nurture = 2, Total = 3 };
 
 inline Component operator++(Component& type, int) {
   Component old = type;
-  type = (type == Component::Total)
-             ? Component::Genetic
-             : Component(static_cast<int>(type) + 1);
+  type = (type == Component::Total) ? Component::Genetic
+                                    : Component(static_cast<int>(type) + 1);
   return old;
 }
 
 inline Component& operator++(Component& type) {
-  type = (type == Component::Total)
-             ? Component::Genetic
-             : Component(static_cast<int>(type) + 1);
+  type = (type == Component::Total) ? Component::Genetic
+                                    : Component(static_cast<int>(type) + 1);
   return type;
 }
 
@@ -46,7 +44,13 @@ inline std::ostream& operator<<(std::ostream& os, Component type) {
 // Buffer structure to store phenotype data
 class PhenoBuf {
  public:
-  explicit PhenoBuf(const Params& params);
+  explicit PhenoBuf(const Params& params)
+      : n_ind_(params.geno.n_ind),
+        n_sex_(n_ind_ / 2),
+        n_pheno_(params.pheno.n_pheno),
+        data_(4 * n_ind_ * n_pheno_),
+        comp_mean_(4, n_pheno_),
+        comp_var_(4, n_pheno_) {}
 
   Eigen::Map<const Eigen::MatrixXd> operator()() const {
     const double* pos = data_.data();
@@ -59,7 +63,8 @@ class PhenoBuf {
   }
 
   // Retrieve const matrix of values for specified component
-  Eigen::Map<const Eigen::MatrixXd> operator()(Component type = Component::Total) const {
+  Eigen::Map<const Eigen::MatrixXd> operator()(
+      Component type = Component::Total) const {
     const double* pos = &data_[n_ind_ * (n_pheno_ * static_cast<int>(type))];
     return Eigen::Map<const Eigen::MatrixXd>(pos, n_ind_, n_pheno_);
   }
@@ -79,7 +84,8 @@ class PhenoBuf {
   }
 
   // Retrieve vector of values for specified phenotype component
-  Eigen::Map<Eigen::VectorXd> operator()(std::size_t id, Component type = Component::Total) {
+  Eigen::Map<Eigen::VectorXd> operator()(
+      std::size_t id, Component type = Component::Total) {
     double* pos = &data_[n_ind_ * (n_pheno_ * static_cast<int>(type) + id)];
     return Eigen::Map<Eigen::VectorXd>(pos, n_ind_);
   }
@@ -161,13 +167,31 @@ class PhenoBuf {
   }
 
  private:
-  const std::size_t n_ind_;  ///< Number of individuals
-  const std::size_t n_sex_;
+  const std::size_t n_ind_;    ///< Number of individuals
+  const std::size_t n_sex_;    ///< Number of reproducing pairs
   const std::size_t n_pheno_;  ///< Number of phenotypes
   std::vector<double> data_;   ///< Main phenotype component buffer
 
-  Eigen::MatrixXd comp_mean_;
-  Eigen::MatrixXd comp_var_;
+  Eigen::MatrixXd comp_mean_;  ///< Component means
+  Eigen::MatrixXd comp_var_;   ///< Component variances
 };
+
+inline void PhenoBuf::compute_stats() {
+  for (Component type :
+       {Component::Genetic,
+        Component::Environmental,
+        Component::Nurture,
+        Component::Total}) {
+    Eigen::Index col_type = static_cast<int>(type);
+    comp_mean_.row(col_type) = (*this)(type).colwise().mean();
+    comp_var_.row(col_type) =
+        ((*this)(type).rowwise() - comp_mean_.row(col_type))
+            .array()
+            .square()
+            .colwise()
+            .sum() /
+        static_cast<double>(n_ind_);
+  }
+}
 
 }  // namespace amsim

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <amsim/core.h>
-#include <amsim/sample.h>
+#include <amsim/sample/proband.h>
 
 #include <Eigen/Dense>
 #include <filesystem>
@@ -90,19 +90,19 @@ class SampleMean : public SampleEstimatorStrategy<P> {
 };
 
 template <Proband P>
-SampleEstimator<P> SampleMeanEstimator() {
+inline SampleEstimator<P> SampleMeanEstimator() {
   return [](const Params& params, const std::filesystem::path& sample_dir) {
     return std::make_unique<SampleMean<P>>(params, sample_dir);
   };
 }
 
 template <Proband P>
-SampleEstimator<P> SampleVarEstimator() {
+inline SampleEstimator<P> SampleVarEstimator() {
 
 }
 
 template <Proband P>
-SampleEstimator<P> SampleCorEstimator() {
+inline SampleEstimator<P> SampleCorEstimator() {
 
 }
 

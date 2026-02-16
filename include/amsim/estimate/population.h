@@ -3,8 +3,6 @@
 #include <amsim/core/params.h>
 #include <amsim/core/state.h>
 #include <amsim/core/utils.h>
-
-#include <amsim/sample/sampler.h>
 #include <amsim/sample/proband.h>
 
 #include <Eigen/Dense>
@@ -69,21 +67,202 @@ using PopulationEstimator =
 
 using PopulationEstimators = std::vector<PopulationEstimator>;
 
-PopulationEstimator PopulationHeritability();
-PopulationEstimator PopulationComponentMean(Component type = Component::Total);
-PopulationEstimator PopulationComponentVar(Component type = Component::Total);
-PopulationEstimator PopulationComponentCor(
+namespace details {
+
+class EstimatorHeritability : public PopulationEstimatorStrategy {
+ public:
+  explicit EstimatorHeritability(const Params& params)
+      : PopulationEstimatorStrategy(
+            params.sim.out_dir,
+            "pheno_h2",
+            params.pheno.names,
+            params.pheno.n_pheno) {
+    n_pheno_ = params.pheno.n_pheno;
+  }
+
+  void compute(const State& state) override {
+    for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
+      data_(pheno, 0) = state.pheno().comp_var(pheno, Component::Genetic) /
+                        state.pheno().comp_var(pheno, Component::Total);
+  }
+
+ private:
+  std::size_t n_pheno_;
+};
+
+class EstimatorComponentMean : public PopulationEstimatorStrategy {
+ public:
+  explicit EstimatorComponentMean(const Params& params, Component type)
+      : PopulationEstimatorStrategy(
+            params.sim.out_dir,
+            "pheno_" + to_string(type) + "_mean",
+            params.pheno.names,
+            params.pheno.n_pheno),
+        type_(type),
+        n_pheno_(params.pheno.n_pheno) {}
+
+  void compute(const State& state) override {
+    for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
+      data_(pheno) = state.pheno().comp_mean(pheno, type_);
+  }
+
+ private:
+  Component type_;
+  std::size_t n_pheno_;
+};
+
+class EstimatorComponentVar : public PopulationEstimatorStrategy {
+ public:
+  explicit EstimatorComponentVar(const Params& params, Component type)
+      : PopulationEstimatorStrategy(
+            params.sim.out_dir,
+            "pheno_" + to_string(type) + "_var",
+            params.pheno.names,
+            params.pheno.n_pheno),
+        type_(type),
+        n_pheno_(params.pheno.n_pheno) {}
+
+  void compute(const State& state) override {
+    for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
+      data_(pheno) = state.pheno().comp_var(pheno, type_);
+  }
+
+ private:
+  Component type_;
+  std::size_t n_pheno_;
+};
+
+class EstimatorComponentCor : public PopulationEstimatorStrategy {
+ public:
+  explicit EstimatorComponentCor(
+      const Params& params, Component type_l, std::optional<Component> type_r)
+      : PopulationEstimatorStrategy(
+            params.sim.out_dir,
+            "pheno_" + to_string(type_l) + "_" +
+                to_string(type_r.value_or(type_l)) + "_cor",
+            utils::label_matrix(
+                params.pheno.names,
+                params.pheno.names,
+                "_" + to_string(type_l),
+                "_" + to_string(type_r.value_or(type_l))),
+            params.pheno.n_pheno,
+            params.pheno.n_pheno),
+        n_ind_(params.geno.n_ind),
+        n_pheno_(params.pheno.n_pheno),
+        type_l_(type_l),
+        type_r_(type_r.value_or(type_l)),
+        std_l_(n_ind_, n_pheno_),
+        std_r_(n_ind_, n_pheno_) {}
+
+  void compute(const State& state) override {
+    std_l_ = utils::standardise(state.pheno()(type_l_));
+    std_r_ = utils::standardise(state.pheno()(type_r_));
+    data_ = (std_l_.transpose() * std_r_) / static_cast<double>(n_ind_);
+  }
+
+ private:
+  std::size_t n_ind_;
+  std::size_t n_pheno_;
+  Component type_l_;
+  Component type_r_;
+  Eigen::MatrixXd std_l_;
+  Eigen::MatrixXd std_r_;
+};
+
+class EstimatorMateCor : public PopulationEstimatorStrategy {
+ public:
+  explicit EstimatorMateCor(const Params& params, Component type)
+      : PopulationEstimatorStrategy(
+            params.sim.out_dir,
+            "mate_" + to_string(type) + "_cor",
+            utils::label_matrix(
+                params.pheno.names, params.pheno.names, "_male", "_female"),
+            params.pheno.n_pheno,
+            params.pheno.n_pheno),
+        type_(type),
+        n_sex_(params.geno.n_ind / 2),
+        n_pheno_(params.pheno.n_pheno),
+        std_male_(n_sex_, n_pheno_),
+        std_female_(n_sex_, n_pheno_) {}
+
+  void compute(const State& state) override {
+    std_male_ = utils::standardise(state.pheno().male(type_));
+    std_female_ = utils::standardise(state.pheno().female(type_));
+    data_.setZero();
+
+    for (std::size_t pair = 0; pair < n_sex_; ++pair)
+      data_.noalias() += std_male_.row(pair).transpose() *
+                         std_female_.row(state.matching()[pair]);
+    data_ /= static_cast<double>(n_sex_);
+  }
+
+ private:
+  Component type_;
+  std::size_t n_sex_;
+  std::size_t n_pheno_;
+  Eigen::MatrixXd std_male_;
+  Eigen::MatrixXd std_female_;
+};
+
+}  // namespace details
+
+inline PopulationEstimator PopulationHeritability() {
+  return [](const Params& params) {
+    return std::make_unique<details::EstimatorHeritability>(params);
+  };
+}
+
+inline PopulationEstimator PopulationComponentMean(
+    Component type = Component::Total) {
+  return [type](const Params& params) {
+    return std::make_unique<details::EstimatorComponentMean>(params, type);
+  };
+}
+
+inline PopulationEstimator PopulationComponentVar(
+    Component type = Component::Total) {
+  return [type](const Params& params) {
+    return std::make_unique<details::EstimatorComponentVar>(params, type);
+  };
+}
+
+inline PopulationEstimator PopulationComponentCor(
     Component type_l = Component::Total,
-    std::optional<Component> type_r = std::nullopt);
-PopulationEstimator PopulationMateCor(Component type = Component::Total);
+    std::optional<Component> type_r = std::nullopt) {
+  return [type_l, type_r](const Params& params) {
+    return std::make_unique<details::EstimatorComponentCor>(
+        params, type_l, type_r);
+  };
+}
+
+inline PopulationEstimator PopulationMateCor(
+    Component type = Component::Total) {
+  return [type](const Params& params) {
+    return std::make_unique<details::EstimatorMateCor>(params, type);
+  };
+}
 
 // macro class to manage all estimators simultaneously in simulation loop
 class ComputePopulationEstimates {
  public:
-  explicit ComputePopulationEstimates(
+  ComputePopulationEstimates(
       const Params& params,
       const PopulationEstimators& estimators,
-      std::optional<std::size_t> rep_id = std::nullopt);
+      std::optional<std::size_t> rep_id)
+      : rep_id_(std::move(rep_id)) {
+    auto out_dir =
+        (rep_id_.has_value())
+            ? params.sim.out_dir / std::format("rep_{:03d}", rep_id_.value())
+            : params.sim.out_dir;
+
+    if (std::filesystem::exists(out_dir) && rep_id.has_value())
+      throw std::runtime_error(
+          "replicate directory " + out_dir.string() + " already exists!");
+    std::filesystem::create_directory(out_dir);
+
+    for (const auto& factory : estimators)
+      estimators_.emplace_back(factory(params));
+  }
 
   void operator()(const State& state);
 
@@ -91,5 +270,9 @@ class ComputePopulationEstimates {
   std::vector<std::unique_ptr<PopulationEstimatorStrategy>> estimators_;
   std::optional<std::size_t> rep_id_;
 };
+
+inline void ComputePopulationEstimates::operator()(const State& state) {
+  for (auto& estimator : estimators_) (*estimator)(state);
+}
 
 }  // namespace amsim

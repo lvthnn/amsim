@@ -13,37 +13,21 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_link_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
 endif()
 
-# Library targets
-add_library(amsimcpp STATIC
-  src/core/log.cc
-  src/core/state.cc
-  src/core/utils.cc
-  src/data/genome.cc
-  src/data/phenome.cc
-  src/estimate/population.cc
-  src/sample/sampler.cc
-  src/init/phenome/optimise_arch.cc
-  src/init/initialise.cc
-  src/init/setup.cc
-  src/transform/genome/update.cc
-  src/transform/phenome/score.cc
-  src/transform/mating/assortative.cc
-  src/transform/mating/random.cc
-  src/simulation.cc
-)
+# Register amsim as a header-only library
+add_library(amsimcpp INTERFACE)
 
 # Public headers for users of the lib
 target_include_directories(amsimcpp
-  PUBLIC
+  INTERFACE 
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
 # Use Eigen with BLAS/LAPACK
 if (APPLE)
   find_library(ACCELERATE_FRAMEWORK Accelerate REQUIRED)
-  target_link_libraries(amsimcpp PUBLIC ${ACCELERATE_FRAMEWORK})
-  target_compile_definitions(amsimcpp PUBLIC ACCELERATE_NEW_LAPACK)
-  target_compile_definitions(amsimcpp PUBLIC EIGEN_USE_BLAS EIGEN_USE_LAPACK)
+  target_link_libraries(amsimcpp INTERFACE ${ACCELERATE_FRAMEWORK})
+  target_compile_definitions(amsimcpp INTERFACE ACCELERATE_NEW_LAPACK)
+  target_compile_definitions(amsimcpp INTERFACE EIGEN_USE_BLAS EIGEN_USE_LAPACK)
 else()
   include_directories("/usr/include/openblas")
   find_package(BLAS REQUIRED)
@@ -57,7 +41,7 @@ option(BUILD_PYTHON "Build Python bindings for amsimpy" OFF)
 
 if (BUILD_PYTHON)
   set(PYBIND11_FINDPYTHON ON)
-  set(PYBIND11_DETAILED_ERROR_MESSAGES ON CACHE BOOL "Enable detailed error messages")
+  set(PYBIND11_DETAILED_ERROR_MESSAGES ON CACHE BOOL "Detailed error messages")
   find_package(pybind11 REQUIRED)
 
   pybind11_add_module(_core
@@ -66,13 +50,6 @@ if (BUILD_PYTHON)
   target_link_libraries(_core PRIVATE amsimcpp)
   target_include_directories(_core PRIVATE ${CMAKE_SOURCE_DIR}/include)
   target_compile_definitions(_core PRIVATE PYBIND11_DETAILED_ERROR_MESSAGES)
-endif()
-
-# Reasonable warnings
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-  target_compile_options(amsimcpp PRIVATE -Wall -Wextra -Wpedantic)
-elseif (MSVC)
-  target_compile_options(amsimcpp PRIVATE /W4)
 endif()
 
 # Use GoogleTest
@@ -103,10 +80,7 @@ endif()
 # Install rules (so other projects can find+link amsimcpp)
 include(GNUInstallDirs)
 install(TARGETS amsimcpp
-  EXPORT amsimcppTargets
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+  EXPORT amsimcppTargets)
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(EXPORT amsimcppTargets
   NAMESPACE amsimcpp::
