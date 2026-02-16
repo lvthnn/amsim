@@ -2,6 +2,7 @@
 #include <amsim/output/estimator.h>
 #include <amsim/params.h>
 #include <amsim/preprocess.h>
+#include <amsim/setup.h>
 #include <amsim/state.h>
 #include <amsim/transform.h>
 
@@ -9,7 +10,6 @@
 #include <iostream>
 
 namespace amsim {
-
 void setup_output(const std::filesystem::path& out_dir) {
   if (std::filesystem::exists(out_dir))
     throw std::runtime_error(
@@ -25,17 +25,37 @@ void simulation_preprocess(Params& params) {
 // runs a single-threaded simulation
 // this should be used by multithreaded controller
 void simulation_run(
-    State& state,
-    Params& params,
-    const Estimators& estimators,
+    const Simulation& simulation,
     std::size_t n_gen,
     std::optional<std::size_t> rep_id) {
+  // build parameters, preprocess, and build state
+  Params params = build_params(simulation);
+  simulation_preprocess(params);
+  State state = build_state(params);
+
+  for (std::size_t pheno = 0; pheno < params.pheno.n_pheno; ++pheno) {
+    std::cout << params.pheno.names[pheno] << "\n";
+  }
+
+  for (std::size_t pheno = 0; pheno < params.pheno.n_pheno; ++pheno) {
+    std::cout << params.pheno.pheno_ids.at(params.pheno.names[pheno]) << "\n";
+  }
+
   // set up output directory
   setup_output(params.sim.out_dir);
   rng::set_seed(rng::auto_seed(params.sim.rng_seed));
-  
-  // preprocess the simulation
-  simulation_preprocess(params);
+
+  ComputePopulationEstimates estimate(params, simulation.estimators, rep_id);
+
+  // convert the specification objects into samplers
+  std::vector<Sampler> samplers;
+  samplers.reserve(simulation.samples.size());
+  for (const auto& sample : simulation.samples) {
+    samplers.push_back(
+        std::visit(
+            [&params](auto&& spec) { return Sampler(spec, params); }, sample));
+  }
+
 
   // founder haplotype initialiser
   genome::HaplotypeGeneratorIID haplo(params);
@@ -44,10 +64,6 @@ void simulation_run(
   mating::AssortativeMating mate(params);
   genome::UpdateGenome update(params);
 
-  // estimator transformer
-  ComputeEstimates estimate(params, estimators, rep_id);
-  estimate.headers();
-
   // generate the initial state
   haplo.generate_haplotypes(state.geno());
   state.geno().compute_mafs();
@@ -55,20 +71,14 @@ void simulation_run(
 
   score(state);
   state.pheno().compute_stats();
-
   random_mate(state);
-
   state.transpose();
   update(state);
   state.transpose();
-
   state.advance();
-  std::cout << "advanced\n";
 
   // run the core simulation loop
-  std::cout << "here we go!\n";
   while (state.gen <= n_gen) {
-    std::cout << "generation: " << std::to_string(state.gen) << "\n";
     state.geno().compute_mafs();
     state.geno().compute_stats();
 
@@ -79,15 +89,14 @@ void simulation_run(
     // match mates
     mate(state);
 
-    // TODO(karihlynsson): Produce subviews / sample the population
-    //     for (each view of the population)
-    //       std::size_t view_mask = view->sample(state);
-    //       estimate(state, view);
+    // sample and estimate subpopulations
+    for (auto& sampler : samplers)
+      sampler(state);
 
-    // compute metrics for everything
+    // compute population estimates
     estimate(state);
 
-    // Update the genome
+    // update the genome
     state.transpose();
     update(state);
     state.transpose();

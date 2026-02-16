@@ -19,9 +19,7 @@ void simulation_preprocess(Params& params);
 
 // Perform a single simulation transformation step
 void simulation_run(
-    State& state,
-    Params& params,
-    const Estimators& estimators,
+    const Simulation& simulation,
     std::size_t n_gen,
     std::optional<std::size_t> rep_id = std::nullopt);
 

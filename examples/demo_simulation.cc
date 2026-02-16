@@ -1,8 +1,9 @@
 // This example shows the setup and running of a toy simulation configuration
-#include <amsim/output/estimator.h>
-#include <amsim/simulation.h>
 #include <amsim/setup.h>
 #include <amsim/state.h>
+#include <amsim/simulation.h>
+#include <amsim/output/estimator.h>
+#include <amsim/output/sample.h>
 
 #include <Eigen/Dense>
 
@@ -32,20 +33,31 @@ int main() {
     .environmental_component_cor = environmental_component_cor,
     .mating = {.mate_cor = mate_cor},
     .estimators = {
-      amsim::Heritability(),
-      amsim::MateCor(),
-      amsim::ComponentCor(amsim::phenome::Component::Genetic),
-      amsim::ComponentCor(amsim::phenome::Component::Environmental)
+      amsim::PopulationHeritability(),
+      amsim::PopulationMateCor(),
+      amsim::PopulationComponentCor(amsim::phenome::Component::Genetic),
+      amsim::PopulationComponentCor(amsim::phenome::Component::Environmental)
+    },
+    .samples = {
+      amsim::Sample<amsim::Proband::Individual>{
+        .name = "random_sample_200",
+        .n_probands = 200,
+        .weighting = amsim::Uniform(),
+        .estimators = {amsim::SampleMeanEstimator<amsim::Proband::Individual>()}
+      },
+      amsim::Sample<amsim::Proband::Individual>{
+        .name = "participation_bias_200",
+        .n_probands = 200,
+        .on = std::vector<std::string>({"height", "weight"}),
+        .weighting = amsim::Logistic((Eigen::VectorXd(2) << 1.0, -1.0).finished()),
+        .estimators = {amsim::SampleMeanEstimator<amsim::Proband::Individual>()}
+      }
     },
     .output_dir = "amsim_demo"
   };
-
   // in the future, we might consider adding
   //   auto pipeline = amsim::build_pipeline(simulation)
-  auto params = amsim::build_params(simulation);
-  auto state = amsim::build_state(params);
-
-  amsim::simulation_run(state, params, simulation.estimators, 25);
+  amsim::simulation_run(simulation, 25);
 
   // run multiple simulations
   // amsim::run_simulations(simulation, 100, 10);

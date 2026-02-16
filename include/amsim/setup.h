@@ -1,13 +1,13 @@
 #pragma once
 
-#include <string>
-#include <vector>
-#include <cstddef>
-
 #include <amsim/output/estimator.h>
+#include <amsim/output/sample.h>
 #include <amsim/params.h>
 
 #include <Eigen/Dense>
+#include <cstddef>
+#include <string>
+#include <vector>
 
 namespace amsim {
 
@@ -23,7 +23,7 @@ struct Phenotype {
   std::string name;
   std::size_t n_causal_loci;
   std::unordered_map<std::string, std::size_t> ids;
-  
+
   std::optional<Eigen::VectorXd> effects;
   std::optional<std::vector<std::size_t>> causal_loci;
 
@@ -54,8 +54,8 @@ struct Simulation {
 
   Mating mating;
 
-  // Samples samples; // subpopulations and estimators to run on them
-  Estimators estimators; // population-wide estimators
+  std::vector<PopulationEstimator> estimators; // population-wide estimators
+  std::vector<SampleSpec> samples; // subpopulation estimators
 
   std::size_t n_replicates = 1;
   std::size_t n_threads = 1;
@@ -65,4 +65,4 @@ struct Simulation {
 
 Params build_params(const Simulation& simulation);
 
-} // namespace amsim
+}  // namespace amsim
