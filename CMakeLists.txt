@@ -24,6 +24,7 @@ add_library(amsimcpp STATIC
   src/transform/mating_transform.cc
   src/transform/phenome_transform.cc
   src/output/estimator.cc
+  src/output/sample.cc
   src/simulation.cc
   src/state.cc
   src/setup.cc
