@@ -15,19 +15,21 @@ endif()
 
 # Library targets
 add_library(amsimcpp STATIC
-  src/utils.cc
+  src/core/log.cc
+  src/core/state.cc
+  src/core/utils.cc
   src/data/genome.cc
   src/data/phenome.cc
-  src/initialise/genome_initialise.cc
-  src/preprocess/phenome_preprocess.cc
-  src/transform/genome_transform.cc
-  src/transform/mating_transform.cc
-  src/transform/phenome_transform.cc
-  src/output/estimator.cc
-  src/output/sample.cc
+  src/estimate/population.cc
+  src/sample/sampler.cc
+  src/init/phenome/optimise_arch.cc
+  src/init/initialise.cc
+  src/init/setup.cc
+  src/transform/genome/update.cc
+  src/transform/phenome/score.cc
+  src/transform/mating/assortative.cc
+  src/transform/mating/random.cc
   src/simulation.cc
-  src/state.cc
-  src/setup.cc
 )
 
 # Public headers for users of the lib
