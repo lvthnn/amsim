@@ -1,11 +1,11 @@
 #include <amsim/data/genome.h>
-#include <amsim/params.h>
-#include <amsim/utils.h>
+#include <amsim/core/params.h>
+#include <amsim/core/utils.h>
 
 #include <cstddef>
 #include <cstdint>
 
-namespace amsim::genome {
+namespace amsim {
 
 HaploBuf::HaploBuf(std::size_t n_ind, std::size_t n_loc)
     : n_ind_(n_ind),
@@ -207,4 +207,4 @@ void GenoBuf::decompress(
   }
 }
 
-}  // namespace amsim::genome
+}  // namespace amsim

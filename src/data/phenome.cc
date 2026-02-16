@@ -1,9 +1,9 @@
 #include <amsim/data/phenome.h>
-#include <amsim/params.h>
+#include <amsim/core/params.h>
 
 #include <cstddef>
 
-namespace amsim::phenome {
+namespace amsim {
 
 PhenoBuf::PhenoBuf(const Params& params)
     : n_ind_(params.geno.n_ind),
@@ -31,4 +31,4 @@ void PhenoBuf::compute_stats() {
   }
 }
 
-}  // namespace amsim::phenome
+}  // namespace amsim

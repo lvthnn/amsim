@@ -1,8 +1,8 @@
-#include <amsim/initialise.h>
-#include <amsim/params.h>
-#include <amsim/state.h>
+#include <amsim/core/params.h>
+#include <amsim/core/state.h>
+#include <amsim/init/initialise.h>
 
-namespace amsim::genome {
+namespace amsim {
 
 void HaplotypeGeneratorIID::generate_haplotypes(GenoBuf& buf) {
   if (buf.view() != HaploView::LocusMajor)
@@ -28,4 +28,4 @@ void HaplotypeGeneratorIID::generate_haplotypes(GenoBuf& buf) {
   }
 }
 
-}  // namespace amsim::genome
+}  // namespace amsim
