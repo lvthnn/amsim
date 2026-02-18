@@ -148,11 +148,13 @@ struct BernoulliWord {
   }
 
   /// @brief Set per-bit probabilities (uses first value)
-  /// @param f Array of probabilities
-  void set_probs(const double* ptr) noexcept {
+  /// @param ptr Array of probabilities
+  /// @param valid Number of valid bits in word — uses 0 probability for
+  /// remainder
+  void set_probs(const double* ptr, std::size_t valid = 64) noexcept {
     double p;
     for (std::size_t j = 0; j < 64; ++j) {
-      p = *(ptr + j);
+      p = (j < valid) ? *(ptr + j) : 0;
       p = std::max(0.0, p);
       p = std::min(p, 1.0);
       T thresh = prob_to_thr<BITS>(p);

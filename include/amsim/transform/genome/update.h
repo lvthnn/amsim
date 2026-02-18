@@ -10,7 +10,8 @@ namespace amsim {
 class UpdateGenome {
  public:
   explicit UpdateGenome(const Params& params)
-      : n_ind_(params.geno.n_ind),
+      : n_loc_(params.geno.n_loc),
+        n_ind_(params.geno.n_ind),
         n_sex_(n_ind_ / 2),
         v_rec_(params.geno.v_rec),
         v_mut_(params.geno.v_mut),
@@ -18,6 +19,7 @@ class UpdateGenome {
   void operator()(State& state);
 
  private:
+  const std::size_t n_loc_;
   const std::size_t n_ind_;
   const std::size_t n_sex_;
   const Eigen::VectorXd& v_rec_;
@@ -27,16 +29,17 @@ class UpdateGenome {
   std::vector<std::uint64_t> transmit_chunk_;
   rng::BernoulliWord<16> bw_;
 
-  std::array<std::uint64_t, 2> gamWord(std::uint64_t h0, std::uint64_t h1);
+  std::uint64_t gamWord(
+      std::uint64_t h0, std::uint64_t h1, std::size_t valid = 64);
 
   void updateGenome(State& state);
   void updateNurture(State& state);
 };
 
-inline std::array<std::uint64_t, 2> UpdateGenome::gamWord(
-    std::uint64_t ind_h0, std::uint64_t ind_h1) {
+inline std::uint64_t UpdateGenome::gamWord(
+    std::uint64_t ind_h0, std::uint64_t ind_h1, std::size_t valid) {
   // set recombination probabilities for loci in word
-  bw_.set_probs(ptr_rec_);
+  bw_.set_probs(ptr_rec_, valid);
 
   // sample a 0-1 recombination mask
   std::uint64_t par = bw_.sample();
@@ -54,10 +57,10 @@ inline std::array<std::uint64_t, 2> UpdateGenome::gamWord(
   if (par0) par = ~par;
 
   // set mutation probabilities for the loci
-  bw_.set_probs(ptr_mut_);
+  bw_.set_probs(ptr_mut_, valid);
   std::uint64_t mut = bw_.sample();
 
-  return {par, ((par & ind_h0) | (~par & ind_h1)) ^ mut};
+  return ((par & ind_h0) | (~par & ind_h1)) ^ mut;
 }
 
 inline void UpdateGenome::operator()(State& state) {
@@ -77,23 +80,24 @@ inline void UpdateGenome::operator()(State& state) {
     std::size_t fpair = matching[pair] + n_sex_;
     ptr_rec_ = v_rec_.data();
     ptr_mut_ = v_mut_.data();
+    std::size_t valid = 64;
+
     for (std::size_t word = 0; word < n_words; ++word) {
+      if (word == n_words - 1)
+        valid = (n_loc_ % 64 == 0) ? 64 : n_loc_ % 64;
+
       std::uint64_t male_h0 = h0(pair, word);
       std::uint64_t male_h1 = h1(pair, word);
       std::uint64_t female_h0 = h0(fpair, word);
       std::uint64_t female_h1 = h1(fpair, word);
 
       // male child
-      auto [mask_mm, gam_mm] = gamWord(male_h0, male_h1);
-      auto [mask_fm, gam_fm] = gamWord(female_h0, female_h1);
-      h0_off(pair, word) = gam_mm;
-      h1_off(pair, word) = gam_fm;
+      h0_off(pair, word) = gamWord(male_h0, male_h1, valid);
+      h1_off(pair, word) = gamWord(female_h0, female_h1, valid);
 
       // female child
-      auto [mask_mf, gam_mf] = gamWord(male_h0, male_h1);
-      auto [mask_ff, gam_ff] = gamWord(female_h0, female_h1);
-      h0_off(fpair, word) = gam_mf;
-      h1_off(fpair, word) = gam_ff;
+      h0_off(fpair, word) = gamWord(male_h0, male_h1, valid);
+      h1_off(fpair, word) = gamWord(female_h0, female_h1, valid);
 
       ptr_rec_ += IncWord;
       ptr_mut_ += IncWord;
@@ -101,4 +105,4 @@ inline void UpdateGenome::operator()(State& state) {
   }
 }
 
-} // namespace amsim
+}  // namespace amsim
