@@ -1,8 +1,8 @@
 #pragma once
 
 #include <amsim/core.h>
-#include <amsim/sample.h>
 #include <amsim/estimate.h>
+#include <amsim/sample.h>
 
 #include <filesystem>
 
@@ -52,9 +52,7 @@ class Sampler {
   explicit Sampler(Sample<P> sample, const Params& params)
       : self_(std::make_unique<Model<P>>(std::move(sample), params)){};
 
-  void operator()(const State& state) {
-    (*self_)(state);
-  }
+  void operator()(const State& state) { (*self_)(state); }
 
  private:
   // type-erased computing interface
@@ -247,47 +245,32 @@ inline void Sampler::Model<P>::extractProbands(const State& state) {
     else if constexpr (P == Proband::Family) {
       for (std::size_t prob = 0; prob < n_probands; ++prob) {
         std::size_t prob_id = selected[prob];
-        std::size_t row = prob_id * n_members;
-        std::size_t member = 0;
+        std::size_t row = prob_id * ProbandData<P>::ProbandSize;
 
-        if (of & Family::Son)
-          phenotypes(row + member++, pheno) = pheno_vec(prob);
-        if (of & Family::SonWife)
-          phenotypes(row + member++, pheno) = pheno_vec(n_sex + matching[prob]);
-        if (of & Family::Daughter)
-          phenotypes(row + member++, pheno) =
-              pheno_vec(n_sex + matching_par[prob]);
-        if (of & Family::DaughterHusband)
-          phenotypes(row + member++, pheno) =
-              pheno_vec(inv_matching[matching_par[prob]]);
-        if (of & Family::Father)
-          phenotypes(row + member++, pheno) = pheno_par_vec(prob);
-        if (of & Family::Mother)
-          phenotypes(row + member++, pheno) =
-              pheno_par_vec(n_sex + matching_par[prob]);
+        phenotypes(row, pheno) = pheno_vec(prob_id);
+        phenotypes(row + 1, pheno) = pheno_vec(n_sex + matching[prob_id]);
+        phenotypes(row + 2, pheno) = pheno_vec(n_sex + matching_par[prob_id]);
+        phenotypes(row + 3, pheno) =
+            pheno_vec(inv_matching[matching_par[prob_id]]);
+        phenotypes(row + 4, pheno) = pheno_par_vec(prob_id);
+        phenotypes(row + 5, pheno) =
+            pheno_par_vec(n_sex + matching_par[prob_id]);
       }
     }
 
     else if constexpr (P == Proband::Mate) {
       for (std::size_t prob = 0; prob < n_probands; ++prob) {
         std::size_t prob_id = selected[prob];
-        std::size_t row = prob_id * n_members;
-        std::size_t member = 0;
+        std::size_t row = prob_id * ProbandData<P>::ProbandSize;
 
-        if (of & Mate::Husband)
-          phenotypes(row + member++, pheno) = pheno_vec(prob);
-        if (of & Mate::Wife)
-          phenotypes(row + member++, pheno) = pheno_vec(n_sex + matching[prob]);
-        if (of & Mate::HusbandFather)
-          phenotypes(row + member++, pheno) = pheno_par_vec(prob);
-        if (of & Mate::HusbandMother)
-          phenotypes(row + member++, pheno) = pheno_par_vec(matching_par[prob]);
-        if (of & Mate::WifeFather)
-          phenotypes(row + member++, pheno) =
-              pheno_par_vec(inv_matching[n_sex + matching[prob]]);
-        if (of & Mate::WifeMother)
-          phenotypes(row + member++, pheno) =
-              pheno_par_vec(inv_matching_par[matching[prob]]);
+        phenotypes(row, pheno) = pheno_vec(prob_id);
+        phenotypes(row + 1, pheno) = pheno_vec(n_sex + matching[prob_id]);
+        phenotypes(row + 2, pheno) = pheno_par_vec(prob_id);
+        phenotypes(row + 3, pheno) = pheno_par_vec(matching_par[prob_id]);
+        phenotypes(row + 4, pheno) =
+            pheno_par_vec(inv_matching[n_sex + matching[prob_id]]);
+        phenotypes(row + 5, pheno) =
+            pheno_par_vec(inv_matching_par[matching[prob_id]]);
       }
     }
   }
