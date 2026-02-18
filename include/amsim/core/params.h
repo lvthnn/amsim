@@ -48,8 +48,7 @@ struct MatingParams {
 };
 
 struct SimulationParams {
-  std::size_t n_reps;
-  std::size_t n_threads;
+  std::size_t n_gens;
   std::uint64_t rng_seed;
   std::filesystem::path out_dir;
 

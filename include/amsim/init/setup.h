@@ -75,8 +75,7 @@ struct Simulation {
   std::vector<PopulationEstimator> estimators;  // population-wide estimators
   std::vector<SampleSpec> samples;              // subpopulation estimators
 
-  std::size_t n_replicates = 1;
-  std::size_t n_threads = 1;
+  std::size_t n_generations;
   std::filesystem::path output_dir;
   std::optional<std::uint64_t> random_seed;
 
@@ -189,8 +188,7 @@ inline Params build_params(const Simulation& simulation) {
       .temp_decay = simulation.mating.temperature_decay};
 
   SimulationParams sim = SimulationParams{
-      .n_reps = simulation.n_replicates,
-      .n_threads = simulation.n_threads,
+      .n_gens = simulation.n_generations,
       .out_dir = simulation.output_dir,
       .rng_seed = rng::auto_seed(simulation.random_seed)};
 
