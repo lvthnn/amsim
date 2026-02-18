@@ -246,20 +246,7 @@ inline PopulationEstimator PopulationMateCor(
 class ComputePopulationEstimates {
  public:
   ComputePopulationEstimates(
-      const Params& params,
-      const PopulationEstimators& estimators,
-      std::optional<std::size_t> rep_id)
-      : rep_id_(std::move(rep_id)) {
-    auto out_dir =
-        (rep_id_.has_value())
-            ? params.sim.out_dir / std::format("rep_{:03d}", rep_id_.value())
-            : params.sim.out_dir;
-
-    if (std::filesystem::exists(out_dir) && rep_id.has_value())
-      throw std::runtime_error(
-          "replicate directory " + out_dir.string() + " already exists!");
-    std::filesystem::create_directory(out_dir);
-
+      const Params& params, const PopulationEstimators& estimators) {
     for (const auto& factory : estimators)
       estimators_.emplace_back(factory(params));
   }
@@ -268,7 +255,6 @@ class ComputePopulationEstimates {
 
  private:
   std::vector<std::unique_ptr<PopulationEstimatorStrategy>> estimators_;
-  std::optional<std::size_t> rep_id_;
 };
 
 inline void ComputePopulationEstimates::operator()(const State& state) {
