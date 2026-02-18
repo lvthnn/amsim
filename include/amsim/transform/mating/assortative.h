@@ -218,7 +218,7 @@ inline void AssortativeMating::operator()(State& state) {
   state.matching() = match_opt_;
 
   for (std::size_t ind = 0; ind < n_sex_; ++ind)
-    state.inv_matching()[ind] = state.matching()[ind];
+    state.inv_matching()[state.matching()[ind]] = ind;
 }
 
 } // namespace amsim

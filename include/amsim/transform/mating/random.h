@@ -19,7 +19,7 @@ class RandomMating {
 
  private:
   std::size_t n_sex_;
-  Matching match_cur_; 
+  Matching match_cur_;
 
   void randomiseMatching();
 };
@@ -36,7 +36,7 @@ inline void RandomMating::operator()(State& state) {
   randomiseMatching();
   state.matching() = match_cur_;
   for (std::size_t ind = 0; ind < n_sex_; ++ind)
-    state.inv_matching()[ind] = state.matching()[ind];
+    state.inv_matching()[state.matching()[ind]] = ind;
 }
 
 } // namespace amsim
