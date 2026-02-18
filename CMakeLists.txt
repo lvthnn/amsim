@@ -32,8 +32,8 @@ else()
   include_directories("/usr/include/openblas")
   find_package(BLAS REQUIRED)
   find_package(LAPACK REQUIRED)
-  target_link_libraries(amsimcpp PUBLIC BLASS::BLAS LAPACK::LAPACK)
-  target_compile_definitions(amsimcpp PUBLIC EIGEN_USE_BLAS EIGEN_USE_LAPACKE)
+  target_link_libraries(amsimcpp PUBLIC BLAS::BLAS LAPACK::LAPACK)
+  target_compile_definitions(amsimcpp PUBLIC EIGEN_USE_BLAS EIGEN_USE_LAPACK)
 endif()
 
 # Python bindings
