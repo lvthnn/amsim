@@ -98,7 +98,7 @@ class Sampler {
       auto sample_dir = params.sim.out_dir / name;
       std::filesystem::create_directories(sample_dir);
       for (const auto& estimator : sample.estimators)
-        estimators.emplace_back(estimator(params, sample_dir));
+        estimators.emplace_back(estimator(params, n_probands, sample_dir));
     };
 
     // fields obtained from sampler specification
@@ -160,20 +160,20 @@ inline void Sampler::Model<P>::fillAggregates(const State& state) {
 
     else if constexpr (P == Proband::Family) {
       for (std::size_t prob = 0; prob < n_probands_total; ++prob) {
-        std::size_t member = 0;
         std::size_t row = prob * n_members;
+        std::size_t member = 0;
 
         if (of & Family::Son) members(row + member++, on) = pheno_on(prob);
 
         if (of & Family::SonWife)
           members(row + member++, on) = pheno_on(n_sex + matching[prob]);
 
-        if (of & Family::Daughter)
-          members(row + member++, on) = pheno_on(n_sex + matching_par[prob]);
-
         if (of & Family::DaughterHusband)
           members(row + member++, on) =
               pheno_on(inv_matching[matching_par[prob]]);
+
+        if (of & Family::Daughter)
+          members(row + member++, on) = pheno_on(n_sex + matching_par[prob]);
 
         if (of & Family::Father)
           members(row + member++, on) = pheno_on_par(prob);
@@ -203,11 +203,11 @@ inline void Sampler::Model<P>::fillAggregates(const State& state) {
 
         if (of & Mate::WifeFather)
           members(row + member++, on) =
-              pheno_on_par(inv_matching[n_sex + matching[prob]]);
+              pheno_on_par(inv_matching_par[matching[prob]]);
 
         if (of & Mate::WifeMother)
-          members(row + member++, on) =
-              pheno_on_par(inv_matching_par[matching[prob]]);
+          members(row + member++, on) = pheno_on_par(
+              n_sex + matching_par[inv_matching_par[matching[prob]]]);
       }
     }
   }
@@ -245,15 +245,29 @@ inline void Sampler::Model<P>::extractProbands(const State& state) {
     else if constexpr (P == Proband::Family) {
       for (std::size_t prob = 0; prob < n_probands; ++prob) {
         std::size_t prob_id = selected[prob];
-        std::size_t row = prob_id * ProbandData<P>::ProbandSize;
+        std::size_t row = prob * ProbandData<P>::ProbandSize;
+        std::size_t member = 0;
 
-        phenotypes(row, pheno) = pheno_vec(prob_id);
-        phenotypes(row + 1, pheno) = pheno_vec(n_sex + matching[prob_id]);
-        phenotypes(row + 2, pheno) = pheno_vec(n_sex + matching_par[prob_id]);
-        phenotypes(row + 3, pheno) =
+        // Family::Son
+        phenotypes(row + member++, pheno) = pheno_vec(prob_id);
+
+        // Family::SonWife
+        phenotypes(row + member++, pheno) =
+            pheno_vec(n_sex + matching[prob_id]);
+
+        // Family::DaughterHusband
+        phenotypes(row + member++, pheno) =
             pheno_vec(inv_matching[matching_par[prob_id]]);
-        phenotypes(row + 4, pheno) = pheno_par_vec(prob_id);
-        phenotypes(row + 5, pheno) =
+
+        // Family::Daughter
+        phenotypes(row + member++, pheno) =
+            pheno_vec(n_sex + matching_par[prob_id]);
+
+        // Family::Father
+        phenotypes(row + member++, pheno) = pheno_par_vec(prob_id);
+
+        // Family::Mother
+        phenotypes(row + member++, pheno) =
             pheno_par_vec(n_sex + matching_par[prob_id]);
       }
     }
@@ -261,16 +275,30 @@ inline void Sampler::Model<P>::extractProbands(const State& state) {
     else if constexpr (P == Proband::Mate) {
       for (std::size_t prob = 0; prob < n_probands; ++prob) {
         std::size_t prob_id = selected[prob];
-        std::size_t row = prob_id * ProbandData<P>::ProbandSize;
+        std::size_t row = prob * ProbandData<P>::ProbandSize;
+        std::size_t member = 0;
 
-        phenotypes(row, pheno) = pheno_vec(prob_id);
-        phenotypes(row + 1, pheno) = pheno_vec(n_sex + matching[prob_id]);
-        phenotypes(row + 2, pheno) = pheno_par_vec(prob_id);
-        phenotypes(row + 3, pheno) = pheno_par_vec(matching_par[prob_id]);
-        phenotypes(row + 4, pheno) =
-            pheno_par_vec(inv_matching[n_sex + matching[prob_id]]);
-        phenotypes(row + 5, pheno) =
+        // Mate::Husband
+        phenotypes(row + member++, pheno) = pheno_vec(prob_id);
+
+        // Mate::Wife
+        phenotypes(row + member++, pheno) =
+            pheno_vec(n_sex + matching[prob_id]);
+
+        // Mate::HusbandFather
+        phenotypes(row + member++, pheno) = pheno_par_vec(prob_id);
+
+        // Mate::HusbandMother
+        phenotypes(row + member++, pheno) =
+            pheno_par_vec(n_sex + matching_par[prob_id]);
+
+        // Mate::WifeFather
+        phenotypes(row + member++, pheno) =
             pheno_par_vec(inv_matching_par[matching[prob_id]]);
+
+        // Mate::WifeMother
+        phenotypes(row + member++, pheno) = pheno_par_vec(
+            n_sex + matching_par[inv_matching_par[matching[prob_id]]]);
       }
     }
   }
@@ -314,5 +342,25 @@ inline void Sampler::Model<P>::operator()(const State& state) {
 template struct Sampler::Model<Proband::Individual>;
 template struct Sampler::Model<Proband::Mate>;
 template struct Sampler::Model<Proband::Family>;
+
+class ComputeSampleEstimates {
+ public:
+  ComputeSampleEstimates(
+      const Params& params,
+      const std::vector<SampleSpec>& samples) {
+    for (const auto& sample : samples)
+      estimators_.emplace_back(std::visit(
+          [&params](auto&& spec) { return Sampler(spec, params); }, sample));
+  }
+
+  void operator()(const State& state);
+
+ private:
+  std::vector<Sampler> estimators_;
+};
+
+inline void ComputeSampleEstimates::operator()(const State& state) {
+  for (auto& estimator : estimators_) estimator(state);
+}
 
 }  // namespace amsim
