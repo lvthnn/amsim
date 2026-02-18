@@ -36,9 +36,7 @@ struct State {
   const GenoBuf& geno_par() const { return genos[1 - parity]; }
   const PhenoBuf& pheno_par() const { return phenos[1 - parity]; }
   const Matching& matching_par() const { return matchings[1 - parity]; }
-  const Matching& inv_matching_par() const {
-    return matchings[1 - parity];
-  }
+  const Matching& inv_matching_par() const { return inv_matchings[1 - parity]; }
 
   void transpose() {
     (*this).geno().transpose();
@@ -53,15 +51,14 @@ struct State {
 
 inline State build_state(const Params& params) {
   return State{
-    .genos = {GenoBuf(params), GenoBuf(params)},
-    .phenos = {PhenoBuf(params), PhenoBuf(params)},
-    .matchings = {
-        std::vector<std::size_t>(params.geno.n_ind / 2),
-        std::vector<std::size_t>(params.geno.n_ind / 2)},
-    .inv_matchings = {
-        std::vector<std::size_t>(params.geno.n_ind / 2),
-        std::vector<std::size_t>(params.geno.n_ind / 2)}
-  };
+      .genos = {GenoBuf(params), GenoBuf(params)},
+      .phenos = {PhenoBuf(params), PhenoBuf(params)},
+      .matchings =
+          {std::vector<std::size_t>(params.geno.n_ind / 2),
+           std::vector<std::size_t>(params.geno.n_ind / 2)},
+      .inv_matchings = {
+          std::vector<std::size_t>(params.geno.n_ind / 2),
+          std::vector<std::size_t>(params.geno.n_ind / 2)}};
 }
 
 }  // namespace amsim

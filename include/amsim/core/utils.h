@@ -3,8 +3,8 @@
 #include <Eigen/Dense>
 #include <cstddef>
 #include <cstdint>
-#include <vector>
 #include <numeric>
+#include <vector>
 
 namespace amsim::utils {
 
@@ -25,7 +25,7 @@ inline void bitmatrix_swap(
   }
 }
 
-} // namespace details
+}  // namespace details
 
 inline std::vector<std::string> label_matrix(
     const std::vector<std::string>& row_labels,
@@ -38,7 +38,7 @@ inline std::vector<std::string> label_matrix(
 
   for (std::size_t row = 0; row < n_rows; ++row)
     for (std::size_t col = 0; col < n_cols; ++col)
-      labels[(row * n_rows) + col] =
+      labels[(row * n_cols) + col] =
           (row_labels[row] + row_suffix.value_or("")) +
           "::" + (col_labels[col] + col_suffix.value_or(""));
 
@@ -63,10 +63,12 @@ inline std::vector<std::size_t> order(const Eigen::VectorXd& v) {
   return idx;
 }
 
-inline Eigen::MatrixXd standardise(const Eigen::MatrixXd& mat) {
+inline Eigen::MatrixXd standardise(
+    const Eigen::MatrixXd& mat, bool population = true) {
   Eigen::RowVectorXd mean = mat.colwise().mean();
   Eigen::RowVectorXd std =
-      ((mat.rowwise() - mean).array().square().colwise().sum() / mat.rows())
+      ((mat.rowwise() - mean).array().square().colwise().sum() /
+       (population ? mat.rows() : mat.rows() - 1))
           .sqrt()
           .max(1e-10);
   return ((mat.rowwise() - mean).array().rowwise() / std.array());
