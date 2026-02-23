@@ -39,44 +39,6 @@ inline std::ostream& operator<<(std::ostream& os, LogLevel level) {
   return os << to_string(level);
 }
 
-/// @brief Timer for logging elapsed time intervals
-///
-/// LoggerTimer measures and logs time intervals between checkpoints, useful
-/// for performance profiling and progress monitoring.
-class LoggerTimer {
- public:
-  using Clock = std::chrono::high_resolution_clock;  ///< Shorten
-  using TimePoint = Clock::time_point;               ///< Time point type
-
-  /// @brief Construct a LoggerTimer
-  /// @param label Optional label for timer
-  explicit LoggerTimer(std::string label = "")
-      : label_(std::move(label)), start_(Clock::now()), last_tick_(start_) {}
-
-  /// @brief Record a checkpoint and return elapsed time message
-  /// @param message Optional message for this checkpoint
-  /// @return Formatted string with elapsed time since last tick
-  std::string tick(const std::string& message = "");
-
-  ~LoggerTimer() = default;
-
- private:
-  std::string label_;    ///< Timer label
-  TimePoint start_;      ///< Start time
-  TimePoint last_tick_;  ///< Last checkpoint time
-};
-
-inline std::string LoggerTimer::tick(const std::string& message) {
-  auto now = Clock::now();
-  auto delta = std::chrono::duration<double>(now - last_tick_).count();
-  last_tick_ = now;
-  std::ostringstream oss;
-  if (!label_.empty()) oss << "[" << label_ << "] ";
-  oss << message << " (" << std::fixed << std::setprecision(3) << delta
-      << " s)";
-  return oss.str();
-}
-
 /// @brief Thread-safe singleton logger
 ///
 /// Logger provides asynchronous, thread-safe logging with configurable
