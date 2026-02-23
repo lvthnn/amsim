@@ -4,11 +4,13 @@
 #include <amsim/data/genome.h>
 #include <amsim/data/mating.h>
 #include <amsim/data/phenome.h>
+#include <amsim/sample/proband.h>
 
 namespace amsim {
 
 // State holds the current state of our simulation
 struct State {
+  const std::size_t n_sex;
   std::size_t gen = 0;
   std::size_t parity = 0;
 
@@ -18,29 +20,46 @@ struct State {
   std::array<Matching, 2> matchings;
   std::array<Matching, 2> inv_matchings;
 
-  GenoBuf& geno() { return genos[parity]; }
-  PhenoBuf& pheno() { return phenos[parity]; }
-  Matching& matching() { return matchings[parity]; }
-  Matching& inv_matching() { return inv_matchings[parity]; }
+  std::size_t get_parity(Generation generation) const {
+    return (generation == Generation::Current) ? parity : 1 - parity;
+  }
 
-  const GenoBuf& geno() const { return genos[parity]; }
-  const PhenoBuf& pheno() const { return phenos[parity]; }
-  const Matching& matching() const { return matchings[parity]; }
-  const Matching& inv_matching() const { return inv_matchings[parity]; }
+  GenoBuf& geno(Generation generation = Generation::Current) {
+    return genos[get_parity(generation)];
+  }
 
-  GenoBuf& geno_par() { return genos[1 - parity]; }
-  PhenoBuf& pheno_par() { return phenos[1 - parity]; }
-  Matching& matching_par() { return matchings[1 - parity]; }
-  Matching& inv_matching_par() { return inv_matchings[1 - parity]; }
+  PhenoBuf& pheno(Generation generation = Generation::Current) {
+    return phenos[get_parity(generation)];
+  }
 
-  const GenoBuf& geno_par() const { return genos[1 - parity]; }
-  const PhenoBuf& pheno_par() const { return phenos[1 - parity]; }
-  const Matching& matching_par() const { return matchings[1 - parity]; }
-  const Matching& inv_matching_par() const { return inv_matchings[1 - parity]; }
+  Matching& matching(Generation generation = Generation::Current) {
+    return matchings[get_parity(generation)];
+  }
+
+  Matching& inv_matching(Generation generation = Generation::Current) {
+    return inv_matchings[get_parity(generation)];
+  }
+
+  const GenoBuf& geno(Generation generation = Generation::Current) const {
+    return genos[get_parity(generation)];
+  }
+
+  const PhenoBuf& pheno(Generation generation = Generation::Current) const {
+    return phenos[get_parity(generation)];
+  }
+
+  const Matching& matching(Generation generation = Generation::Current) const {
+    return matchings[get_parity(generation)];
+  }
+
+  const Matching& inv_matching(
+      Generation generation = Generation::Current) const {
+    return inv_matchings[get_parity(generation)];
+  }
 
   void transpose() {
-    (*this).geno().transpose();
-    (*this).geno_par().transpose();
+    (*this).geno(Generation::Current).transpose();
+    (*this).geno(Generation::Parents).transpose();
   }
 
   void advance() {
@@ -51,6 +70,7 @@ struct State {
 
 inline State build_state(const Params& params) {
   return State{
+      .n_sex = params.geno.n_ind / 2,
       .genos = {GenoBuf(params), GenoBuf(params)},
       .phenos = {PhenoBuf(params), PhenoBuf(params)},
       .matchings =
