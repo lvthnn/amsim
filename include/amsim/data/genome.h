@@ -160,6 +160,9 @@ class GenoBuf {
   HaploBuf h1_;
 };
 
+// NOTE: This function forgets the strand the preceding word started from. This
+// is not good if the loci are linked. Either fix this, or remove linked locus
+// generation.
 inline std::array<std::uint64_t, 2> GenoBuf::gam_word(
     std::uint64_t ind_h0,
     std::uint64_t ind_h1,
