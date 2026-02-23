@@ -8,8 +8,6 @@
 
 namespace amsim::utils {
 
-namespace details {
-
 inline void bitmatrix_swap(
     std::uint64_t matrix[], std::size_t width, std::uint64_t mask) {
   std::size_t inner;
@@ -25,7 +23,15 @@ inline void bitmatrix_swap(
   }
 }
 
-}  // namespace details
+inline void bitmatrix_transpose(std::uint64_t* matrix) {
+  std::size_t swap_width = 64;
+  auto swap_mask = static_cast<std::uint64_t>(-1);
+  while (swap_width != 1) {
+    swap_width >>= 1;
+    swap_mask = swap_mask ^ (swap_mask >> swap_width);
+    bitmatrix_swap(matrix, swap_width, swap_mask);
+  }
+}
 
 inline std::vector<std::string> label_matrix(
     const std::vector<std::string>& row_labels,
@@ -45,16 +51,6 @@ inline std::vector<std::string> label_matrix(
   return labels;
 }
 
-inline void bitmatrix_transpose(std::uint64_t* matrix) {
-  std::size_t swap_width = 64;
-  auto swap_mask = static_cast<std::uint64_t>(-1);
-  while (swap_width != 1) {
-    swap_width >>= 1;
-    swap_mask = swap_mask ^ (swap_mask >> swap_width);
-    details::bitmatrix_swap(matrix, swap_width, swap_mask);
-  }
-}
-
 inline std::vector<std::size_t> order(const Eigen::VectorXd& v) {
   std::vector<std::size_t> idx(v.size());
   std::iota(idx.begin(), idx.end(), 0);
@@ -72,6 +68,18 @@ inline Eigen::MatrixXd standardise(
           .sqrt()
           .max(1e-10);
   return ((mat.rowwise() - mean).array().rowwise() / std.array());
+}
+
+inline void check_plink2() {
+  int rc = std::system("command -v plink2 >/dev/null 2>&1");
+  if (!WIFEXITED(rc) || WEXITSTATUS(rc) != 0)
+    throw std::runtime_error("Executable 'plink2' not found in PATH");
+}
+
+inline void check_gcta64() {
+  int rc = std::system("command -v gcta64 >/dev/null 2>&1");
+  if (!WIFEXITED(rc) || WEXITSTATUS(rc) != 0)
+    throw std::runtime_error("Executable 'gcta64' not found in PATH");
 }
 
 }  // namespace amsim::utils
