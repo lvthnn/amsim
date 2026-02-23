@@ -102,7 +102,7 @@ inline void OptimisePhenotypeArchitecture::randomState() {
     std::ranges::set_difference(
         iota, pheno_loc, std::back_inserter(pheno_loc_complement));
 
-    // create the matrix in question
+    // create the phenotype effect matrix wrt the assignment
     for (std::size_t loc = 0; loc < n_locs; ++loc)
       pheno_effects_(pheno_loc[loc], pheno) = pheno_effects_vec_[pheno][loc];
   }
@@ -181,12 +181,10 @@ inline void OptimisePhenotypeArchitecture::operator()() {
 
     if (err_frob_opt_ < tol_l2_) {
       n_itr_ = itr;
-      computeExpected();
       break;
     }
   }
 
-  computeExpected();
   n_itr_ = max_itr_;
 }
 
