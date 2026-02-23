@@ -23,6 +23,7 @@ target_include_directories(amsimcpp
     $<INSTALL_INTERFACE:include>)
 
 # Use Eigen with BLAS/LAPACK
+
 if (APPLE)
   find_library(ACCELERATE_FRAMEWORK Accelerate REQUIRED)
   target_link_libraries(amsimcpp INTERFACE ${ACCELERATE_FRAMEWORK})
@@ -35,6 +36,11 @@ else()
   target_link_libraries(amsimcpp PUBLIC BLAS::BLAS LAPACK::LAPACK)
   target_compile_definitions(amsimcpp PUBLIC EIGEN_USE_BLAS EIGEN_USE_LAPACK)
 endif()
+
+# Use h5pp for HDF5 support
+
+find_package(HDF5 REQUIRED COMPONENTS C)
+target_link_libraries(amsimcpp INTERFACE HDF5::HDF5)
 
 # Python bindings
 option(BUILD_PYTHON "Build Python bindings for amsimpy" OFF)
@@ -67,7 +73,6 @@ endif()
 # enable_testing()
 # 
 # include(GoogleTest)
-
 
 # Examples
 option(BUILD_EXAMPLES "Build example applications" ON)
