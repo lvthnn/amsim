@@ -109,13 +109,15 @@ inline void ScorePhenotypes::scoreNurture(State& state) {
     for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno) {
       auto bgen = state.pheno()(pheno, Component::Genetic);
       auto bnur = state.pheno()(pheno, Component::Nurture);
-      auto bgen_par = state.pheno_par()(pheno, Component::Genetic);
-      auto benv_par = state.pheno_par()(pheno, Component::Environmental);
+      auto bgen_par =
+          state.pheno(Generation::Parents)(pheno, Component::Genetic);
+      auto benv_par =
+          state.pheno(Generation::Parents)(pheno, Component::Environmental);
       double rnur_env = rnur_env_(pheno);
       double rnur_pat = rnur_pat_(pheno);
 
       for (std::size_t ind = 0; ind < n_sex_; ++ind) {
-        std::size_t find = n_sex_ + state.matching_par()[ind];
+        std::size_t find = n_sex_ + state.matching(Generation::Parents)[ind];
         double nt_son = bgen_par(ind) + bgen_par(find) - bgen(ind);
         double nt_daughter = bgen_par(ind) + bgen_par(find) - bgen(find);
         double nt_env =
@@ -149,4 +151,4 @@ inline void ScorePhenotypes::operator()(State& state) {
   scoreTotal(state);
 }
 
-} // namespace amsim
+}  // namespace amsim

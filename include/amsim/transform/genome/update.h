@@ -72,8 +72,8 @@ inline void UpdateGenome::operator()(State& state) {
 
   HaploBuf& h0 = state.geno().h0();
   HaploBuf& h1 = state.geno().h1();
-  HaploBuf& h0_off = state.geno_par().h0();
-  HaploBuf& h1_off = state.geno_par().h1();
+  HaploBuf& h0_off = state.geno(Generation::Parents).h0();
+  HaploBuf& h1_off = state.geno(Generation::Parents).h1();
   const Matching& matching = state.matching();
 
   for (std::size_t pair = 0; pair < n_sex_; ++pair) {
