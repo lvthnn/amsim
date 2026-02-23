@@ -13,6 +13,7 @@
 namespace amsim {
 
 namespace details {
+
 inline std::uint64_t shuffle_seed(std::uint64_t rng_seed, std::size_t rep_id) {
   constexpr std::uint64_t Phi = 0x9E3779B97F4A7C15ULL;
   return rng_seed + (Phi * rep_id);
@@ -22,6 +23,7 @@ inline Params preprocess_simulation(const Simulation& simulation) {
   Params params = build_params(simulation);
   OptimisePhenotypeArchitecture opt(params);
   opt();
+  std::cout << opt.expected() << "\n";
 
   return params;
 }
@@ -129,7 +131,7 @@ inline void run_simulation(
     // compute population estimates
     population_est(state);
 
-    // update the genome
+    // update the genome — individual-major
     state.transpose();
     update(state);
     state.transpose();
@@ -149,6 +151,7 @@ inline void run_simulations(
 
   // set up random seed
   std::uint64_t seed = rng::auto_seed(simulation.random_seed);
+  rng::set_seed(seed);
 
   // check whether number of output files exceed rlimit
   details::check_rlimit(simulation, n_threads);
@@ -175,13 +178,13 @@ inline void run_simulations(
             details::setup_replicate(simulation, rep_id);
         thread_params.sim.rng_seed = details::shuffle_seed(seed, rep_id);
 
-        run_simulation(thread_params, simulation.estimators, simulation.samples);
+        run_simulation(
+            thread_params, simulation.estimators, simulation.samples);
       }
     });
   }
 
-  for (auto& t : pool)
-    t.join();
+  for (auto& t : pool) t.join();
 }
 
 }  // namespace amsim
