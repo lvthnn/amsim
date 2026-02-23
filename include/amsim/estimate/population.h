@@ -82,8 +82,8 @@ class EstimatorHeritability : public PopulationEstimatorStrategy {
 
   void compute(const State& state) override {
     for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
-      data_(pheno, 0) = state.pheno().comp_var(pheno, Component::Genetic) /
-                        state.pheno().comp_var(pheno, Component::Total);
+      data_(pheno) = state.pheno().comp_var(pheno, Component::Genetic) /
+                     state.pheno().comp_var(pheno, Component::Total);
   }
 
  private:
