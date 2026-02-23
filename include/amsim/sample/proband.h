@@ -5,14 +5,21 @@
 
 namespace amsim {
 
+// which generation the probands are in
+enum class Generation { Current, Parents };
+
+// proband member sex
+enum class Sex : uint8_t { Unknown = 0, Male = 1, Female = 2 };
+
 // proband types — these define the unit of sampling
 enum class Proband { Individual, Mate, Family };
 
 // proband subtypes — the members constituting a sampling unit and various
 // combinations of them, such as parents, siblings, in-laws, etc.
-enum class Individual : uint8_t { Self = 0b1 };
+enum class Individual : uint8_t { Unknown = 0b0, Self = 0b1 };
 
 enum class Mate : uint8_t {
+  Unknown = 0b000000,
   Husband = 0b000001,
   Wife = 0b000010,
   HusbandFather = 0b000100,
@@ -31,6 +38,7 @@ enum class Mate : uint8_t {
 };
 
 enum class Family : uint8_t {
+  Unknown = 0b000000,
   Father = 0b000001,
   Mother = 0b000010,
   Son = 0b000100,
@@ -73,6 +81,16 @@ constexpr Family operator|(Family a, Family b) {
 // that can enter into a sampling probability transformer
 enum class Aggregator { Max, Mean, Min, Identity };
 
+// declares member information
+template <typename ProbandEnum>
+struct ProbandMember {
+  ProbandEnum self;
+  ProbandEnum father;
+  ProbandEnum mother;
+  Generation generation;
+  Sex sex;
+};
+
 // for each kind of proband type, the extracted data from sampling has a
 // fixed layout, depending on the size (or "dimension") of the sampling unit
 // with respect to the number of "atomic" members comprising it
@@ -84,6 +102,10 @@ struct ProbandData<Proband::Individual> {
   using ProbandEnum = Individual;
   static constexpr std::size_t ProbandSize = 1;
   static constexpr ProbandEnum ProbandDefault = Individual::Self;
+  static constexpr ProbandMember<ProbandEnum> ProbandMembers[ProbandSize] = {
+      {.self = Individual::Self,
+       .generation = Generation::Current,
+       .sex = Sex::Unknown}};
   static constexpr Aggregator AggDefault = Aggregator::Identity;
 };
 
@@ -92,6 +114,42 @@ struct ProbandData<Proband::Mate> {
   using ProbandEnum = Mate;
   static constexpr std::size_t ProbandSize = 6;
   static constexpr ProbandEnum ProbandDefault = Mate::Couple;
+  static constexpr ProbandMember<ProbandEnum> ProbandMembers[ProbandSize] = {
+      {.self = Mate::Husband,
+       .father = Mate::HusbandFather,
+       .mother = Mate::HusbandMother,
+       .generation = Generation::Current,
+       .sex = Sex::Male},
+
+      {.self = Mate::Wife,
+       .father = Mate::WifeFather,
+       .mother = Mate::WifeMother,
+       .generation = Generation::Current,
+       .sex = Sex::Female},
+
+      {.self = Mate::HusbandFather,
+       .generation = Generation::Parents,
+       .sex = Sex::Male,
+       .father = Mate::Unknown,
+       .mother = Mate::Unknown},
+
+      {.self = Mate::HusbandMother,
+       .generation = Generation::Parents,
+       .sex = Sex::Female,
+       .father = Mate::Unknown,
+       .mother = Mate::Unknown},
+
+      {.self = Mate::WifeFather,
+       .generation = Generation::Parents,
+       .sex = Sex::Male,
+       .father = Mate::Unknown,
+       .mother = Mate::Unknown},
+
+      {.self = Mate::WifeMother,
+       .generation = Generation::Parents,
+       .sex = Sex::Female,
+       .father = Mate::Unknown,
+       .mother = Mate::Unknown}};
   static constexpr Aggregator AggDefault = Aggregator::Mean;
 };
 
@@ -100,6 +158,43 @@ struct ProbandData<Proband::Family> {
   using ProbandEnum = Family;
   static constexpr std::size_t ProbandSize = 6;
   static constexpr ProbandEnum ProbandDefault = Family::All;
+  static constexpr ProbandMember<ProbandEnum> ProbandMembers[ProbandSize] = {
+      {.self = Family::Father,
+       .generation = Generation::Parents,
+       .sex = Sex::Male,
+       .father = Family::Unknown,
+       .mother = Family::Unknown},
+
+      {.self = Family::Mother,
+       .generation = Generation::Parents,
+       .sex = Sex::Female,
+       .father = Family::Unknown,
+       .mother = Family::Unknown},
+
+      {.self = Family::Son,
+       .generation = Generation::Current,
+       .sex = Sex::Male,
+       .father = Family::Father,
+       .mother = Family::Mother},
+
+      {.self = Family::SonWife,
+       .generation = Generation::Current,
+       .sex = Sex::Female,
+       .father = Family::Unknown,
+       .mother = Family::Unknown},
+
+      {.self = Family::DaughterHusband,
+       .generation = Generation::Current,
+       .sex = Sex::Male,
+       .father = Family::Unknown,
+       .mother = Family::Unknown},
+
+      {.self = Family::Daughter,
+       .generation = Generation::Current,
+       .sex = Sex::Female,
+       .father = Family::Father,
+       .mother = Family::Mother},
+  };
   static constexpr Aggregator AggDefault = Aggregator::Mean;
 };
 
