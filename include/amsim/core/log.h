@@ -2,6 +2,8 @@
 
 #include <condition_variable>
 #include <deque>
+#include <filesystem>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <mutex>
@@ -27,44 +29,23 @@ inline std::string to_string(LogLevel level) {
   __builtin_unreachable();
 }
 
-/// @brief Prints a LogLevel to a stream
-///
-/// Converts the enum to its string representation and writes
-/// it to the given stream.
-///
-/// @param os The output stream
-/// @param type The log level to print
-/// @return The same output stream, allowing chaining
 inline std::ostream& operator<<(std::ostream& os, LogLevel level) {
   return os << to_string(level);
 }
 
-/// @brief Thread-safe singleton logger
-///
-/// Logger provides asynchronous, thread-safe logging with configurable
-/// verbosity levels. It uses a background thread to write log messages.
-class Logger {
+class Log {
  public:
-  Logger(const Logger&) = delete;
-  Logger& operator=(const Logger&) = delete;
+  Log(const Log&) = delete;
+  Log& operator=(const Log&) = delete;
 
-  /// @brief Get Logger instance with custom stream and level
-  /// @param out Output stream
-  /// @param level Logging level
-  /// @return Reference to singleton Logger instance
-  static Logger& get_instance(std::ostream& out, const LogLevel level) {
-    static Logger instance(out, level);
+  static Log& get_instance(std::ostream& out, const LogLevel level) {
+    static Log instance(out, level);
     return instance;
   }
 
-  /// @brief Get Logger instance with default settings
-  /// @return Reference to singleton Logger instance
-  static Logger& get_instance() {
-    return get_instance(std::cout, LogLevel::Info);
-  }
+  static Log& get_instance() { return get_instance(std::cout, LogLevel::Info); }
 
-  /// @brief Destructor - flushes messages and joins logger thread
-  ~Logger() {
+  ~Log() {
     {
       std::lock_guard<std::mutex> lg(mutex_);
       done_ = true;
@@ -73,53 +54,37 @@ class Logger {
     if (thread_.joinable()) thread_.join();
   }
 
-  /// @brief Log a message at specified level
-  /// @param msg Message to log
-  /// @param level Log level for this message
   void log(const std::string& msg, LogLevel level);
+  static void file(const std::filesystem::path& path, LogLevel level);
+  static void stream(std::ostream& stream, LogLevel level);
+  static void debug(const std::string& msg);
+  static void info(const std::string& msg);
+  static void warning(const std::string& msg);
+  static void error(const std::string& msg);
 
  private:
-  /// @brief Private constructor for singleton
-  /// @param out Output stream
-  /// @param level Minimum log level
-  explicit Logger(
+  explicit Log(
       std::ostream& out = std::cout, const LogLevel level = LogLevel::Info)
       : stream_(out), level_(level) {
-    thread_ = std::thread(&Logger::threadCallback, this);
+    thread_ = std::thread(&Log::threadCallback, this);
   }
 
-  std::ostream& stream_;              ///< Output stream
-  std::deque<std::string> messages_;  ///< Message queue
-  std::condition_variable cv_;  ///< Condition variable for synchronization
-  std::thread thread_;          ///< Background logging thread
-  std::mutex mutex_;            ///< Mutex for thread safety
-  LogLevel level_;              ///< Minimum log level
-  bool done_ = false;           ///< Shutdown flag
+  std::ostream& stream_;
+  std::deque<std::string> messages_;
+  std::condition_variable cv_;
+  std::thread thread_;
+  std::mutex mutex_;
+  LogLevel level_;
+  bool done_ = false;
 
-  /// @brief Background thread callback for writing log messages
   void threadCallback();
-
-  /// @brief Set output stream
-  /// @param stream Output stream
   void setStream(std::ostream& stream);
-
-  /// @brief Convert log level to string
-  /// @param level Log level
-  /// @return String representation
   std::string levelToStr(LogLevel level);
-
-  /// @brief Get current timestamp string
-  /// @return Formatted timestamp
   static std::string getTimeStr();
-
-  /// @brief Format log message with timestamp and level
-  /// @param msg Message text
-  /// @param level Log level
-  /// @return Formatted message
   static std::string formatMsg(const std::string& msg, LogLevel level);
 };
 
-inline void Logger::threadCallback() {
+inline void Log::threadCallback() {
   std::unique_lock<std::mutex> lk(mutex_);
   while (!done_ || !messages_.empty()) {
     cv_.wait(lk, [this] { return done_ || !messages_.empty(); });
@@ -135,7 +100,7 @@ inline void Logger::threadCallback() {
   }
 }
 
-inline std::string Logger::getTimeStr() {
+inline std::string Log::getTimeStr() {
   const auto now = std::chrono::system_clock::now();
   const auto tse = now.time_since_epoch();
   const auto ms =
@@ -157,7 +122,7 @@ inline std::string Logger::getTimeStr() {
   return oss.str();
 }
 
-inline std::string Logger::formatMsg(
+inline std::string Log::formatMsg(
     const std::string& msg, const LogLevel level) {
   std::string time_str = getTimeStr();
   std::ostringstream msg_format;
@@ -169,7 +134,7 @@ inline std::string Logger::formatMsg(
   return msg_format.str();
 }
 
-inline void Logger::log(const std::string& msg, const LogLevel level) {
+inline void Log::log(const std::string& msg, const LogLevel level) {
   if (level < level_) return;
   {
     std::lock_guard<std::mutex> lg(mutex_);
@@ -179,39 +144,29 @@ inline void Logger::log(const std::string& msg, const LogLevel level) {
   cv_.notify_one();
 }
 
-/// @brief Initialize logger to write to a file
-/// @param path File path
-/// @param log_level Minimum log level
-#define LOG_FILE(path, log_level)                         \
-  do {                                                    \
-    static std::ofstream __log_file__(path);              \
-    amsim::Logger::get_instance(__log_file__, log_level); \
-  } while (false)
+inline void Log::file(const std::filesystem::path& path, LogLevel log_level) {
+  static std::fstream log_file(path, std::ios::out);
+  Log::get_instance(log_file, log_level);
+}
 
-/// @brief Initialize logger to write to a stream
-/// @param stream Output stream
-/// @param log_level Minimum log level
-#define LOG_STREAM(stream, log_level) \
-  amsim::Logger::get_instance(stream, log_level);
+inline void Log::stream(std::ostream& stream, LogLevel log_level) {
+  Log::get_instance(stream, log_level);
+}
 
-/// @brief Log an informational message
-/// @param msg Message to log
-#define LOG_INFO(msg) \
-  amsim::Logger::get_instance().log(msg, amsim::LogLevel::Info)
+inline void Log::debug(const std::string& msg) {
+  Log::get_instance().log(msg, LogLevel::Debug);
+}
 
-/// @brief Log a debug message
-/// @param msg Message to log
-#define LOG_DEBUG(msg) \
-  amsim::Logger::get_instance().log(msg, amsim::LogLevel::Debug)
+inline void Log::info(const std::string& msg) {
+  Log::get_instance().log(msg, LogLevel::Info);
+}
 
-/// @brief Log a warning message
-/// @param msg Message to log
-#define LOG_WARNING(msg) \
-  amsim::Logger::get_instance().log(msg, amsim::LogLevel::Warning)
+inline void Log::warning(const std::string& msg) {
+  Log::get_instance().log(msg, LogLevel::Warning);
+}
 
-/// @brief Log an error message
-/// @param msg Message to log
-#define LOG_ERROR(msg) \
-  amsim::Logger::get_instance().log(msg, amsim::LogLevel::Error)
+inline void Log::error(const std::string& msg) {
+  Log::get_instance().log(msg, LogLevel::Error);
+}
 
 }  // namespace amsim
