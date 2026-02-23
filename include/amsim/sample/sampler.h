@@ -8,6 +8,19 @@
 
 namespace amsim {
 
+namespace details {
+
+template <Proband P>
+auto get_prefix = [](auto member_enum) -> std::string_view {
+  for (std::size_t i = 0; i < ProbandData<P>::ProbandSize; ++i) {
+    if (ProbandData<P>::ProbandMembers[i].member == member_enum)
+      return ProbandData<P>::ProbandMembers[i].prefix;
+  }
+  return "";
+};
+
+}  // namespace details
+
 inline WeightFunction Uniform() {
   return [](const Eigen::MatrixXd& /*agg*/, Eigen::VectorXd& res) {
     res.setConstant(1.0);
@@ -69,6 +82,7 @@ class Sampler {
     explicit Model(Sample<P> sample, const Params& params)
         : name(sample.name),
           n_probands(sample.n_probands),
+          sample_dir(params.sim.out_dir / name),
           of(sample.of),
           agg(std::move(sample.agg)),
           weighting(std::move(sample.weighting)),
@@ -89,13 +103,13 @@ class Sampler {
           aggregates(n_probands_total, n_on),
           unif(n_probands_total),
           keys(n_probands_total),
+          names(params.pheno.names),
           phenotypes(sample.n_probands * ProbandData<P>::ProbandSize, n_pheno),
           selected(n_probands_total) {
       if (sample.on.has_value())
         for (const auto& pheno_name : sample.on.value())
           on_indices.push_back(params.pheno.pheno_ids.at(pheno_name));
 
-      auto sample_dir = params.sim.out_dir / name;
       std::filesystem::create_directories(sample_dir);
       for (const auto& estimator : sample.estimators)
         estimators.emplace_back(estimator(params, n_probands, sample_dir));
@@ -104,6 +118,7 @@ class Sampler {
     // fields obtained from sampler specification
     std::string name;
     std::size_t n_probands;
+    std::filesystem::path sample_dir;
     ProbandData<P>::ProbandEnum of;
     Aggregator agg;
     WeightFunction weighting;
@@ -127,12 +142,36 @@ class Sampler {
     Eigen::MatrixXd aggregates;
     Eigen::VectorXd unif;
     Eigen::VectorXd keys;
+
+    // extracted proband phenotypes
+    std::vector<std::string> names;
     Eigen::MatrixXd phenotypes;
     Eigen::MatrixXd genotypes;
     std::vector<std::size_t> selected;
 
     void fillAggregates(const State& state);
     void extractProbands(const State& state);
+
+    void addGenotype(
+        const State& state,
+        std::size_t proband_id,
+        std::size_t locus,
+        const ProbandMember<typename ProbandData<P>::ProbandEnum>& member,
+        std::uint8_t& byte,
+        std::size_t& bit_pos,
+        std::fstream& bed) const;
+
+    void writeBIM() const;
+    void writeBED(const State& state) const;
+    void writeFAM(const State& state) const;
+    void writePHENO(const State& state) const;
+
+    void writePLINK(const State& state) const {
+      writeBIM();
+      writeBED(state);
+      writeFAM(state);
+      writePHENO(state);
+    }
 
     void draw(const State& state) override;
     void estimate(const State& state) override;
@@ -145,69 +184,20 @@ class Sampler {
 template <Proband P>
 inline void Sampler::Model<P>::fillAggregates(const State& state) {
   if (on_indices.empty()) return;
-  const auto& matching = state.matching();
-  const auto& matching_par = state.matching_par();
-  const auto& inv_matching = state.inv_matching();
-  const auto& inv_matching_par = state.inv_matching_par();
 
   for (std::size_t on = 0; on < n_on; ++on) {
-    const auto& pheno_on = state.pheno()(on_indices[on], on_components[on]);
-    const auto& pheno_on_par =
-        state.pheno_par()(on_indices[on], on_components[on]);
+    std::size_t pheno_id = on_indices[on];
+    Component comp = on_components[on];
 
-    if constexpr (P == Proband::Individual)
-      members.col(on) = pheno_on;
+    for (std::size_t prob = 0; prob < n_probands_total; ++prob) {
+      std::size_t row = prob * n_members;
+      std::size_t member_idx = 0;
 
-    else if constexpr (P == Proband::Family) {
-      for (std::size_t prob = 0; prob < n_probands_total; ++prob) {
-        std::size_t row = prob * n_members;
-        std::size_t member = 0;
-
-        if (of & Family::Son) members(row + member++, on) = pheno_on(prob);
-
-        if (of & Family::SonWife)
-          members(row + member++, on) = pheno_on(n_sex + matching[prob]);
-
-        if (of & Family::DaughterHusband)
-          members(row + member++, on) =
-              pheno_on(inv_matching[matching_par[prob]]);
-
-        if (of & Family::Daughter)
-          members(row + member++, on) = pheno_on(n_sex + matching_par[prob]);
-
-        if (of & Family::Father)
-          members(row + member++, on) = pheno_on_par(prob);
-
-        if (of & Family::Mother)
-          members(row + member++, on) =
-              pheno_on_par(n_sex + matching_par[prob]);
-      }
-    }
-
-    else if constexpr (P == Proband::Mate) {
-      for (std::size_t prob = 0; prob < n_probands_total; ++prob) {
-        std::size_t member = 0;
-        std::size_t row = prob * n_members;
-
-        if (of & Mate::Husband) members(row + member++, on) = pheno_on(prob);
-
-        if (of & Mate::Wife)
-          members(row + member++, on) = pheno_on(n_sex + matching[prob]);
-
-        if (of & Mate::HusbandFather)
-          members(row + member++, on) = pheno_on_par(prob);
-
-        if (of & Mate::HusbandMother)
-          members(row + member++, on) =
-              pheno_on_par(n_sex + matching_par[prob]);
-
-        if (of & Mate::WifeFather)
-          members(row + member++, on) =
-              pheno_on_par(inv_matching_par[matching[prob]]);
-
-        if (of & Mate::WifeMother)
-          members(row + member++, on) = pheno_on_par(
-              n_sex + matching_par[inv_matching_par[matching[prob]]]);
+      for (std::size_t m = 0; m < ProbandData<P>::ProbandSize; ++m) {
+        const auto& member = ProbandData<P>::ProbandMembers[m];
+        if (of & member.self)
+          members(row + member_idx++, on) =
+              member_pheno(state, member, prob, pheno_id, comp);
       }
     }
   }
@@ -218,10 +208,13 @@ inline void Sampler::Model<P>::fillAggregates(const State& state) {
 
     if (agg == Aggregator::Mean)
       aggregates.row(prob) = proband.colwise().mean();
+
     else if (agg == Aggregator::Max)
       aggregates.row(prob) = proband.colwise().maxCoeff();
+
     else if (agg == Aggregator::Min)
       aggregates.row(prob) = proband.colwise().minCoeff();
+
     else if (agg == Aggregator::Identity)
       aggregates.row(prob) = proband.row(0);
   }
@@ -229,77 +222,138 @@ inline void Sampler::Model<P>::fillAggregates(const State& state) {
 
 template <Proband P>
 inline void Sampler::Model<P>::extractProbands(const State& state) {
-  const auto& matching = state.matching();
-  const auto& matching_par = state.matching_par();
-  const auto& inv_matching = state.inv_matching();
-  const auto& inv_matching_par = state.inv_matching_par();
+  for (std::size_t pheno_id = 0; pheno_id < n_pheno; ++pheno_id) {
+    for (std::size_t prob = 0; prob < n_probands; ++prob) {
+      std::size_t prob_id = selected[prob];
+      std::size_t row = prob * ProbandData<P>::ProbandSize;
 
-  for (std::size_t pheno = 0; pheno < n_pheno; ++pheno) {
-    const auto& pheno_vec = state.pheno()(pheno);
-    const auto& pheno_par_vec = state.pheno_par()(pheno);
-
-    if constexpr (P == Proband::Individual)
-      for (std::size_t prob = 0; prob < n_probands; ++prob)
-        phenotypes(prob, pheno) = pheno_vec(selected[prob]);
-
-    else if constexpr (P == Proband::Family) {
-      for (std::size_t prob = 0; prob < n_probands; ++prob) {
-        std::size_t prob_id = selected[prob];
-        std::size_t row = prob * ProbandData<P>::ProbandSize;
-        std::size_t member = 0;
-
-        // Family::Son
-        phenotypes(row + member++, pheno) = pheno_vec(prob_id);
-
-        // Family::SonWife
-        phenotypes(row + member++, pheno) =
-            pheno_vec(n_sex + matching[prob_id]);
-
-        // Family::DaughterHusband
-        phenotypes(row + member++, pheno) =
-            pheno_vec(inv_matching[matching_par[prob_id]]);
-
-        // Family::Daughter
-        phenotypes(row + member++, pheno) =
-            pheno_vec(n_sex + matching_par[prob_id]);
-
-        // Family::Father
-        phenotypes(row + member++, pheno) = pheno_par_vec(prob_id);
-
-        // Family::Mother
-        phenotypes(row + member++, pheno) =
-            pheno_par_vec(n_sex + matching_par[prob_id]);
+      for (std::size_t m = 0; m < ProbandData<P>::ProbandSize; ++m) {
+        const auto& member_data = ProbandData<P>::ProbandMembers[m];
+        phenotypes(row + m, pheno_id) =
+            member_pheno(state, member_data, prob_id, pheno_id);
       }
     }
+  }
+}
 
-    else if constexpr (P == Proband::Mate) {
-      for (std::size_t prob = 0; prob < n_probands; ++prob) {
-        std::size_t prob_id = selected[prob];
-        std::size_t row = prob * ProbandData<P>::ProbandSize;
-        std::size_t member = 0;
+template <Proband P>
+inline void Sampler::Model<P>::addGenotype(
+    const State& state,
+    std::size_t proband_id,
+    std::size_t locus,
+    const ProbandMember<typename ProbandData<P>::ProbandEnum>& member,
+    std::uint8_t& byte,
+    std::size_t& bit_pos,
+    std::fstream& bed) const {
+  byte |= (member_geno_plink(state, member, proband_id, locus) << bit_pos);
+  bit_pos += 2;
+  if (bit_pos == 8) {
+    bed.put(byte);
+    byte = 0;
+    bit_pos = 0;
+  }
+}
 
-        // Mate::Husband
-        phenotypes(row + member++, pheno) = pheno_vec(prob_id);
+template <Proband P>
+inline void Sampler::Model<P>::writeBIM() const {
+  std::ofstream bim_file(sample_dir / "data.bim");
+  for (std::size_t loc = 0; loc < n_loc; ++loc)
+    bim_file << std::format("0\tSNP{}\t0\t{}\tA\tG\n", loc, loc);
+}
 
-        // Mate::Wife
-        phenotypes(row + member++, pheno) =
-            pheno_vec(n_sex + matching[prob_id]);
+template <Proband P>
+inline void Sampler::Model<P>::writeBED(const State& state) const {
+  if (state.geno().view() != HaploView::LocusMajor)
+    throw std::runtime_error(
+        "Sampler::Model<P>::writeBED: require locus-major layout");
 
-        // Mate::HusbandFather
-        phenotypes(row + member++, pheno) = pheno_par_vec(prob_id);
+  // open the file
+  std::fstream bed_file(sample_dir / "data.bed", std::ios::out | std::ios::binary);
 
-        // Mate::HusbandMother
-        phenotypes(row + member++, pheno) =
-            pheno_par_vec(n_sex + matching_par[prob_id]);
+  if (!bed_file.is_open())
+    throw std::runtime_error(
+        "Could not open BED file stream " + (sample_dir / "data.bed").string());
 
-        // Mate::WifeFather
-        phenotypes(row + member++, pheno) =
-            pheno_par_vec(inv_matching_par[matching[prob_id]]);
+  // magic numbers
+  bed_file.put(0x6c).put(0x1b).put(0x01);
 
-        // Mate::WifeMother
-        phenotypes(row + member++, pheno) = pheno_par_vec(
-            n_sex + matching_par[inv_matching_par[matching[prob_id]]]);
-      }
+  // start looping
+  for (std::size_t loc = 0; loc < n_loc; ++loc) {
+    std::uint8_t byte = 0;
+    std::size_t bit_pos = 0;
+
+    for (std::size_t prob = 0; prob < n_probands; ++prob) {
+      std::size_t id = selected[prob];
+
+      // add the genotypes of all members in the proband
+      for (std::size_t m = 0; m < ProbandData<P>::ProbandSize; ++m)
+        addGenotype(
+            state,
+            id,
+            loc,
+            ProbandData<P>::ProbandMembers[m],
+            byte,
+            bit_pos,
+            bed_file);
+    }
+
+    // flush partial buffer at end of locus
+    if (bit_pos != 0) bed_file.put(byte);
+  }
+}
+
+template <Proband P>
+inline void Sampler::Model<P>::writeFAM(const State& state) const {
+  std::fstream fam_file(sample_dir / "data.fam", std::ios::out);
+
+  for (std::size_t prob = 0; prob < n_probands; ++prob) {
+    std::size_t id = selected[prob];
+
+    for (std::size_t m = 0; m < ProbandData<P>::ProbandSize; ++m) {
+      auto member = ProbandData<P>::ProbandMembers[m];
+
+      std::size_t fid = prob;
+      std::size_t iid = member_index(state, member, id);
+
+      int sex = (member.sex == Sex::Unknown) ? ((iid >= n_sex) + 1)
+                                             : static_cast<int>(member.sex);
+
+      std::string istr = member_id<P>(state, member.self, id);
+      std::string pstr = member_id<P>(state, member.father, id);
+      std::string mstr = member_id<P>(state, member.mother, id);
+
+      fam_file << std::format(
+          "FAM{}\t{}\t{}\t{}\t{}\t-9\n", fid, istr, pstr, mstr, sex);
+    }
+  }
+}
+
+template <Proband P>
+inline void Sampler::Model<P>::writePHENO(const State& state) const {
+  std::fstream pheno_file(sample_dir / "data.pheno", std::ios::out);
+
+  std::string header = "FID\tIID";
+  for (const std::string& pheno : names) header += "\t" + pheno;
+  header += "\n";
+
+  pheno_file << header;
+
+  for (std::size_t prob = 0; prob < n_probands; ++prob) {
+    std::size_t id = selected[prob];
+
+    for (std::size_t m = 0; m < ProbandData<P>::ProbandSize; ++m) {
+      auto member = ProbandData<P>::ProbandMembers[m];
+
+      std::size_t fid = prob;
+      std::string istr = member_id<P>(state, member.self, id);
+
+      pheno_file << std::format("FAM{}\t{}", fid, istr);
+
+      for (std::size_t pheno = 0; pheno < n_pheno; ++pheno)
+        pheno_file << std::format(
+            "\t{}", member_pheno(state, member, id, pheno));
+
+      pheno_file << "\n";
     }
   }
 }
@@ -325,6 +379,9 @@ inline void Sampler::Model<P>::draw(const State& state) {
 
   // extract selected proband data
   extractProbands(state);
+
+  // write to PLINK if necessary
+  writePLINK(state);
 }
 
 template <Proband P>
@@ -346,8 +403,7 @@ template struct Sampler::Model<Proband::Family>;
 class ComputeSampleEstimates {
  public:
   ComputeSampleEstimates(
-      const Params& params,
-      const std::vector<SampleSpec>& samples) {
+      const Params& params, const std::vector<SampleSpec>& samples) {
     for (const auto& sample : samples)
       estimators_.emplace_back(std::visit(
           [&params](auto&& spec) { return Sampler(spec, params); }, sample));
