@@ -33,22 +33,13 @@ inline void bitmatrix_transpose(std::uint64_t* matrix) {
   }
 }
 
-inline std::vector<std::string> label_matrix(
-    const std::vector<std::string>& row_labels,
-    const std::vector<std::string>& col_labels,
-    const std::optional<std::string>& row_suffix = std::nullopt,
-    const std::optional<std::string>& col_suffix = std::nullopt) {
-  std::size_t n_rows = row_labels.size();
-  std::size_t n_cols = col_labels.size();
-  std::vector<std::string> labels(n_rows * n_cols);
-
-  for (std::size_t row = 0; row < n_rows; ++row)
-    for (std::size_t col = 0; col < n_cols; ++col)
-      labels[(row * n_cols) + col] =
-          (row_labels[row] + row_suffix.value_or("")) +
-          "::" + (col_labels[col] + col_suffix.value_or(""));
-
-  return labels;
+inline std::vector<std::string> label_vector(
+    const std::vector<std::string>& labels,
+    const std::optional<std::string>& suffix = std::nullopt) {
+  std::vector<std::string> result(labels.size());
+  for (std::size_t i = 0; i < labels.size(); ++i)
+    result[i] = labels[i] + suffix.value_or("");
+  return result;
 }
 
 inline std::vector<std::size_t> order(const Eigen::VectorXd& v) {
