@@ -6,58 +6,41 @@
 #include <amsim/sample/proband.h>
 
 #include <Eigen/Dense>
-#include <filesystem>
-#include <fstream>
 
 namespace amsim {
 
 class PopulationEstimatorStrategy {
  public:
   PopulationEstimatorStrategy(
-      const std::filesystem::path& out_dir,
       std::string name,
-      std::vector<std::string> labels,
+      std::vector<std::string> row_labels,
+      std::vector<std::string> col_labels,
       std::size_t n_rows,
       std::size_t n_cols = 1)
       : name_(std::move(name)),
-        labels_(std::move(labels)),
+        row_labels_(std::move(row_labels)),
+        col_labels_(std::move(col_labels)),
         n_rows_(n_rows),
         n_cols_(n_cols),
-        stream_(out_dir / (name_ + ".tsv")),
-        data_(n_rows_, n_cols_) {
-    header();
-  };
+        data_(n_rows_, n_cols_) {}
 
   virtual ~PopulationEstimatorStrategy() = default;
   virtual void compute(const State& state) = 0;
 
-  void header() {
-    stream_ << "gen\t";
-    for (Eigen::Index el = 0; el < data_.size(); ++el) {
-      stream_ << ((!labels_.empty()) ? labels_[el] : std::to_string(el));
-      if (el < data_.size() - 1) stream_ << "\t";
-    }
-    stream_ << "\n";
-  }
+  std::string name() const { return name_; }
+  std::vector<std::string> row_labels() const { return row_labels_; }
+  std::vector<std::string> col_labels() const { return col_labels_; }
+  std::size_t n_rows() const { return n_rows_; }
+  std::size_t n_cols() const { return n_cols_; }
 
-  void stream(std::size_t gen) {
-    stream_ << std::to_string(gen);
-    for (Eigen::Index el = 0; el < data_.size(); ++el)
-      stream_ << "\t" + std::to_string(data_(el));
-    stream_ << "\n";
-  }
-
-  void operator()(const State& state) {
-    compute(state);
-    stream(state.gen);
-  }
+  void operator()(const State& state) { compute(state); }
 
  protected:
   std::string name_;
-  std::vector<std::string> labels_;
+  std::vector<std::string> row_labels_;
+  std::vector<std::string> col_labels_;
   std::size_t n_rows_;
   std::size_t n_cols_;
-  std::ofstream stream_;
   Eigen::MatrixXd data_;
 };
 
@@ -73,10 +56,7 @@ class EstimatorHeritability : public PopulationEstimatorStrategy {
  public:
   explicit EstimatorHeritability(const Params& params)
       : PopulationEstimatorStrategy(
-            params.sim.out_dir,
-            "pheno_h2",
-            params.pheno.names,
-            params.pheno.n_pheno) {
+            "pheno_h2", {}, params.pheno.names, params.pheno.n_pheno) {
     n_pheno_ = params.pheno.n_pheno;
   }
 
@@ -94,8 +74,8 @@ class EstimatorComponentMean : public PopulationEstimatorStrategy {
  public:
   explicit EstimatorComponentMean(const Params& params, Component type)
       : PopulationEstimatorStrategy(
-            params.sim.out_dir,
             "pheno_" + to_string(type) + "_mean",
+            {},
             params.pheno.names,
             params.pheno.n_pheno),
         type_(type),
@@ -115,8 +95,8 @@ class EstimatorComponentVar : public PopulationEstimatorStrategy {
  public:
   explicit EstimatorComponentVar(const Params& params, Component type)
       : PopulationEstimatorStrategy(
-            params.sim.out_dir,
             "pheno_" + to_string(type) + "_var",
+            {},
             params.pheno.names,
             params.pheno.n_pheno),
         type_(type),
@@ -137,13 +117,11 @@ class EstimatorComponentCor : public PopulationEstimatorStrategy {
   explicit EstimatorComponentCor(
       const Params& params, Component type_l, std::optional<Component> type_r)
       : PopulationEstimatorStrategy(
-            params.sim.out_dir,
             "pheno_" + to_string(type_l) + "_" +
                 to_string(type_r.value_or(type_l)) + "_cor",
-            utils::label_matrix(
+            utils::label_vector(params.pheno.names, "_" + to_string(type_l)),
+            utils::label_vector(
                 params.pheno.names,
-                params.pheno.names,
-                "_" + to_string(type_l),
                 "_" + to_string(type_r.value_or(type_l))),
             params.pheno.n_pheno,
             params.pheno.n_pheno),
@@ -173,10 +151,9 @@ class EstimatorMateCor : public PopulationEstimatorStrategy {
  public:
   explicit EstimatorMateCor(const Params& params, Component type)
       : PopulationEstimatorStrategy(
-            params.sim.out_dir,
             "mate_" + to_string(type) + "_cor",
-            utils::label_matrix(
-                params.pheno.names, params.pheno.names, "_male", "_female"),
+            utils::label_vector(params.pheno.names, "_male"),
+            utils::label_vector(params.pheno.names, "_female"),
             params.pheno.n_pheno,
             params.pheno.n_pheno),
         type_(type),

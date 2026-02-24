@@ -5,7 +5,6 @@
 
 #include <Eigen/Dense>
 #include <filesystem>
-#include <fstream>
 
 namespace amsim {
 
@@ -13,55 +12,41 @@ template <Proband P>
 class SampleEstimatorStrategy {
  public:
   SampleEstimatorStrategy(
-      const std::filesystem::path& sample_dir,
       std::string name,
-      std::vector<std::string> labels,
+      std::vector<std::string> row_labels,
+      std::vector<std::string> col_labels,
       std::size_t n_rows,
       std::size_t n_cols = 1)
       : name_(std::move(name)),
-        labels_(std::move(labels)),
+        row_labels_(std::move(row_labels)),
+        col_labels_(std::move(col_labels)),
         n_rows_(n_rows),
         n_cols_(n_cols),
-        stream_(sample_dir / (name_ + ".tsv")),
-        data_(n_rows_, n_cols_) {
-    header();
-  }
+        data_(n_rows_, n_cols_) {}
 
   virtual ~SampleEstimatorStrategy() = default;
   virtual void compute(
       const Eigen::MatrixXd& phenotypes, const Eigen::MatrixXd& genotypes) = 0;
 
   std::string name() const { return name_; }
-
-  void header() {
-    stream_ << "gen";
-    for (Eigen::Index el = 0; el < data_.size(); ++el)
-      stream_ << "\t"
-              << ((!labels_.empty()) ? labels_[el] : std::to_string(el));
-    stream_ << "\n";
-  }
-
-  void stream(std::size_t gen) {
-    stream_ << gen;
-    for (Eigen::Index el = 0; el < data_.size(); ++el)
-      stream_ << "\t" << data_(el);
-    stream_ << "\n";
-  }
+  std::vector<std::string> row_labels() const { return row_labels_; }
+  std::vector<std::string> col_labels() const { return col_labels_; }
+  std::size_t n_rows() const { return n_rows_; }
+  std::size_t n_cols() const { return n_cols_; }
 
   void operator()(
-      std::size_t gen,
+      std::size_t /*gen*/,
       const Eigen::MatrixXd& phenotypes,
       const Eigen::MatrixXd& genotypes) {
     compute(phenotypes, genotypes);
-    stream(gen);
   }
 
  protected:
   std::string name_;
-  std::vector<std::string> labels_;
+  std::vector<std::string> row_labels_;
+  std::vector<std::string> col_labels_;
   std::size_t n_rows_;
   std::size_t n_cols_;
-  std::ofstream stream_;
   Eigen::MatrixXd data_;
 };
 
@@ -78,11 +63,10 @@ using SampleEstimators = std::vector<SampleEstimator<P>>;
 template <Proband P>
 class SampleMean : public SampleEstimatorStrategy<P> {
  public:
-  explicit SampleMean(
-      const Params& params, const std::filesystem::path& sample_dir)
+  explicit SampleMean(const Params& params)
       : SampleEstimatorStrategy<P>(
-            sample_dir,
             "sample_mean",
+            {},
             params.pheno.names,
             params.pheno.n_pheno) {}
 
@@ -96,11 +80,10 @@ class SampleMean : public SampleEstimatorStrategy<P> {
 template <Proband P>
 class SampleVar : public SampleEstimatorStrategy<P> {
  public:
-  explicit SampleVar(
-      const Params& params, const std::filesystem::path& sample_dir)
+  explicit SampleVar(const Params& params)
       : SampleEstimatorStrategy<P>(
-            sample_dir,
             "sample_var",
+            {},
             params.pheno.names,
             params.pheno.n_pheno) {}
 
@@ -119,15 +102,11 @@ class SampleVar : public SampleEstimatorStrategy<P> {
 template <Proband P>
 class SampleMateCor : public SampleEstimatorStrategy<P> {
  public:
-  explicit SampleMateCor(
-      const Params& params,
-      const std::filesystem::path& sample_dir,
-      std::size_t n_probands)
+  explicit SampleMateCor(const Params& params, std::size_t n_probands)
       : SampleEstimatorStrategy<P>(
-            sample_dir,
             "sample_mate_cor",
-            utils::label_matrix(
-                params.pheno.names, params.pheno.names, "_male", "_female"),
+            utils::label_vector(params.pheno.names, "_male"),
+            utils::label_vector(params.pheno.names, "_female"),
             params.pheno.n_pheno,
             params.pheno.n_pheno),
         n_probands_(n_probands),
@@ -218,8 +197,8 @@ template <Proband P>
 inline SampleEstimator<P> SampleMeanEstimator() {
   return [](const Params& params,
             std::size_t /*n_probands*/,
-            const std::filesystem::path& sample_dir) {
-    return std::make_unique<SampleMean<P>>(params, sample_dir);
+            const std::filesystem::path& /*sample_dir*/) {
+    return std::make_unique<SampleMean<P>>(params);
   };
 }
 
@@ -227,8 +206,8 @@ template <Proband P>
 inline SampleEstimator<P> SampleVarEstimator() {
   return [](const Params& params,
             std::size_t /*n_probands*/,
-            const std::filesystem::path& sample_dir) {
-    return std::make_unique<SampleVar<P>>(params, sample_dir);
+            const std::filesystem::path& /*sample_dir*/) {
+    return std::make_unique<SampleVar<P>>(params);
   };
 }
 
@@ -239,8 +218,8 @@ template <Proband P>
 inline SampleEstimator<P> SampleMateCorEstimator() {
   return [](const Params& params,
             std::size_t n_probands,
-            const std::filesystem::path& sample_dir) {
-    return std::make_unique<SampleMateCor<P>>(params, sample_dir, n_probands);
+            const std::filesystem::path& /*sample_dir*/) {
+    return std::make_unique<SampleMateCor<P>>(params, n_probands);
   };
 }
 
@@ -261,7 +240,7 @@ inline SampleEstimator<P> SampleGWASEstimator() {
   //   - true positive rate
   //   - false positive rate
   //   - bias / l2 / linfty norms
-  //   - more?
+  //   - polygenic score accuracy
   // write to HDF5
   //
   // delete the intermediate file
@@ -284,7 +263,7 @@ inline SampleEstimator<P> SampleHasemanElstonEstimator() {
   //
   // extract the values from the file and write it to HDF5
   //
-  // delete the intermediate file
+  // delete the intermediate file (as in the H-E specific files)
 }
 
 // invoke GCTA
@@ -301,7 +280,7 @@ inline SampleEstimator<P> SampleGREMLEstimator() {
   //
   // extract the GREML estimate and write it to HDF5
   //
-  // delete the intermediate files
+  // delete the intermediate files (as in the GREML specific files)
 }
 
 // invoke PLINK and compute PCA
