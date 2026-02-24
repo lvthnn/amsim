@@ -35,11 +35,11 @@ inline void setup_outdir(const Simulation& simulation) {
   std::filesystem::create_directory(simulation.output_dir);
 }
 
-inline void setup_logger(const Simulation& simulation) {
+inline void setup_log(const Simulation& simulation) {
   if (simulation.log_file)
-    LOG_FILE(simulation.output_dir / "amsim.log", simulation.log_level);
+    Log::file(simulation.output_dir / "amsim.log", simulation.log_level);
   else
-    LOG_STREAM(std::cout, simulation.log_level);
+    Log::stream(std::cout, simulation.log_level);
 }
 
 inline std::filesystem::path setup_replicate(
@@ -114,7 +114,7 @@ inline void run_simulation(
 
   // run the core simulation loop
   while (state.gen <= params.sim.n_gens) {
-    LOG_DEBUG("Simulating generation " + std::to_string(state.gen));
+    Log::debug("Simulating generation " + std::to_string(state.gen));
     state.geno().compute_mafs();
     state.geno().compute_stats();
 
@@ -162,14 +162,15 @@ inline void run_simulations(
   // preprocess parameters
   Params params = details::preprocess_simulation(simulation);
 
+  details::setup_log(simulation);
+
   for (std::size_t thread = 0; thread < n_threads; ++thread) {
     pool.emplace_back([&, thread]() {
       while (true) {
         Params thread_params = params;
 
-        details::setup_logger(simulation);
 
-        LOG_DEBUG("setting up thread " + std::to_string(thread));
+        Log::debug("setting up thread " + std::to_string(thread));
 
         auto rep_id = next.fetch_add(1);
         if (rep_id >= n_replicates) return;
