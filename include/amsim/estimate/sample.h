@@ -1,10 +1,12 @@
 #pragma once
 
 #include <amsim/core.h>
+#include <amsim/io.h>
 #include <amsim/sample/proband.h>
 
 #include <Eigen/Dense>
 #include <filesystem>
+#include <vector>
 
 namespace amsim {
 
@@ -12,17 +14,21 @@ template <Proband P>
 class SampleEstimatorStrategy {
  public:
   SampleEstimatorStrategy(
-      std::string name,
+      std::string_view estimator_name,
+      std::string_view sample_name,
       std::vector<std::string> row_labels,
       std::vector<std::string> col_labels,
       std::size_t n_rows,
       std::size_t n_cols = 1)
-      : name_(std::move(name)),
+      : name_(estimator_name),
+        name_h5_(std::format("{}/{}", sample_name, estimator_name)),
         row_labels_(std::move(row_labels)),
         col_labels_(std::move(col_labels)),
         n_rows_(n_rows),
         n_cols_(n_cols),
-        data_(n_rows_, n_cols_) {}
+        data_(n_rows_, n_cols_) {
+    Writer::create(data_, name_h5_, row_labels_, col_labels_);
+  }
 
   virtual ~SampleEstimatorStrategy() = default;
   virtual void compute(
@@ -35,19 +41,22 @@ class SampleEstimatorStrategy {
   std::size_t n_cols() const { return n_cols_; }
 
   void operator()(
-      std::size_t /*gen*/,
+      std::size_t gen,
+      std::size_t rep,
       const Eigen::MatrixXd& phenotypes,
       const Eigen::MatrixXd& genotypes) {
     compute(phenotypes, genotypes);
+    Writer::write(data_, name_h5_, rep, gen);
   }
 
  protected:
   std::string name_;
+  std::string name_h5_;
   std::vector<std::string> row_labels_;
   std::vector<std::string> col_labels_;
   std::size_t n_rows_;
   std::size_t n_cols_;
-  Eigen::MatrixXd data_;
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data_;
 };
 
 template <Proband P>
@@ -63,9 +72,10 @@ using SampleEstimators = std::vector<SampleEstimator<P>>;
 template <Proband P>
 class SampleMean : public SampleEstimatorStrategy<P> {
  public:
-  explicit SampleMean(const Params& params)
+  explicit SampleMean(const Params& params, const std::string& sample_name)
       : SampleEstimatorStrategy<P>(
             "sample_mean",
+            sample_name,
             {},
             params.pheno.names,
             params.pheno.n_pheno) {}
@@ -80,9 +90,10 @@ class SampleMean : public SampleEstimatorStrategy<P> {
 template <Proband P>
 class SampleVar : public SampleEstimatorStrategy<P> {
  public:
-  explicit SampleVar(const Params& params)
+  explicit SampleVar(const Params& params, const std::string& sample_name)
       : SampleEstimatorStrategy<P>(
             "sample_var",
+            sample_name,
             {},
             params.pheno.names,
             params.pheno.n_pheno) {}
@@ -102,9 +113,13 @@ class SampleVar : public SampleEstimatorStrategy<P> {
 template <Proband P>
 class SampleMateCor : public SampleEstimatorStrategy<P> {
  public:
-  explicit SampleMateCor(const Params& params, std::size_t n_probands)
+  explicit SampleMateCor(
+      const Params& params,
+      const std::string& sample_name,
+      std::size_t n_probands)
       : SampleEstimatorStrategy<P>(
             "sample_mate_cor",
+            sample_name,
             utils::label_vector(params.pheno.names, "_male"),
             utils::label_vector(params.pheno.names, "_female"),
             params.pheno.n_pheno,
@@ -158,47 +173,12 @@ class SampleMateCor : public SampleEstimatorStrategy<P> {
 };
 
 template <Proband P>
-class SampleGWAS : public SampleEstimatorStrategy<P> {
- public:
-  explicit SampleGWAS(
-      const Params& params, const std::filesystem::path& sample_dir)
-      : SampleEstimatorStrategy<P>(params, sample_dir) {
-    utils::check_plink2();
-  }
-
- private:
-};
-
-template <Proband P>
-class SampleHasemanElston : public SampleEstimatorStrategy<P> {
- public:
-  explicit SampleHasemanElston(
-      const Params& params, const std::filesystem::path& sample_dir)
-      : SampleHasemanElston<P>(params, sample_dir) {
-    utils::check_gcta64();
-  }
-
- private:
-};
-
-template <Proband P>
-class SampleGREML : public SampleEstimatorStrategy<P> {
- public:
-  explicit SampleGREML(
-      const Params& params, const std::filesystem::path& sample_dir)
-      : SampleGREML<P>(params, sample_dir) {
-    utils::check_gcta64();
-  }
-
- private:
-};
-
-template <Proband P>
 inline SampleEstimator<P> SampleMeanEstimator() {
   return [](const Params& params,
             std::size_t /*n_probands*/,
-            const std::filesystem::path& /*sample_dir*/) {
-    return std::make_unique<SampleMean<P>>(params);
+            const std::filesystem::path& sample_dir) {
+    return std::make_unique<SampleMean<P>>(
+        params, sample_dir.filename().string());
   };
 }
 
@@ -206,8 +186,9 @@ template <Proband P>
 inline SampleEstimator<P> SampleVarEstimator() {
   return [](const Params& params,
             std::size_t /*n_probands*/,
-            const std::filesystem::path& /*sample_dir*/) {
-    return std::make_unique<SampleVar<P>>(params);
+            const std::filesystem::path& sample_dir) {
+    return std::make_unique<SampleVar<P>>(
+        params, sample_dir.filename().string());
   };
 }
 
@@ -218,78 +199,10 @@ template <Proband P>
 inline SampleEstimator<P> SampleMateCorEstimator() {
   return [](const Params& params,
             std::size_t n_probands,
-            const std::filesystem::path& /*sample_dir*/) {
-    return std::make_unique<SampleMateCor<P>>(params, n_probands);
-  };
-}
-
-// invoke PLINK2
-// should support PCA correction for ancestry
-// - both a boolean flag whether to do that,
-// - then flags which allow controlling how many PCA components
-template <Proband P>
-inline SampleEstimator<P> SampleGWASEstimator() {
-  // whoops, this is actually meant for the compute function
-  //
-  // std::string gcta_string = std::format(...);
-  // std::system(gcta_string);
-  //
-  // verify call worked
-  //
-  // extract values from file, and compute:
-  //   - true positive rate
-  //   - false positive rate
-  //   - bias / l2 / linfty norms
-  //   - polygenic score accuracy
-  // write to HDF5
-  //
-  // delete the intermediate file
-  return [](const Params& params,
-            std::size_t n_probands,
             const std::filesystem::path& sample_dir) {
-    return std::make_unique<SampleGWAS<P>>(params, n_probands, sample_dir);
+    return std::make_unique<SampleMateCor<P>>(
+        params, sample_dir.filename().string(), n_probands);
   };
-}
-
-// invoke GCTA
-template <Proband P>
-inline SampleEstimator<P> SampleHasemanElstonEstimator() {
-  // whoops, this is actually meant for the compute function
-  //
-  // std::string gcta_string = std::format(...);
-  // std::system(gcta_string);
-  //
-  // verify call worked
-  //
-  // extract the values from the file and write it to HDF5
-  //
-  // delete the intermediate file (as in the H-E specific files)
-}
-
-// invoke GCTA
-template <Proband P>
-inline SampleEstimator<P> SampleGREMLEstimator() {
-  // whoops, this is actually meant for the compute function
-  //
-  // support pca correction? likely unnecessary since there is no ancestry
-  //
-  // std::string gcta_string = std::format(...);
-  // std::system(gcta_string);
-  //
-  // verify call worked
-  //
-  // extract the GREML estimate and write it to HDF5
-  //
-  // delete the intermediate files (as in the GREML specific files)
-}
-
-// invoke PLINK and compute PCA
-template <Proband P>
-inline SampleEstimator<P> SamplePCAEstimator() {
-  // is this unnecessary?
-  //
-  // would be very interesting to see how PCA vectors and eigenvalues
-  // change with time
 }
 
 }  // namespace amsim

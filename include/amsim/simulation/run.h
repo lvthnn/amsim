@@ -8,6 +8,7 @@
 
 #include <atomic>
 #include <iostream>
+#include <stdexcept>
 #include <thread>
 
 namespace amsim {
@@ -47,36 +48,9 @@ inline std::filesystem::path setup_replicate(
   return simulation.output_dir / std::format("rep_{:03}", rep_id);
 }
 
-inline void resolve_rlimit(const std::size_t required) {
-  auto rl_req = static_cast<rlim_t>(required);
-  struct rlimit rl;
-
-  if (getrlimit(RLIMIT_NOFILE, &rl) != 0) perror("getrlimit");
-
-  if (rl_req > rl.rlim_max)
-    throw std::invalid_argument(
-        "required resource limit exceeds hard limit for process; consider "
-        "lowering number of threads or the number of metrics");
-
-  if (rl_req > rl.rlim_cur) {
-    rl.rlim_cur = rl_req;
-    if (setrlimit(RLIMIT_NOFILE, &rl) != 0) perror("setrlimit");
-  }
+inline void setup_writer(const Simulation& simulation) {
+  Writer::get_instance(simulation.output_dir, simulation.n_generations);
 }
-
-inline void check_rlimit(
-    const Simulation& simulation, const std::size_t n_threads) {
-  // count population estimators
-  std::size_t n_estimators = simulation.estimators.size();
-
-  // count sample estimators
-  for (const auto& sample : simulation.samples)
-    std::visit(
-        [&](const auto& s) { n_estimators += s.estimators.size(); }, sample);
-
-  resolve_rlimit(n_threads * n_estimators);
-}
-
 }  // namespace details
 
 inline void run_simulation(
@@ -153,9 +127,6 @@ inline void run_simulations(
   std::uint64_t seed = rng::auto_seed(simulation.random_seed);
   rng::set_seed(seed);
 
-  // check whether number of output files exceed rlimit
-  details::check_rlimit(simulation, n_threads);
-
   // set up the base and replicate directories
   details::setup_outdir(simulation);
 
@@ -163,12 +134,12 @@ inline void run_simulations(
   Params params = details::preprocess_simulation(simulation);
 
   details::setup_log(simulation);
+  details::setup_writer(simulation);
 
   for (std::size_t thread = 0; thread < n_threads; ++thread) {
     pool.emplace_back([&, thread]() {
       while (true) {
         Params thread_params = params;
-
 
         Log::debug("setting up thread " + std::to_string(thread));
 
@@ -178,6 +149,7 @@ inline void run_simulations(
         thread_params.sim.out_dir =
             details::setup_replicate(simulation, rep_id);
         thread_params.sim.rng_seed = details::shuffle_seed(seed, rep_id);
+        thread_params.sim.rep_id = rep_id;
 
         run_simulation(
             thread_params, simulation.estimators, simulation.samples);
