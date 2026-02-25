@@ -136,7 +136,7 @@ inline double member_pheno(
     Component component = Component::Total) {
   Generation generation = member_generation(member);
   std::size_t index = member_index(state, member, proband_id);
-  return state.pheno(generation)(pheno_id)(index, component);
+  return state.pheno(generation)(pheno_id, component)(index);
 }
 
 template <typename ProbandEnum>
@@ -147,7 +147,7 @@ inline double member_pheno(
     std::size_t pheno_id,
     Component component = Component::Total) {
   std::size_t index = member_index(state, member, proband_id);
-  return state.pheno(member.generation)(pheno_id)(index, component);
+  return state.pheno(member.generation)(pheno_id, component)(index);
 }
 
 template <Proband P>
