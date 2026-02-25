@@ -5,6 +5,7 @@
 #include <amsim/sample.h>
 
 #include <filesystem>
+#include <variant>
 
 namespace amsim {
 
@@ -256,7 +257,13 @@ inline void Sampler::Model<P>::addGenotype(
 
 template <Proband P>
 inline void Sampler::Model<P>::writeBIM() const {
-  std::ofstream bim_file(sample_dir / "data.bim");
+  std::fstream bim_file(sample_dir / "data.bim", std::ios::out);
+
+  if (!bim_file.is_open())
+    std::runtime_error(
+        "Could not open BIM file output stream " +
+        (sample_dir / "data.bim").string());
+
   for (std::size_t loc = 0; loc < n_loc; ++loc)
     bim_file << std::format("0\tSNP{}\t0\t{}\tA\tG\n", loc, loc);
 }
@@ -268,7 +275,8 @@ inline void Sampler::Model<P>::writeBED(const State& state) const {
         "Sampler::Model<P>::writeBED: require locus-major layout");
 
   // open the file
-  std::fstream bed_file(sample_dir / "data.bed", std::ios::out | std::ios::binary);
+  std::fstream bed_file(
+      sample_dir / "data.bed", std::ios::out | std::ios::binary);
 
   if (!bed_file.is_open())
     throw std::runtime_error(
@@ -306,6 +314,11 @@ template <Proband P>
 inline void Sampler::Model<P>::writeFAM(const State& state) const {
   std::fstream fam_file(sample_dir / "data.fam", std::ios::out);
 
+  if (!fam_file.is_open())
+    std::runtime_error(
+        "Could not open FAM file output stream " +
+        (sample_dir / "data.bim").string());
+
   for (std::size_t prob = 0; prob < n_probands; ++prob) {
     std::size_t id = selected[prob];
 
@@ -315,8 +328,9 @@ inline void Sampler::Model<P>::writeFAM(const State& state) const {
       std::size_t fid = prob;
       std::size_t iid = member_index(state, member, id);
 
-      int sex = (member.sex == Sex::Unknown) ? ((iid >= n_sex) + 1)
-                                             : static_cast<int>(member.sex);
+      int sex = (member.sex == Sex::Unknown)
+                    ? (static_cast<int>(iid >= n_sex) + 1)
+                    : static_cast<int>(member.sex);
 
       std::string istr = member_id<P>(state, member.self, id);
       std::string pstr = member_id<P>(state, member.father, id);
@@ -331,6 +345,11 @@ inline void Sampler::Model<P>::writeFAM(const State& state) const {
 template <Proband P>
 inline void Sampler::Model<P>::writePHENO(const State& state) const {
   std::fstream pheno_file(sample_dir / "data.pheno", std::ios::out);
+
+  if (!pheno_file.is_open())
+    std::runtime_error(
+        "Could not open PHENO file output stream " +
+        (sample_dir / "data.bim").string());
 
   std::string header = "FID\tIID";
   for (const std::string& pheno : names) header += "\t" + pheno;
@@ -387,7 +406,7 @@ inline void Sampler::Model<P>::draw(const State& state) {
 template <Proband P>
 inline void Sampler::Model<P>::estimate(const State& state) {
   for (const auto& estimator : estimators)
-    (*estimator)(state.gen, phenotypes, genotypes);
+    (*estimator)(state.gen, state.rep, phenotypes, genotypes);
 }
 
 template <Proband P>
@@ -405,8 +424,10 @@ class ComputeSampleEstimates {
   ComputeSampleEstimates(
       const Params& params, const std::vector<SampleSpec>& samples) {
     for (const auto& sample : samples)
-      estimators_.emplace_back(std::visit(
-          [&params](auto&& spec) { return Sampler(spec, params); }, sample));
+      estimators_.emplace_back(
+          std::visit(
+              [&params](auto&& spec) { return Sampler(spec, params); },
+              sample));
   }
 
   void operator()(const State& state);
