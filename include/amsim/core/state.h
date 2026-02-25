@@ -12,6 +12,7 @@ namespace amsim {
 struct State {
   const std::size_t n_sex;
   std::size_t gen = 0;
+  std::size_t rep = 0;
   std::size_t parity = 0;
 
   // store current and parent generation
@@ -71,6 +72,7 @@ struct State {
 inline State build_state(const Params& params) {
   return State{
       .n_sex = params.geno.n_ind / 2,
+      .rep = params.sim.rep_id,
       .genos = {GenoBuf(params), GenoBuf(params)},
       .phenos = {PhenoBuf(params), PhenoBuf(params)},
       .matchings =

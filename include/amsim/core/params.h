@@ -51,6 +51,7 @@ struct SimulationParams {
   std::size_t n_gens;
   std::uint64_t rng_seed;
   std::filesystem::path out_dir;
+  std::size_t rep_id;
 
   LogLevel log_level;
   bool log_to_file = false;
