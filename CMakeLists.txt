@@ -18,7 +18,7 @@ add_library(amsimcpp INTERFACE)
 
 # Public headers for users of the lib
 target_include_directories(amsimcpp
-  INTERFACE 
+  INTERFACE
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
@@ -33,14 +33,15 @@ else()
   include_directories("/usr/include/openblas")
   find_package(BLAS REQUIRED)
   find_package(LAPACK REQUIRED)
-  target_link_libraries(amsimcpp PUBLIC BLAS::BLAS LAPACK::LAPACK)
-  target_compile_definitions(amsimcpp PUBLIC EIGEN_USE_BLAS EIGEN_USE_LAPACK)
+  target_link_libraries(amsimcpp INTERFACE BLAS::BLAS LAPACK::LAPACK)
+  target_compile_definitions(amsimcpp INTERFACE EIGEN_USE_BLAS EIGEN_USE_LAPACK)
 endif()
 
-# Use h5pp for HDF5 support
+# Use highfive for HDF5 support
 
 find_package(HDF5 REQUIRED COMPONENTS C)
 target_link_libraries(amsimcpp INTERFACE HDF5::HDF5)
+target_compile_definitions(amsimcpp INTERFACE HIGHFIVE_USE_EIGEN)
 
 # Python bindings
 option(BUILD_PYTHON "Build Python bindings for amsimpy" OFF)
@@ -69,9 +70,9 @@ endif()
 #   GIT_TAG v1.17.0
 # )
 # FetchContent_MakeAvailable(googletest)
-# 
+#
 # enable_testing()
-# 
+#
 # include(GoogleTest)
 
 # Examples
