@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <stdexcept>
 #include <type_traits>
 #if __cpp_lib_bitops
 #include <bit>

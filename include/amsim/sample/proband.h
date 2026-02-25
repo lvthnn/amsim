@@ -128,28 +128,28 @@ struct ProbandData<Proband::Mate> {
        .sex = Sex::Female},
 
       {.self = Mate::HusbandFather,
-       .generation = Generation::Parents,
-       .sex = Sex::Male,
        .father = Mate::Unknown,
-       .mother = Mate::Unknown},
+       .mother = Mate::Unknown,
+       .generation = Generation::Parents,
+       .sex = Sex::Male},
 
       {.self = Mate::HusbandMother,
-       .generation = Generation::Parents,
-       .sex = Sex::Female,
        .father = Mate::Unknown,
-       .mother = Mate::Unknown},
+       .mother = Mate::Unknown,
+       .generation = Generation::Parents,
+       .sex = Sex::Female},
 
       {.self = Mate::WifeFather,
-       .generation = Generation::Parents,
-       .sex = Sex::Male,
        .father = Mate::Unknown,
-       .mother = Mate::Unknown},
+       .mother = Mate::Unknown,
+       .generation = Generation::Parents,
+       .sex = Sex::Male},
 
       {.self = Mate::WifeMother,
-       .generation = Generation::Parents,
-       .sex = Sex::Female,
        .father = Mate::Unknown,
-       .mother = Mate::Unknown}};
+       .mother = Mate::Unknown,
+       .generation = Generation::Parents,
+       .sex = Sex::Female}};
   static constexpr Aggregator AggDefault = Aggregator::Mean;
 };
 
@@ -160,40 +160,40 @@ struct ProbandData<Proband::Family> {
   static constexpr ProbandEnum ProbandDefault = Family::All;
   static constexpr ProbandMember<ProbandEnum> ProbandMembers[ProbandSize] = {
       {.self = Family::Father,
-       .generation = Generation::Parents,
-       .sex = Sex::Male,
        .father = Family::Unknown,
-       .mother = Family::Unknown},
+       .mother = Family::Unknown,
+       .generation = Generation::Parents,
+       .sex = Sex::Male},
 
       {.self = Family::Mother,
-       .generation = Generation::Parents,
-       .sex = Sex::Female,
        .father = Family::Unknown,
-       .mother = Family::Unknown},
+       .mother = Family::Unknown,
+       .generation = Generation::Parents,
+       .sex = Sex::Female},
 
       {.self = Family::Son,
-       .generation = Generation::Current,
-       .sex = Sex::Male,
        .father = Family::Father,
-       .mother = Family::Mother},
+       .mother = Family::Mother,
+       .generation = Generation::Current,
+       .sex = Sex::Male},
 
       {.self = Family::SonWife,
-       .generation = Generation::Current,
-       .sex = Sex::Female,
        .father = Family::Unknown,
-       .mother = Family::Unknown},
+       .mother = Family::Unknown,
+       .generation = Generation::Current,
+       .sex = Sex::Female},
 
       {.self = Family::DaughterHusband,
-       .generation = Generation::Current,
-       .sex = Sex::Male,
        .father = Family::Unknown,
-       .mother = Family::Unknown},
+       .mother = Family::Unknown,
+       .generation = Generation::Current,
+       .sex = Sex::Male},
 
       {.self = Family::Daughter,
-       .generation = Generation::Current,
-       .sex = Sex::Female,
        .father = Family::Father,
-       .mother = Family::Mother},
+       .mother = Family::Mother,
+       .generation = Generation::Current,
+       .sex = Sex::Female},
   };
   static constexpr Aggregator AggDefault = Aggregator::Mean;
 };

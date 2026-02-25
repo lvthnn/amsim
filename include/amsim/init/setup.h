@@ -6,8 +6,11 @@
 
 #include <Eigen/Dense>
 #include <cstddef>
+#include <stdexcept>
 #include <string>
+#include <variant>
 #include <vector>
+
 namespace amsim {
 
 namespace details {
@@ -171,10 +174,10 @@ inline Params build_params(const Simulation& simulation) {
   GenomeParams geno = GenomeParams{
       .n_ind = simulation.n_individuals,
       .n_loc = simulation.genome.n_loci,
-      .v_rec =
-          details::expand(simulation.genome.v_rec, simulation.genome.n_loci),
       .v_maf =
           details::expand(simulation.genome.v_maf, simulation.genome.n_loci),
+      .v_rec =
+          details::expand(simulation.genome.v_rec, simulation.genome.n_loci),
       .v_mut =
           details::expand(simulation.genome.v_mut, simulation.genome.n_loci)};
 
@@ -189,8 +192,8 @@ inline Params build_params(const Simulation& simulation) {
 
   SimulationParams sim = SimulationParams{
       .n_gens = simulation.n_generations,
-      .out_dir = simulation.output_dir,
-      .rng_seed = rng::auto_seed(simulation.random_seed)};
+      .rng_seed = rng::auto_seed(simulation.random_seed),
+      .out_dir = simulation.output_dir};
 
   return Params{
       .geno = std::move(geno),

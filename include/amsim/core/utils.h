@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <numeric>
 #include <vector>
+#include <stdexcept>
 
 namespace amsim::utils {
 

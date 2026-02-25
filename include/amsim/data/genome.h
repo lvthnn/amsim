@@ -1,12 +1,13 @@
 #pragma once
 
-#include <amsim/core/rng.h>
 #include <amsim/core/params.h>
+#include <amsim/core/rng.h>
 #include <amsim/core/utils.h>
 
 #include <Eigen/Dense>
 #include <cstddef>
 #include <cstdint>
+#include <stdexcept>
 #include <vector>
 
 namespace amsim {

@@ -5,6 +5,7 @@
 
 #include <ranges>
 #include <vector>
+#include <stdexcept>
 
 namespace amsim {
 
