@@ -3,6 +3,7 @@
 #include <amsim/core/params.h>
 #include <amsim/core/state.h>
 #include <amsim/core/utils.h>
+#include <amsim/io.h>
 #include <amsim/sample/proband.h>
 
 #include <Eigen/Dense>
@@ -22,7 +23,9 @@ class PopulationEstimatorStrategy {
         col_labels_(std::move(col_labels)),
         n_rows_(n_rows),
         n_cols_(n_cols),
-        data_(n_rows_, n_cols_) {}
+        data_(n_rows_, n_cols_) {
+    Writer::create(data_, name_, row_labels_, col_labels_);
+  }
 
   virtual ~PopulationEstimatorStrategy() = default;
   virtual void compute(const State& state) = 0;
@@ -33,7 +36,10 @@ class PopulationEstimatorStrategy {
   std::size_t n_rows() const { return n_rows_; }
   std::size_t n_cols() const { return n_cols_; }
 
-  void operator()(const State& state) { compute(state); }
+  void operator()(const State& state) {
+    compute(state);
+    Writer::write(data_, name(), state.rep, state.gen);
+  }
 
  protected:
   std::string name_;
@@ -41,7 +47,7 @@ class PopulationEstimatorStrategy {
   std::vector<std::string> col_labels_;
   std::size_t n_rows_;
   std::size_t n_cols_;
-  Eigen::MatrixXd data_;
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data_;
 };
 
 using PopulationEstimator =
@@ -121,8 +127,7 @@ class EstimatorComponentCor : public PopulationEstimatorStrategy {
                 to_string(type_r.value_or(type_l)) + "_cor",
             utils::label_vector(params.pheno.names, "_" + to_string(type_l)),
             utils::label_vector(
-                params.pheno.names,
-                "_" + to_string(type_r.value_or(type_l))),
+                params.pheno.names, "_" + to_string(type_r.value_or(type_l))),
             params.pheno.n_pheno,
             params.pheno.n_pheno),
         n_ind_(params.geno.n_ind),
