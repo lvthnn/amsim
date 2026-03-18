@@ -111,6 +111,32 @@ class SampleVar : public SampleEstimatorStrategy<P> {
 };
 
 template <Proband P>
+class SampleCov : public SampleEstimatorStrategy<P> {
+ public:
+  explicit SampleCov(const Params& params, const std::string& sample_name)
+      : SampleEstimatorStrategy<P>(
+            "sample_cov",
+            sample_name,
+            params.pheno.names,
+            params.pheno.names,
+            params.pheno.n_pheno,
+            params.pheno.n_pheno),
+        n_ind_(params.geno.n_ind) {}
+
+  void compute(
+      const Eigen::MatrixXd& phenotypes,
+      const Eigen::MatrixXd& /*genotypes*/) override {
+    this->data_ =
+        (phenotypes.rowwise() - phenotypes.colwise().mean()).transpose() *
+        (phenotypes.rowwise() - phenotypes.colwise().mean()) /
+        (static_cast<double>(n_ind_ - 1));
+  }
+
+ private:
+  std::size_t n_ind_;
+};
+
+template <Proband P>
 class SampleMateCor : public SampleEstimatorStrategy<P> {
  public:
   explicit SampleMateCor(
@@ -120,8 +146,8 @@ class SampleMateCor : public SampleEstimatorStrategy<P> {
       : SampleEstimatorStrategy<P>(
             "sample_mate_cor",
             sample_name,
-            utils::label_vector(params.pheno.names, "_male"),
-            utils::label_vector(params.pheno.names, "_female"),
+            utils::vector_suffix(params.pheno.names, "_male"),
+            utils::vector_suffix(params.pheno.names, "_female"),
             params.pheno.n_pheno,
             params.pheno.n_pheno),
         n_probands_(n_probands),
@@ -193,7 +219,14 @@ inline SampleEstimator<P> SampleVarEstimator() {
 }
 
 template <Proband P>
-inline SampleEstimator<P> SampleCovEstimator() {}
+inline SampleEstimator<P> SampleCovEstimator() {
+  return [](const Params& params,
+            std::size_t /*n_probands*/,
+            const std::filesystem::path& sample_dir) {
+    return std::make_unique<SampleCov<P>>(
+        params, sample_dir.filename().string());
+  };
+}
 
 template <Proband P>
 inline SampleEstimator<P> SampleMateCorEstimator() {
