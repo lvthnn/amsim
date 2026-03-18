@@ -56,6 +56,7 @@ class ScorePhenotypes {
   void scoreGenetic(State& state);
   void scoreEnvironmental(State& state);
   void scoreNurture(State& state);
+  void scoreVertical(State& state);
   static void scoreTotal(State& state);
 };
 
@@ -102,14 +103,14 @@ inline void ScorePhenotypes::scoreNurture(State& state) {
 
   if (state.gen == 0) {
     for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno) {
-      auto pheno_nur_buf = state.pheno()(pheno, Component::Nurture);
+      auto pheno_nur_buf = state.pheno()(pheno, Component::Vertical);
       rng::NormalPolar::fill(pheno_nur_buf.data(), n_ind_);
       pheno_nur_buf *= std::sqrt(h2_nur_[pheno]);
     }
   } else {
     for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno) {
       auto bgen = state.pheno()(pheno, Component::Genetic);
-      auto bnur = state.pheno()(pheno, Component::Nurture);
+      auto bnur = state.pheno()(pheno, Component::Vertical);
       auto bgen_par =
           state.pheno(Generation::Parents)(pheno, Component::Genetic);
       auto benv_par =
@@ -138,11 +139,15 @@ inline void ScorePhenotypes::scoreNurture(State& state) {
   }
 }
 
+inline void ScorePhenotypes::scoreVertical(State& state) {
+  if (h2_nur_.isZero(0)) return;
+}
+
 inline void ScorePhenotypes::scoreTotal(State& state) {
   state.pheno()(Component::Total).noalias() =
       state.pheno()(Component::Genetic) +
       state.pheno()(Component::Environmental) +
-      state.pheno()(Component::Nurture);
+      state.pheno()(Component::Vertical);
 }
 
 inline void ScorePhenotypes::operator()(State& state) {
