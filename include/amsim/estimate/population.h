@@ -125,8 +125,8 @@ class EstimatorComponentCor : public PopulationEstimatorStrategy {
       : PopulationEstimatorStrategy(
             "pheno_" + to_string(type_l) + "_" +
                 to_string(type_r.value_or(type_l)) + "_cor",
-            utils::label_vector(params.pheno.names, "_" + to_string(type_l)),
-            utils::label_vector(
+            utils::vector_suffix(params.pheno.names, "_" + to_string(type_l)),
+            utils::vector_suffix(
                 params.pheno.names, "_" + to_string(type_r.value_or(type_l))),
             params.pheno.n_pheno,
             params.pheno.n_pheno),
@@ -157,8 +157,8 @@ class EstimatorMateCor : public PopulationEstimatorStrategy {
   explicit EstimatorMateCor(const Params& params, Component type)
       : PopulationEstimatorStrategy(
             "mate_" + to_string(type) + "_cor",
-            utils::label_vector(params.pheno.names, "_male"),
-            utils::label_vector(params.pheno.names, "_female"),
+            utils::vector_suffix(params.pheno.names, "_male"),
+            utils::vector_suffix(params.pheno.names, "_female"),
             params.pheno.n_pheno,
             params.pheno.n_pheno),
         type_(type),

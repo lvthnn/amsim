@@ -34,7 +34,7 @@ inline void bitmatrix_transpose(std::uint64_t* matrix) {
   }
 }
 
-inline std::vector<std::string> label_vector(
+inline std::vector<std::string> vector_suffix(
     const std::vector<std::string>& labels,
     const std::optional<std::string>& suffix = std::nullopt) {
   std::vector<std::string> result(labels.size());
