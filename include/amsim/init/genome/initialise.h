@@ -59,7 +59,7 @@ inline void HaplotypeGeneratorIID::operator()(State& state) {
 //  public:
 //   explicit HaploGeneratorLD(const Params& params);
 //   void generate_haplotypes(GenoBuf& buf) override;
-// 
+//
 //  private:
 //   std::vector<double> v_maf_;
 //   std::vector<double> v_rec_;
