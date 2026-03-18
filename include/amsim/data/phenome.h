@@ -8,7 +8,7 @@
 
 namespace amsim {
 
-enum Component { Genetic = 0, Environmental = 1, Nurture = 2, Total = 3 };
+enum Component { Genetic = 0, Environmental = 1, Vertical = 2, Total = 3 };
 
 inline Component operator++(Component& type, int) {
   Component old = type;
@@ -29,7 +29,7 @@ inline std::string to_string(Component type) {
       return "genetic";
     case Component::Environmental:
       return "environ";
-    case Component::Nurture:
+    case Component::Vertical:
       return "nurture";
     case Component::Total:
       return "total";
@@ -180,7 +180,7 @@ inline void PhenoBuf::compute_stats() {
   for (Component type :
        {Component::Genetic,
         Component::Environmental,
-        Component::Nurture,
+        Component::Vertical,
         Component::Total}) {
     Eigen::Index col_type = static_cast<int>(type);
     comp_mean_.row(col_type) = (*this)(type).colwise().mean();
