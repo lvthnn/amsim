@@ -265,7 +265,8 @@ inline void Sampler::Model<P>::writeBIM() const {
         (sample_dir / "data.bim").string());
 
   for (std::size_t loc = 0; loc < n_loc; ++loc)
-    bim_file << std::format("0\tSNP{}\t0\t{}\tA\tG\n", loc, loc);
+    bim_file << std::format(
+        "{}\tSNP{}\t0\t{}\tA\tG\n", (loc % 22) + 1, loc, loc);
 }
 
 template <Proband P>
@@ -424,10 +425,8 @@ class ComputeSampleEstimates {
   ComputeSampleEstimates(
       const Params& params, const std::vector<SampleSpec>& samples) {
     for (const auto& sample : samples)
-      estimators_.emplace_back(
-          std::visit(
-              [&params](auto&& spec) { return Sampler(spec, params); },
-              sample));
+      estimators_.emplace_back(std::visit(
+          [&params](auto&& spec) { return Sampler(spec, params); }, sample));
   }
 
   void operator()(const State& state);
