@@ -50,8 +50,9 @@ struct Phenotype {
 
   double h2_genetic = 0.5;
   double h2_environmental = 0.5;
-  double h2_nurture = 0.0;
+  double h2_vertical = 0.0;
 
+  double vertical_paternal_ratio = 0.5;
   double nurture_paternal_ratio = 0.5;
   double nurture_environmental_ratio = 0.5;
 };
@@ -102,6 +103,7 @@ inline PhenomeParams build_pheno_params(const Simulation& simulation) {
 
   Eigen::VectorXd rnur_pat(n_pheno);
   Eigen::VectorXd rnur_env(n_pheno);
+  Eigen::VectorXd vert_pat(n_pheno);
 
   for (std::size_t pheno = 0; pheno < n_pheno; ++pheno) {
     Phenotype pheno_data = simulation.phenotypes[pheno];
@@ -141,9 +143,10 @@ inline PhenomeParams build_pheno_params(const Simulation& simulation) {
 
     h2_gen(pheno) = pheno_data.h2_genetic;
     h2_env(pheno) = pheno_data.h2_environmental;
-    h2_nur(pheno) = pheno_data.h2_nurture;
+    h2_nur(pheno) = pheno_data.h2_vertical;
     rnur_pat(pheno) = pheno_data.nurture_paternal_ratio;
     rnur_env(pheno) = pheno_data.nurture_environmental_ratio;
+    vert_pat(pheno) = pheno_data.vertical_paternal_ratio;
   }
 
   Eigen::MatrixXd gen_cor = simulation.genetic_component_cor.has_value()

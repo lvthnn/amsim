@@ -30,7 +30,7 @@ inline std::string to_string(Component type) {
     case Component::Environmental:
       return "environ";
     case Component::Vertical:
-      return "nurture";
+      return "vertical";
     case Component::Total:
       return "total";
   }

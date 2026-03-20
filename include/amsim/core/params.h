@@ -37,6 +37,7 @@ struct PhenomeParams {
 
   Eigen::VectorXd rnur_pat;  ///< Paternal ratio in nurture effect
   Eigen::VectorXd rnur_env;  ///< Environmental ratio in nurture effect
+  Eigen::VectorXd vert_pat;  ///< Paternal vertical transmission ratio
 };
 
 struct MatingParams {
