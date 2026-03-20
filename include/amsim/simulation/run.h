@@ -45,11 +45,13 @@ inline void setup_log(const Simulation& simulation) {
 
 inline std::filesystem::path setup_replicate(
     const Simulation& simulation, std::size_t rep_id) {
-  return simulation.output_dir / std::format("rep_{:03}", rep_id);
+  return simulation.output_dir / std::format("rep_{:03}", rep_id + 1);
 }
 
-inline void setup_writer(const Simulation& simulation) {
-  Writer::get_instance(simulation.output_dir, simulation.n_generations);
+inline void setup_writer(
+    const Simulation& simulation, std::size_t n_replicates) {
+  Writer::get_instance(
+      simulation.output_dir, simulation.n_generations, n_replicates);
 }
 }  // namespace details
 
@@ -134,7 +136,7 @@ inline void run_simulations(
   Params params = details::preprocess_simulation(simulation);
 
   details::setup_log(simulation);
-  details::setup_writer(simulation);
+  details::setup_writer(simulation, n_replicates);
 
   for (std::size_t thread = 0; thread < n_threads; ++thread) {
     pool.emplace_back([&, thread]() {
