@@ -107,6 +107,12 @@ class Sampler {
           names(params.pheno.names),
           phenotypes(sample.n_probands * ProbandData<P>::ProbandSize, n_pheno),
           selected(n_probands_total) {
+      if (n_probands > n_probands_total)
+        throw std::runtime_error(
+            "n_probands (" + std::to_string(n_probands) + ") exceeds " +
+            "available sampling units (" + std::to_string(n_probands_total) +
+            ") for sample '" + name + "'");
+
       if (sample.on.has_value())
         for (const auto& pheno_name : sample.on.value())
           on_indices.push_back(params.pheno.pheno_ids.at(pheno_name));
@@ -165,13 +171,19 @@ class Sampler {
     void writeBIM() const;
     void writeBED(const State& state) const;
     void writeFAM(const State& state) const;
-    void writePHENO(const State& state) const;
+    void writePHENO(
+        const State& state, Component type = Component::Total) const;
 
     void writePLINK(const State& state) const {
       writeBIM();
       writeBED(state);
       writeFAM(state);
-      writePHENO(state);
+      for (auto comp :
+           {Component::Total,
+            Component::Genetic,
+            Component::Environmental,
+            Component::Vertical})
+        writePHENO(state, comp);
     }
 
     void draw(const State& state) override;
@@ -260,13 +272,12 @@ inline void Sampler::Model<P>::writeBIM() const {
   std::fstream bim_file(sample_dir / "data.bim", std::ios::out);
 
   if (!bim_file.is_open())
-    std::runtime_error(
+    throw std::runtime_error(
         "Could not open BIM file output stream " +
         (sample_dir / "data.bim").string());
 
   for (std::size_t loc = 0; loc < n_loc; ++loc)
-    bim_file << std::format(
-        "{}\tSNP{}\t0\t{}\tA\tG\n", (loc % 22) + 1, loc, loc);
+    bim_file << std::format("1\tSNP{}\t0\t{}\tA\tG\n", loc, loc + 1);
 }
 
 template <Proband P>
@@ -316,7 +327,7 @@ inline void Sampler::Model<P>::writeFAM(const State& state) const {
   std::fstream fam_file(sample_dir / "data.fam", std::ios::out);
 
   if (!fam_file.is_open())
-    std::runtime_error(
+    throw std::runtime_error(
         "Could not open FAM file output stream " +
         (sample_dir / "data.bim").string());
 
@@ -344,13 +355,17 @@ inline void Sampler::Model<P>::writeFAM(const State& state) const {
 }
 
 template <Proband P>
-inline void Sampler::Model<P>::writePHENO(const State& state) const {
-  std::fstream pheno_file(sample_dir / "data.pheno", std::ios::out);
+inline void Sampler::Model<P>::writePHENO(
+    const State& state, Component type) const {
+  auto path = (type == Component::Total)
+                  ? sample_dir / "data.pheno"
+                  : sample_dir / std::format("data.{}.pheno", to_string(type));
+
+  std::fstream pheno_file(path, std::ios::out);
 
   if (!pheno_file.is_open())
-    std::runtime_error(
-        "Could not open PHENO file output stream " +
-        (sample_dir / "data.bim").string());
+    throw std::runtime_error(
+        "Could not open PHENO file output stream " + path.string());
 
   std::string header = "FID\tIID";
   for (const std::string& pheno : names) header += "\t" + pheno;
@@ -371,7 +386,7 @@ inline void Sampler::Model<P>::writePHENO(const State& state) const {
 
       for (std::size_t pheno = 0; pheno < n_pheno; ++pheno)
         pheno_file << std::format(
-            "\t{}", member_pheno(state, member, id, pheno));
+            "\t{}", member_pheno(state, member, id, pheno, type));
 
       pheno_file << "\n";
     }
@@ -412,6 +427,10 @@ inline void Sampler::Model<P>::estimate(const State& state) {
 
 template <Proband P>
 inline void Sampler::Model<P>::operator()(const State& state) {
+  std::vector<std::filesystem::path> to_remove;
+  for (const auto& entry : std::filesystem::directory_iterator(sample_dir))
+    to_remove.push_back(entry.path());
+  for (const auto& p : to_remove) std::filesystem::remove(p);
   draw(state);
   estimate(state);
 }
