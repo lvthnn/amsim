@@ -4,8 +4,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <numeric>
-#include <vector>
+#include <semaphore>
 #include <stdexcept>
+#include <string>
+#include <thread>
+#include <vector>
 
 namespace amsim::utils {
 
@@ -60,6 +63,18 @@ inline Eigen::MatrixXd standardise(
           .sqrt()
           .max(1e-10);
   return ((mat.rowwise() - mean).array().rowwise() / std.array());
+}
+
+inline std::counting_semaphore<64> process_semaphore{
+    static_cast<std::ptrdiff_t>(
+        std::thread::hardware_concurrency() > 0
+            ? std::thread::hardware_concurrency()
+            : 4)};
+
+inline void system_throttled(const std::string& cmd) {
+  process_semaphore.acquire();
+  std::system(cmd.c_str());
+  process_semaphore.release();
 }
 
 inline void check_plink2() {
