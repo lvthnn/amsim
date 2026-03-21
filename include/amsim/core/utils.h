@@ -1,9 +1,13 @@
 #pragma once
 
+#include <amsim/core/log.h>
+
 #include <Eigen/Dense>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <numeric>
+#include <sys/wait.h>
 #include <semaphore>
 #include <stdexcept>
 #include <string>
@@ -73,8 +77,19 @@ inline std::counting_semaphore<64> process_semaphore{
 
 inline void system_throttled(const std::string& cmd) {
   process_semaphore.acquire();
-  std::system(cmd.c_str());
+  FILE* pipe = popen((cmd + " 2>&1").c_str(), "r");
+  std::string output;
+  if (pipe) {
+    char buffer[512];
+    while (fgets(buffer, sizeof(buffer), pipe))
+      output += buffer;
+  }
+  int rc = pclose(pipe);
   process_semaphore.release();
+  if (WIFEXITED(rc) && WEXITSTATUS(rc) != 0) {
+    Log::error(output);
+    throw std::runtime_error(output);
+  }
 }
 
 inline void check_plink2() {
