@@ -20,9 +20,10 @@ class HasemanElstonEstimator : public SampleEstimatorStrategy<P> {
   HasemanElstonEstimator(
       const Params& params,
       std::string sample_name,
-      std::filesystem::path sample_dir)
+      std::filesystem::path sample_dir,
+      std::string name = "haseman-elston")
       : SampleEstimatorStrategy<P>(
-            "haseman-elston",
+            std::move(name),
             std::move(sample_name),
             params.pheno.names,
             std::vector<std::string>{"V(G)/Vp"},
@@ -39,7 +40,7 @@ class HasemanElstonEstimator : public SampleEstimatorStrategy<P> {
     if (!std::filesystem::exists(sample_dir_ / "grm.grm.bin")) {
       utils::system_throttled(std::format(
           "gcta64 --bfile {} --make-grm --out {} "
-          "--thread-num 1 2>/dev/null",
+          "--thread-num 1",
           (sample_dir_ / "data").string(),
           (sample_dir_ / "grm").string()));
     }
@@ -48,7 +49,7 @@ class HasemanElstonEstimator : public SampleEstimatorStrategy<P> {
       auto pfix = sample_dir_ / std::format("he_{}", p);
       utils::system_throttled(std::format(
           "gcta64 --grm {} --pheno {} --mpheno {} --HEreg "
-          "--out {} --thread-num 1 2>/dev/null",
+          "--out {} --thread-num 1",
           (sample_dir_ / "grm").string(),
           (sample_dir_ / "data.pheno").string(),
           p + 1,
@@ -80,12 +81,14 @@ class HasemanElstonEstimator : public SampleEstimatorStrategy<P> {
 };
 
 template <Proband P>
-inline SampleEstimator<P> SampleHasemanElstonEstimator() {
-  return [](const Params& params,
-            std::size_t /*n_probands*/,
-            const std::filesystem::path& sample_dir) {
+inline SampleEstimator<P> SampleHasemanElstonEstimator(
+    std::string name = "haseman-elston") {
+  return [name = std::move(name)](
+             const Params& params,
+             std::size_t /*n_probands*/,
+             const std::filesystem::path& sample_dir) {
     return std::make_unique<HasemanElstonEstimator<P>>(
-        params, sample_dir.filename().string(), sample_dir);
+        params, sample_dir.filename().string(), sample_dir, name);
   };
 }
 

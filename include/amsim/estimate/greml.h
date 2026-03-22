@@ -21,9 +21,10 @@ class GREMLEstimator : public SampleEstimatorStrategy<P> {
   GREMLEstimator(
       const Params& params,
       std::string sample_name,
-      std::filesystem::path sample_dir)
+      std::filesystem::path sample_dir,
+      std::string name = "greml")
       : SampleEstimatorStrategy<P>(
-            "greml",
+            std::move(name),
             std::move(sample_name),
             params.pheno.names,
             {"V(G)", "V(E)", "V(G)/[V(G) + V(E)]"},
@@ -41,7 +42,7 @@ class GREMLEstimator : public SampleEstimatorStrategy<P> {
     if (!std::filesystem::exists(sample_dir_ / "grm.grm.bin")) {
       utils::system_throttled(std::format(
           "gcta64 --bfile {} --make-grm --out {} "
-          "--thread-num 1 2>/dev/null",
+          "--thread-num 1",
           (sample_dir_ / "data").string(),
           (sample_dir_ / "grm").string()));
     }
@@ -50,7 +51,7 @@ class GREMLEstimator : public SampleEstimatorStrategy<P> {
       auto pfix = sample_dir_ / std::format("greml_{}", p);
       utils::system_throttled(std::format(
           "gcta64 --grm {} --pheno {} --mpheno {} --reml "
-          "--out {} --thread-num 1 2>/dev/null",
+          "--out {} --thread-num 1",
           (sample_dir_ / "grm").string(),
           (sample_dir_ / "data.pheno").string(),
           p + 1,
@@ -91,12 +92,13 @@ class GREMLEstimator : public SampleEstimatorStrategy<P> {
 };
 
 template <Proband P>
-inline SampleEstimator<P> SampleGREMLEstimator() {
-  return [](const Params& params,
-            std::size_t /*n_probands*/,
-            const std::filesystem::path& sample_dir) {
+inline SampleEstimator<P> SampleGREMLEstimator(std::string name = "greml") {
+  return [name = std::move(name)](
+             const Params& params,
+             std::size_t /*n_probands*/,
+             const std::filesystem::path& sample_dir) {
     return std::make_unique<GREMLEstimator<P>>(
-        params, sample_dir.filename().string(), sample_dir);
+        params, sample_dir.filename().string(), sample_dir, name);
   };
 }
 
