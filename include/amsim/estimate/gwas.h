@@ -22,9 +22,11 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
       const Params& params,
       std::string sample_name,
       std::filesystem::path sample_dir,
+      std::string name = "gwas",
+      std::size_t n_pcs = 0,
       double pval_threshold = 5e-8)
       : SampleEstimatorStrategy<P>(
-            "gwas_linear",
+            std::move(name),
             std::move(sample_name),
             params.pheno.names,
             {"l2_effect", "fpr", "tpr", "pgs_r2"},
@@ -34,6 +36,7 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
         n_pheno_(params.pheno.n_pheno),
         n_loc_(params.geno.n_loc),
         pval_threshold_(pval_threshold),
+        n_pcs_(n_pcs),
         pheno_names_(params.pheno.names),
         beta_true_(n_pheno_, Eigen::VectorXd::Zero(n_loc_)),
         causal_mask_(n_pheno_, Eigen::VectorXd::Zero(n_loc_)) {
@@ -47,7 +50,7 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
   }
 
   void compute(
-      const Eigen::MatrixXd& phenotypes,
+      const Eigen::MatrixXd& /*phenotypes*/,
       const Eigen::MatrixXd& /*genotypes*/) override {
     runGWAS();
 
@@ -74,19 +77,37 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
   std::size_t n_pheno_;
   std::size_t n_loc_;
   double pval_threshold_;
+  std::size_t n_pcs_;
   std::vector<std::string> pheno_names_;
 
   std::vector<Eigen::VectorXd> beta_true_;
   std::vector<Eigen::VectorXd> causal_mask_;
 
   void runGWAS() {
-    utils::system_throttled(std::format(
-        "plink2 --bfile {} --pheno {} --glm allow-no-covars "
-        "--variance-standardize --no-psam-pheno --allow-extra-chr "
-        "--threads 1 --out {} 2>/dev/null",
-        (sample_dir_ / "data").string(),
-        (sample_dir_ / "data.pheno").string(),
-        (sample_dir_ / "gwas").string()));
+    if (n_pcs_ > 0) {
+      utils::system_throttled(std::format(
+          "plink2 --bfile {} --pca approx {} --out {}",
+          (sample_dir_ / "data").string(),
+          n_pcs_,
+          (sample_dir_ / (this->name_ + "_pca")).string()));
+
+      utils::system_throttled(std::format(
+          "plink2 --bfile {} --pheno {} --covar {} "
+          "--glm --variance-standardize --no-psam-pheno "
+          "--threads 1 --out {}",
+          (sample_dir_ / "data").string(),
+          (sample_dir_ / "data.pheno").string(),
+          (sample_dir_ / (this->name_ + "_pca.eigenvec")).string(),
+          (sample_dir_ / this->name_).string()));
+    } else {
+      utils::system_throttled(std::format(
+          "plink2 --bfile {} --pheno {} --glm allow-no-covars "
+          "--variance-standardize --no-psam-pheno "
+          "--threads 1 --out {}",
+          (sample_dir_ / "data").string(),
+          (sample_dir_ / "data.pheno").string(),
+          (sample_dir_ / this->name_).string()));
+    }
   }
 
   std::pair<Eigen::VectorXd, Eigen::VectorXd> parseGWAS(std::size_t p) {
@@ -94,7 +115,7 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
     Eigen::VectorXd pvals = Eigen::VectorXd::Ones(n_loc_);
 
     std::ifstream f(
-        sample_dir_ / std::format("gwas.{}.glm.linear", pheno_names_[p]));
+        sample_dir_ / std::format("{}.{}.glm.linear", this->name_, pheno_names_[p]));
 
     if (!f) return {betas, pvals};
 
@@ -121,6 +142,8 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
       ss >> chrom >> pos >> id >> ref >> alt >> prov_ref >> a1 >> omitted >>
           a1_freq >> test >> obs >> beta >> se >> t >> pval;
 
+      if (test != "ADD") continue;
+
       std::size_t loc = std::stoul(id.substr(3));
       betas(loc) = beta;
       pvals(loc) = pval;
@@ -129,14 +152,54 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
   }
 
   double pgsR2(std::size_t p) {
-    auto glm = sample_dir_ / std::format("gwas.{}.glm.linear", pheno_names_[p]);
-    auto pfix = sample_dir_ / std::format("pgs_{}", p);
+    auto glm = sample_dir_ /
+               std::format("{}.{}.glm.linear", this->name_, pheno_names_[p]);
+    auto score_file =
+        sample_dir_ / std::format("{}_score_{}.txt", this->name_, p);
+    auto pfix = sample_dir_ / std::format("{}_pgs_{}", this->name_, p);
+
+    {
+      std::ifstream glm_in(glm);
+      std::ofstream score_out(score_file);
+      if (!glm_in) return std::numeric_limits<double>::quiet_NaN();
+
+      std::string line;
+      std::getline(glm_in, line);
+      score_out << line << "\n";
+
+      bool any_hits = false;
+      while (std::getline(glm_in, line)) {
+        std::istringstream ss(line);
+        std::string chrom;
+        std::string pos;
+        std::string id;
+        std::string ref;
+        std::string alt;
+        std::string prov_ref;
+        std::string a1;
+        std::string omitted;
+        std::string test;
+        double a1_freq;
+        double beta;
+        double se;
+        double t;
+        double pval;
+        std::size_t obs;
+        ss >> chrom >> pos >> id >> ref >> alt >> prov_ref >> a1 >> omitted >>
+            a1_freq >> test >> obs >> beta >> se >> t >> pval;
+        if (test == "ADD" && pval < pval_threshold_) {
+          score_out << line << "\n";
+          any_hits = true;
+        }
+      }
+      if (!any_hits) return 0.0;
+    }
 
     utils::system_throttled(std::format(
         "plink2 --bfile {} --score {} 3 7 12 header "
-        "--threads 1 --out {} 2>/dev/null",
+        "--threads 1 --out {}",
         (sample_dir_ / "data").string(),
-        glm.string(),
+        score_file.string(),
         pfix.string()));
 
     std::ifstream pgs_file(pfix.string() + ".sscore");
@@ -186,13 +249,21 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
 };
 
 template <Proband P>
-inline SampleEstimator<P> SampleGWASEstimator(double pval_threshold = 5e-8) {
-  return [pval_threshold](
+inline SampleEstimator<P> SampleGWASEstimator(
+    std::string name = "gwas",
+    std::size_t n_pcs = 0,
+    double pval_threshold = 5e-8) {
+  return [name = std::move(name), n_pcs, pval_threshold](
              const Params& params,
              std::size_t /*n_probands*/,
              const std::filesystem::path& sample_dir) {
     return std::make_unique<GWASEstimator<P>>(
-        params, sample_dir.filename().string(), sample_dir, pval_threshold);
+        params,
+        sample_dir.filename().string(),
+        sample_dir,
+        name,
+        n_pcs,
+        pval_threshold);
   };
 }
 
