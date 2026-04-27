@@ -166,11 +166,12 @@ inline PhenomeParams build_pheno_params(const Simulation& simulation) {
       .pheno_loc = std::move(pheno_loc),
       .h2_gen = h2_gen,
       .h2_env = h2_env,
-      .h2_nur = h2_nur,
+      .h2_vert = h2_nur,
       .gen_cor = gen_cor,
       .env_cor = env_cor,
       .rnur_pat = rnur_pat,
-      .rnur_env = rnur_env};
+      .rnur_env = rnur_env,
+      .vert_pat = vert_pat};
 }
 
 inline Params build_params(const Simulation& simulation) {
