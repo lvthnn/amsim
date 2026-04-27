@@ -4,8 +4,8 @@
 #include <amsim/core/state.h>
 
 #include <ranges>
-#include <vector>
 #include <stdexcept>
+#include <vector>
 
 namespace amsim {
 
@@ -22,6 +22,7 @@ class ScorePhenotypes {
         h2_vert_(params.pheno.h2_vert),
         rnur_pat_(params.pheno.rnur_pat),
         rnur_env_(params.pheno.rnur_env),
+        vert_pat_(params.pheno.vert_pat),
         env_cor_(params.pheno.env_cor),
         nur_scale_(n_pheno_) {
     env_chol_ = env_cor_.llt().matrixL();
@@ -46,6 +47,7 @@ class ScorePhenotypes {
   const Eigen::VectorXd& h2_vert_;
   const Eigen::VectorXd& rnur_pat_;
   const Eigen::VectorXd& rnur_env_;
+  const Eigen::VectorXd& vert_pat_;
 
   static constexpr std::size_t IndTile = 512;
   Eigen::MatrixXd gen_tile_;
@@ -99,6 +101,33 @@ inline void ScorePhenotypes::scoreEnvironmental(State& state) {
 
 inline void ScorePhenotypes::scoreVertical(State& state) {
   if (h2_vert_.isZero(0)) return;
+
+  // parental phenotype buffer
+  auto phenos_father = utils::standardise(
+      state.pheno(Generation::Parents).male(Component::Total));
+  auto phenos_mother = utils::standardise(
+      state.pheno(Generation::Parents).female(Component::Total));
+  auto phenos_off = state.pheno(Generation::Current)(Component::Vertical);
+  auto& match = state.matching(Generation::Parents);
+
+  // score siblings
+  for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno) {
+    double vert_pat = vert_pat_(pheno);
+    auto pheno_father = phenos_father.col(pheno);
+    auto pheno_mother = phenos_mother.col(pheno);
+    auto pheno_off = phenos_off.col(pheno);
+    double norm =
+        1.0 /
+        std::sqrt((vert_pat * vert_pat) + ((1 - vert_pat) * (1 - vert_pat)));
+
+    for (std::size_t pair = 0; pair < n_sex_; ++pair) {
+      pheno_off(pair) = vert_pat * pheno_father(pair) +
+                        (1 - vert_pat) * pheno_mother(match[pair]);
+      pheno_off(n_sex_ + pair) = pheno_off(pair);
+    }
+
+    phenos_off.col(pheno) *= std::sqrt(h2_vert_(pheno)) * norm;
+  }
 }
 
 inline void ScorePhenotypes::scoreTotal(State& state) {
@@ -111,7 +140,7 @@ inline void ScorePhenotypes::scoreTotal(State& state) {
 inline void ScorePhenotypes::operator()(State& state) {
   scoreGenetic(state);
   scoreEnvironmental(state);
-  scoreNurture(state);
+  scoreVertical(state);
   scoreTotal(state);
 }
 
