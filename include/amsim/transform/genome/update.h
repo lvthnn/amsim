@@ -30,22 +30,20 @@ class UpdateGenome {
   rng::BernoulliWord<16> bw_;
 
   std::uint64_t gamWord(
-      std::uint64_t h0, std::uint64_t h1, std::size_t valid = 64);
+      std::uint64_t h0, std::uint64_t h1, bool& par0, std::size_t valid = 64);
 
   void updateGenome(State& state);
   void updateNurture(State& state);
 };
 
+// BUG: forgets parity across word boundaries. needs to be fixed
 inline std::uint64_t UpdateGenome::gamWord(
-    std::uint64_t ind_h0, std::uint64_t ind_h1, std::size_t valid) {
+    std::uint64_t ind_h0, std::uint64_t ind_h1, bool& par0, std::size_t valid) {
   // set recombination probabilities for loci in word
   bw_.set_probs(ptr_rec_, valid);
 
   // sample a 0-1 recombination mask
   std::uint64_t par = bw_.sample();
-
-  // select the initial parental strand uniformly
-  bool par0 = bw_.coinflip();
 
   // Hallis-Steele shift cumulative sum mod 2
   par ^= par << 1;
@@ -59,6 +57,9 @@ inline std::uint64_t UpdateGenome::gamWord(
   // set mutation probabilities for the loci
   bw_.set_probs(ptr_mut_, valid);
   std::uint64_t mut = bw_.sample();
+
+  // update parity as the parity of the last locus of the word
+  par0 = static_cast<bool>((par >> (valid - 1)) & 1ULL);
 
   return ((par & ind_h0) | (~par & ind_h1)) ^ mut;
 }
@@ -82,9 +83,14 @@ inline void UpdateGenome::operator()(State& state) {
     ptr_mut_ = v_mut_.data();
     std::size_t valid = 64;
 
+    // select starting strands uniformly at random
+    bool par_h0_male = bw_.coinflip();
+    bool par_h1_male = bw_.coinflip();
+    bool par_h0_female = bw_.coinflip();
+    bool par_h1_female = bw_.coinflip();
+
     for (std::size_t word = 0; word < n_words; ++word) {
-      if (word == n_words - 1)
-        valid = (n_loc_ % 64 == 0) ? 64 : n_loc_ % 64;
+      if (word == n_words - 1) valid = (n_loc_ % 64 == 0) ? 64 : n_loc_ % 64;
 
       std::uint64_t male_h0 = h0(pair, word);
       std::uint64_t male_h1 = h1(pair, word);
@@ -92,12 +98,12 @@ inline void UpdateGenome::operator()(State& state) {
       std::uint64_t female_h1 = h1(fpair, word);
 
       // male child
-      h0_off(pair, word) = gamWord(male_h0, male_h1, valid);
-      h1_off(pair, word) = gamWord(female_h0, female_h1, valid);
+      h0_off(pair, word) = gamWord(male_h0, male_h1, par_h0_male, valid);
+      h1_off(pair, word) = gamWord(female_h0, female_h1, par_h1_male, valid);
 
       // female child
-      h0_off(fpair, word) = gamWord(male_h0, male_h1, valid);
-      h1_off(fpair, word) = gamWord(female_h0, female_h1, valid);
+      h0_off(fpair, word) = gamWord(male_h0, male_h1, par_h0_female, valid);
+      h1_off(fpair, word) = gamWord(female_h0, female_h1, par_h1_female, valid);
 
       ptr_rec_ += IncWord;
       ptr_mut_ += IncWord;
