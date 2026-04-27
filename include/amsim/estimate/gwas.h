@@ -29,9 +29,9 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
             std::move(name),
             std::move(sample_name),
             params.pheno.names,
-            {"l2_effect", "fpr", "tpr", "pgs_r2"},
+            {"l2_effect", "fpr", "tpr", "pgs_r2", "pgs_rmse"},
             params.pheno.n_pheno,
-            4),
+            5),
         sample_dir_(std::move(sample_dir)),
         n_pheno_(params.pheno.n_pheno),
         n_loc_(params.geno.n_loc),
@@ -66,9 +66,9 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
       double tpr = n_causal > 0 ? (sig * mask.array()).sum() / n_causal : 0.0;
       double fpr =
           n_null > 0 ? (sig * (1.0 - mask.array())).sum() / n_null : 0.0;
-      double r2 = pgsR2(p);
+      auto [r2, rmse] = pgsMetrics(p);
 
-      this->data_.row(p) << l2, fpr, tpr, r2;
+      this->data_.row(p) << l2, fpr, tpr, r2, rmse;
     }
   }
 
@@ -151,7 +151,8 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
     return {betas, pvals};
   }
 
-  double pgsR2(std::size_t p) {
+  std::pair<double, double> pgsMetrics(std::size_t p) {
+    constexpr auto NaN = std::numeric_limits<double>::quiet_NaN();
     auto glm = sample_dir_ /
                std::format("{}.{}.glm.linear", this->name_, pheno_names_[p]);
     auto score_file =
@@ -161,7 +162,7 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
     {
       std::ifstream glm_in(glm);
       std::ofstream score_out(score_file);
-      if (!glm_in) return std::numeric_limits<double>::quiet_NaN();
+      if (!glm_in) return {NaN, NaN};
 
       std::string line;
       std::getline(glm_in, line);
@@ -192,7 +193,7 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
           any_hits = true;
         }
       }
-      if (!any_hits) return 0.0;
+      if (!any_hits) return {0.0, NaN};
     }
 
     utils::system_throttled(std::format(
@@ -204,7 +205,7 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
 
     std::ifstream pgs_file(pfix.string() + ".sscore");
     std::ifstream gen_file(sample_dir_ / "data.genetic.pheno");
-    if (!pgs_file || !gen_file) return std::numeric_limits<double>::quiet_NaN();
+    if (!pgs_file || !gen_file) return {NaN, NaN};
 
     std::string pgs_line;
     std::string gen_line;
@@ -234,7 +235,7 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
     }
 
     if (pgs_vals.empty() || pgs_vals.size() != gen_vals.size())
-      return std::numeric_limits<double>::quiet_NaN();
+      return {NaN, NaN};
 
     Eigen::VectorXd pgs =
         Eigen::Map<Eigen::VectorXd>(pgs_vals.data(), pgs_vals.size());
@@ -244,7 +245,9 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
     auto pc = pgs.array() - pgs.mean();
     auto gc = gen.array() - gen.mean();
     double num = (pc * gc).sum();
-    return (num * num) / (pc.square().sum() * gc.square().sum());
+    double r2 = (num * num) / (pc.square().sum() * gc.square().sum());
+    double rmse = std::sqrt((pgs - gen).squaredNorm() / pgs.size());
+    return {r2, rmse};
   }
 };
 
