@@ -90,7 +90,7 @@ inline void run_simulation(
 
   // run the core simulation loop
   while (state.gen <= params.sim.n_gens) {
-    Log::debug("Simulating generation " + std::to_string(state.gen));
+    Log::info("Simulating generation " + std::to_string(state.gen));
     state.geno().compute_mafs();
     state.geno().compute_stats();
 
@@ -142,8 +142,6 @@ inline void run_simulations(
     pool.emplace_back([&, thread]() {
       while (true) {
         Params thread_params = params;
-
-        Log::debug("setting up thread " + std::to_string(thread));
 
         auto rep_id = next.fetch_add(1);
         if (rep_id >= n_replicates) return;
