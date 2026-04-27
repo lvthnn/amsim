@@ -30,7 +30,7 @@ struct PhenomeParams {
 
   Eigen::VectorXd h2_gen;  ///< Vector of genetic component variances
   Eigen::VectorXd h2_env;  ///< Vector of environmental component variances
-  Eigen::VectorXd h2_nur;  ///< Vector of nurture component variances
+  Eigen::VectorXd h2_vert;  ///< Vector of nurture component variances
 
   Eigen::MatrixXd gen_cor;  ///< Genetic component correlation matrix
   Eigen::MatrixXd env_cor;  ///< Environmental component correlation matrix
