@@ -19,7 +19,7 @@ class ScorePhenotypes {
         pheno_loc_(params.pheno.pheno_loc),
         h2_gen_(params.pheno.h2_gen),
         h2_env_(params.pheno.h2_env),
-        h2_nur_(params.pheno.h2_nur),
+        h2_vert_(params.pheno.h2_vert),
         rnur_pat_(params.pheno.rnur_pat),
         rnur_env_(params.pheno.rnur_env),
         env_cor_(params.pheno.env_cor),
@@ -43,7 +43,7 @@ class ScorePhenotypes {
   const std::vector<std::vector<std::size_t>>& pheno_loc_;
   const Eigen::VectorXd& h2_gen_;
   const Eigen::VectorXd& h2_env_;
-  const Eigen::VectorXd& h2_nur_;
+  const Eigen::VectorXd& h2_vert_;
   const Eigen::VectorXd& rnur_pat_;
   const Eigen::VectorXd& rnur_env_;
 
@@ -55,7 +55,6 @@ class ScorePhenotypes {
 
   void scoreGenetic(State& state);
   void scoreEnvironmental(State& state);
-  void scoreNurture(State& state);
   void scoreVertical(State& state);
   static void scoreTotal(State& state);
 };
@@ -98,49 +97,8 @@ inline void ScorePhenotypes::scoreEnvironmental(State& state) {
         std::sqrt(h2_env_[pheno]) * pheno_env_buf.col(pheno);
 }
 
-inline void ScorePhenotypes::scoreNurture(State& state) {
-  if (h2_nur_.isZero(0)) return;
-
-  if (state.gen == 0) {
-    for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno) {
-      auto pheno_nur_buf = state.pheno()(pheno, Component::Vertical);
-      rng::NormalPolar::fill(pheno_nur_buf.data(), n_ind_);
-      pheno_nur_buf *= std::sqrt(h2_nur_[pheno]);
-    }
-  } else {
-    for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno) {
-      auto bgen = state.pheno()(pheno, Component::Genetic);
-      auto bnur = state.pheno()(pheno, Component::Vertical);
-      auto bgen_par =
-          state.pheno(Generation::Parents)(pheno, Component::Genetic);
-      auto benv_par =
-          state.pheno(Generation::Parents)(pheno, Component::Environmental);
-      double rnur_env = rnur_env_(pheno);
-      double rnur_pat = rnur_pat_(pheno);
-
-      for (std::size_t ind = 0; ind < n_sex_; ++ind) {
-        std::size_t find = n_sex_ + state.matching(Generation::Parents)[ind];
-        double nt_son = bgen_par(ind) + bgen_par(find) - bgen(ind);
-        double nt_daughter = bgen_par(ind) + bgen_par(find) - bgen(find);
-        double nt_env =
-            (rnur_pat * benv_par(ind)) + ((1 - rnur_pat) * benv_par(find));
-
-        bnur(ind) = (1 - rnur_env) * nt_son + rnur_env * nt_env;
-        bnur(find) = (1 - rnur_env) * nt_daughter + rnur_env * nt_env;
-      }
-
-      if (state.gen == 1) {
-        double var = (bnur.array() - bnur.mean()).square().mean();
-        nur_scale_(pheno) = std::sqrt(h2_nur_(pheno) / var);
-      }
-
-      bnur *= nur_scale_(pheno);
-    }
-  }
-}
-
 inline void ScorePhenotypes::scoreVertical(State& state) {
-  if (h2_nur_.isZero(0)) return;
+  if (h2_vert_.isZero(0)) return;
 }
 
 inline void ScorePhenotypes::scoreTotal(State& state) {
