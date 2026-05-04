@@ -54,18 +54,4 @@ inline void HaplotypeGeneratorIID::operator()(State& state) {
   generateHaplotypes(state.geno());
 }
 
-// Class to initialise founder population genotypes with linkage structure
-// class HaploGeneratorLD : public HaplotypeGenerator {
-//  public:
-//   explicit HaploGeneratorLD(const Params& params);
-//   void generate_haplotypes(GenoBuf& buf) override;
-//
-//  private:
-//   std::vector<double> v_maf_;
-//   std::vector<double> v_rec_;
-//   std::vector<Eigen::MatrixXd> ld_blocks_;
-//   std::vector<std::size_t> n_loc_block_;
-//   std::size_t n_ld_blocks_;
-// };
-
 }  // namespace amsim
