@@ -132,12 +132,6 @@ class GenoBuf {
   const HaploBuf& h1() const noexcept { return h1_; }
   HaploView view() const noexcept { return h0_.view(); }
 
-  std::array<std::uint64_t, 2> gam_word(
-      std::uint64_t ind_h0,
-      std::uint64_t ind_h1,
-      const double* v_rec,
-      const double* v_mut) noexcept;
-
   void transpose() noexcept;
   void compute_mafs();
   void compute_stats();
@@ -147,7 +141,8 @@ class GenoBuf {
       std::size_t ind_end,
       const std::vector<std::size_t>& loc,
       Eigen::MatrixXd& out,
-      bool standardise = false);
+      bool centre = false,
+      bool scale = false);
 
  private:
   const Eigen::VectorXd v_mut_;
@@ -160,39 +155,6 @@ class GenoBuf {
   HaploBuf h0_;
   HaploBuf h1_;
 };
-
-// NOTE: This function forgets the strand the preceding word started from. This
-// is not good if the loci are linked. Either fix this, or remove linked locus
-// generation.
-inline std::array<std::uint64_t, 2> GenoBuf::gam_word(
-    std::uint64_t ind_h0,
-    std::uint64_t ind_h1,
-    const double* v_rec,
-    const double* v_mut) noexcept {
-  // Set recombination probabilities for loci in word
-  bw_.set_probs(v_rec);
-
-  // Sample a 0-1 recombination mask
-  std::uint64_t par = bw_.sample();
-
-  // Select the initial parental strand uniformly
-  bool par0 = bw_.coinflip();
-
-  // Hallis-Steele shift cumulative sum mod 2
-  par ^= par << 1;
-  par ^= par << 2;
-  par ^= par << 4;
-  par ^= par << 8;
-  par ^= par << 16;
-  par ^= par << 32;
-  if (par0) par = ~par;
-
-  // Set mutation probabilities for the loci
-  bw_.set_probs(v_mut);
-  std::uint64_t mut = bw_.sample();
-
-  return {par, ((par & ind_h0) | (~par & ind_h1)) ^ mut};
-}
 
 inline void GenoBuf::transpose() noexcept {
   h0_.transpose();
@@ -269,20 +231,22 @@ inline void GenoBuf::decompress(
     std::size_t ind_end,
     const std::vector<std::size_t>& loc,
     Eigen::MatrixXd& out,
-    bool standardise) {
+    bool centre,
+    bool scale) {
   if (view() != HaploView::LocusMajor)
     throw std::runtime_error("GenoBuf::decompress: require loc-major view");
   if (ind_end > n_ind())
     throw std::runtime_error(
-        "GenoBuf::decompress: argument ind_end exceeds number of individuals");
+        "GenBuf::decompress: argument ind_end exceeds number of individuals");
 
   std::size_t n_loc = loc.size();
   std::size_t start = ind_start / 64;
   std::size_t end = (ind_end + 63) / 64;
 
   for (std::size_t el = 0; el < n_loc; ++el) {
-    double scl = 1.0 / std::sqrt(v_lvar_[loc[el]]);
-    double cen = -v_lmean_[loc[el]] * scl;
+    double scl = (scale) ? 1.0 / std::sqrt(v_lvar_[loc[el]]) : 1.0;
+    double cen = (centre) ? -v_lmean_[loc[el]] * scl : 0;
+
     for (std::size_t word = start; word < end; ++word) {
       std::size_t bit_lo = (word == start) ? (ind_start % 64) : 0;
       std::size_t bit_hi = (word == end - 1) ? ((ind_end - 1) % 64) + 1 : 64;
@@ -291,9 +255,7 @@ inline void GenoBuf::decompress(
 
       for (std::size_t bit = bit_lo; bit < bit_hi; ++bit) {
         out((64 * word) + bit - ind_start, el) =
-            (standardise)
-                ? (scl * (((h0 >> bit) & 1ULL) + ((h1 >> bit) & 1ULL))) + cen
-                : ((h0 >> bit) & 1ULL) + ((h1 >> bit) & 1ULL);
+            (scl * (((h0 >> bit) & 1ULL) + ((h1 >> bit) & 1ULL))) + cen
       }
     }
   }
