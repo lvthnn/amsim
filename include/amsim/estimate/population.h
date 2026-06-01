@@ -58,6 +58,73 @@ using PopulationEstimators = std::vector<PopulationEstimator>;
 
 namespace details {
 
+class EstimatorGenotypeMean : public PopulationEstimatorStrategy {
+ public:
+  explicit EstimatorGenotypeMean(const Params& params)
+      : PopulationEstimatorStrategy("geno_mean", {}, {}, params.geno.n_loc) {};
+
+  void compute(const State& state) override { data_ = state.geno().v_lmean(); }
+};
+
+class EstimatorGenotypeVar : public PopulationEstimatorStrategy {
+ public:
+  explicit EstimatorGenotypeVar(const Params& params)
+      : PopulationEstimatorStrategy("geno_var", {}, {}, params.geno.n_loc) {}
+
+  void compute(const State& state) override { data_ = state.geno().v_lvar(); }
+};
+
+class EstimatorGenotypeMAF : public PopulationEstimatorStrategy {
+ public:
+  explicit EstimatorGenotypeMAF(const Params& params)
+      : PopulationEstimatorStrategy("geno_maf", {}, {}, params.geno.n_loc) {}
+
+  void compute(const State& state) override { data_ = state.geno().v_lmaf(); }
+};
+
+class EstimatorGenotypeCov : public PopulationEstimatorStrategy {
+ public:
+  explicit EstimatorGenotypeCov(const Params& params)
+      : PopulationEstimatorStrategy(
+            "geno_cov", {}, {}, params.geno.n_loc, params.geno.n_loc) {
+    n_loc_ = params.geno.n_loc;
+  }
+
+  void compute(const State& state) override {
+    const GenoBuf& geno = state.geno();
+    std::size_t n_words = geno.n_words();
+    std::size_t n_ind = geno.n_ind();
+
+    for (std::size_t loc1 = 0; loc1 < n_loc_; ++loc1) {
+      // haplotypes of the first locus
+      const uint64_t* h01 = geno.h0().rowptr(loc1);
+      const uint64_t* h11 = geno.h1().rowptr(loc1);
+      for (std::size_t loc2 = loc1; loc2 < n_loc_; ++loc2) {
+        // haplotypes of the second locus
+        const uint64_t* h02 = geno.h0().rowptr(loc2);
+        const uint64_t* h12 = geno.h1().rowptr(loc2);
+        std::size_t acc = 0;
+
+        for (std::size_t word = 0; word < n_words; ++word)
+          // can express the inner product as popcounts like so
+          acc += __builtin_popcountll(h01[word] & h02[word]) +
+                 __builtin_popcountll(h01[word] & h12[word]) +
+                 __builtin_popcountll(h11[word] & h02[word]) +
+                 __builtin_popcountll(h11[word] & h12[word]);
+
+        data_(loc1, loc2) =
+            (1.0 / n_ind) * acc - geno.v_lmean(loc1) * geno.v_lmean(loc2);
+      }
+    }
+
+    data_.triangularView<Eigen::Lower>() =
+        data_.transpose().triangularView<Eigen::Lower>();
+  }
+
+ private:
+  std::size_t n_loc_;
+};
+
 class EstimatorHeritability : public PopulationEstimatorStrategy {
  public:
   explicit EstimatorHeritability(const Params& params)
@@ -187,6 +254,30 @@ class EstimatorMateCor : public PopulationEstimatorStrategy {
 };
 
 }  // namespace details
+
+inline PopulationEstimator PopulationGenotypeCov() {
+  return [](const Params& params) {
+    return std::make_unique<details::EstimatorGenotypeCov>(params);
+  };
+}
+
+inline PopulationEstimator PopulationGenotypeMean() {
+  return [](const Params& params) {
+    return std::make_unique<details::EstimatorGenotypeMean>(params);
+  };
+}
+
+inline PopulationEstimator PopulationGenotypeVar() {
+  return [](const Params& params) {
+    return std::make_unique<details::EstimatorGenotypeVar>(params);
+  };
+}
+
+inline PopulationEstimator PopulationGenotypeMAF() {
+  return [](const Params& params) {
+    return std::make_unique<details::EstimatorGenotypeMAF>(params);
+  };
+}
 
 inline PopulationEstimator PopulationHeritability() {
   return [](const Params& params) {
