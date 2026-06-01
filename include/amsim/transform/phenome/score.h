@@ -78,7 +78,7 @@ inline void ScorePhenotypes::scoreGenetic(State& state) {
 
       // decompress the standardised genotype matrix in manageable tiles
       geno_buf.decompress(
-          ind_tile, ind_tile + tile_size, pheno_loc, gen_tile_, true);
+          ind_tile, ind_tile + tile_size, pheno_loc, gen_tile_, true, true);
 
       // update the genetic component buffer in-place
       pheno_gen_buf.col(pheno).segment(ind_tile, tile_size).noalias() =
