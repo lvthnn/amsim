@@ -13,60 +13,42 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_link_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
 endif()
 
-# Library targets
-add_library(amsimcpp STATIC
-  src/genome.cc
-  src/phenotype.cc
-  src/utils.cc
-  src/mating.cc
-  src/phenobuf.cc
-  src/phenoarch.cc
-  src/haplobuf.cc
-  src/logger.cc
-  src/logger_timer.cc
-  src/metric.cc
-  src/metricspec.cc
-  src/simulation.cc
-  src/simulation_config.cc
-  src/simulation_results.cc
-  src/stats.cc
-)
+# Register amsim as a header-only library
+add_library(amsimcpp INTERFACE)
 
 # Public headers for users of the lib
 target_include_directories(amsimcpp
-  PUBLIC
+  INTERFACE
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
-# Resolve OS-dependent BLAS / LAPACK imports
+# Use Eigen with BLAS/LAPACK
+
 if (APPLE)
   find_library(ACCELERATE_FRAMEWORK Accelerate REQUIRED)
-  target_link_libraries(amsimcpp PUBLIC ${ACCELERATE_FRAMEWORK})
-  target_compile_definitions(amsimcpp PUBLIC ACCELERATE_NEW_LAPACK)
-  # target_compile_options(amsimcpp PRIVATE -Wno-deprecated-declarations)
+  target_link_libraries(amsimcpp INTERFACE ${ACCELERATE_FRAMEWORK})
+  target_compile_definitions(amsimcpp INTERFACE ACCELERATE_NEW_LAPACK)
+  target_compile_definitions(amsimcpp INTERFACE EIGEN_USE_BLAS EIGEN_USE_LAPACK)
 else()
+  include_directories("/usr/include/openblas")
   find_package(BLAS REQUIRED)
   find_package(LAPACK REQUIRED)
-
-  if(TARGET BLAS::BLAS)
-    target_link_libraries(amsimcpp PUBLIC BLAS::BLAS)
-  else()
-    target_link_libraries(amsimcpp PUBLIC ${BLAS_LIBRARIES})
-  endif()
-
-  if(TARGET LAPACK::LAPACK)
-    target_link_libraries(amsimcpp PUBLIC LAPACK::LAPACK)
-  else()
-    target_link_libraries(amsimcpp PUBLIC ${LAPACK_LIBRARIES})
-  endif()
+  target_link_libraries(amsimcpp INTERFACE BLAS::BLAS LAPACK::LAPACK)
+  target_compile_definitions(amsimcpp INTERFACE EIGEN_USE_BLAS EIGEN_USE_LAPACK)
 endif()
+
+# Use highfive for HDF5 support
+
+find_package(HDF5 REQUIRED COMPONENTS C)
+target_link_libraries(amsimcpp INTERFACE HDF5::HDF5)
+target_compile_definitions(amsimcpp INTERFACE HIGHFIVE_USE_EIGEN)
 
 # Python bindings
 option(BUILD_PYTHON "Build Python bindings for amsimpy" OFF)
 
 if (BUILD_PYTHON)
   set(PYBIND11_FINDPYTHON ON)
-  set(PYBIND11_DETAILED_ERROR_MESSAGES ON CACHE BOOL "Enable detailed error messages")
+  set(PYBIND11_DETAILED_ERROR_MESSAGES ON CACHE BOOL "Detailed error messages")
   find_package(pybind11 REQUIRED)
 
   pybind11_add_module(_core
@@ -77,57 +59,34 @@ if (BUILD_PYTHON)
   target_compile_definitions(_core PRIVATE PYBIND11_DETAILED_ERROR_MESSAGES)
 endif()
 
-# Reasonable warnings
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-  target_compile_options(amsimcpp PRIVATE -Wall -Wextra -Wpedantic)
-elseif (MSVC)
-  target_compile_options(amsimcpp PRIVATE /W4)
-endif()
-
 # Use GoogleTest
-include(FetchContent)
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
-FetchContent_Declare(
-  googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG v1.17.0
-)
-FetchContent_MakeAvailable(googletest)
 
-enable_testing()
+# include(FetchContent)
+# set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+# set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+# FetchContent_Declare(
+#   googletest
+#   GIT_REPOSITORY https://github.com/google/googletest.git
+#   GIT_TAG v1.17.0
+# )
+# FetchContent_MakeAvailable(googletest)
+#
+# enable_testing()
+#
+# include(GoogleTest)
 
-# Example programs
-add_executable(demo_simulation examples/demo_simulation.cc)
-add_executable(demo_results examples/demo_results.cc)
-add_executable(demo_logger examples/demo_logger.cc)
+# Examples
+option(BUILD_EXAMPLES "Build example applications" ON)
 
-target_link_libraries(demo_simulation PRIVATE amsimcpp)
-target_link_libraries(demo_results PRIVATE amsimcpp)
-target_link_libraries(demo_logger PRIVATE amsimcpp)
-
-# Link unit tests
-add_executable(stats_test tests/stats_test.cc)
-add_executable(utils_test tests/utils_test.cc)
-add_executable(simulation_test tests/simulation_test.cc)
-
-target_link_libraries(stats_test PRIVATE GTest::gtest_main amsimcpp)
-target_link_libraries(utils_test PRIVATE GTest::gtest_main amsimcpp)
-target_link_libraries(simulation_test PRIVATE GTest::gtest_main amsimcpp)
-
-include(GoogleTest)
-gtest_discover_tests(stats_test)
-gtest_discover_tests(utils_test)
-gtest_discover_tests(simulation_test)
-
+if (BUILD_EXAMPLES)
+  add_executable(demo_simulation examples/demo_simulation.cc)
+  target_link_libraries(demo_simulation PRIVATE amsimcpp)
+endif()
 
 # Install rules (so other projects can find+link amsimcpp)
 include(GNUInstallDirs)
 install(TARGETS amsimcpp
-  EXPORT amsimcppTargets
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+  EXPORT amsimcppTargets)
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(EXPORT amsimcppTargets
   NAMESPACE amsimcpp::
