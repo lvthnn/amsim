@@ -79,6 +79,7 @@ class OptimisePhenotypeArchitecture {
 };
 
 inline void OptimisePhenotypeArchitecture::randomState() {
+  pheno_effects_.setZero();
   std::vector<std::size_t> iota(n_loc_);
   std::iota(iota.begin(), iota.end(), 0);
 
@@ -167,8 +168,6 @@ inline void OptimisePhenotypeArchitecture::updateState() {
 
 inline void OptimisePhenotypeArchitecture::operator()() {
   randomState();
-
-  if (gen_cor_.isIdentity(1e-12)) return;
 
   computeInitObjective();
 
