@@ -1,5 +1,7 @@
 #pragma once
 
+#include <amsim/core/params.h>
+
 #include <boost/math/distributions/students_t.hpp>
 #include <condition_variable>
 #include <deque>
@@ -36,6 +38,8 @@ class Writer {
     return *instance_;
   }
 
+  void write_params(const Params& params);
+
   template <typename T>
   static void create(
       T&& data,
@@ -67,6 +71,7 @@ class Writer {
         n_gens_(n_gens),
         n_reps_(n_reps) {
     thread_ = std::thread(&Writer::threadCallback, this);
+    file_.createGroup("params");
     file_.createGroup("raw");
     file_.createGroup("summary");
   }
@@ -162,6 +167,50 @@ inline void Writer::writeEstimator(
   cv_.notify_one();
 }
 
+inline void Writer::write_params(const Params& params) {
+  auto params_group = file_.getGroup("params");
+
+  // assemble effect matrix
+  Eigen::MatrixXd effect_matrix(params.geno.n_loc, params.pheno.n_pheno);
+  effect_matrix.setZero();
+
+  for (std::size_t pheno = 0; pheno < params.pheno.n_pheno; ++pheno) {
+    auto effects = params.pheno.pheno_effects[pheno];
+    auto locs = params.pheno.pheno_loc[pheno];
+    for (std::size_t el = 0; el < locs.size(); ++el)
+      effect_matrix(locs[el], pheno) = effects(el);
+  }
+
+  file_.createGroup("params/genome");
+  file_.createDataSet("params/genome/n_ind", params.geno.n_ind);
+  file_.createDataSet("params/genome/n_loc", params.geno.n_loc);
+  file_.createDataSet("params/genome/v_maf", params.geno.v_maf);
+  file_.createDataSet("params/genome/v_rec", params.geno.v_rec);
+  file_.createDataSet("params/genome/v_mut", params.geno.v_mut);
+
+  file_.createGroup("params/phenome");
+  file_.createDataSet("params/phenome/n_pheno", params.pheno.n_pheno);
+  file_.createDataSet("params/phenome/names", params.pheno.names);
+  file_.createDataSet("params/phenome/n_locs", params.pheno.n_locs);
+  file_.createDataSet("params/phenome/effects", effect_matrix);
+  file_.createDataSet("params/phenome/gen_cor", params.pheno.gen_cor);
+  file_.createDataSet("params/phenome/env_cor", params.pheno.env_cor);
+  file_.createDataSet("params/phenome/h2_gen", params.pheno.h2_gen);
+  file_.createDataSet("params/phenome/h2_env", params.pheno.h2_env);
+  file_.createDataSet("params/phenome/h2_vert", params.pheno.h2_vert);
+
+  file_.createGroup("params/mating");
+  file_.createDataSet("params/mating/mate_cor", params.mate.mate_cor);
+  file_.createDataSet("params/mating/tol_inf", params.mate.tol_inf);
+  file_.createDataSet("params/mating/max_itr", params.mate.max_itr);
+  file_.createDataSet("params/mating/temp_init", params.mate.temp_init);
+  file_.createDataSet("params/mating/temp_decay", params.mate.temp_decay);
+
+  file_.createGroup("params/simulation");
+  file_.createDataSet("params/simulation/n_gens", params.sim.n_gens);
+  file_.createDataSet("params/simulation/rng_seed", params.sim.rng_seed);
+}
+
 template <typename T>
 inline void Writer::create(
     T&& data,
@@ -192,12 +241,9 @@ inline void Writer::summarise() {
     auto col_labels =
         group.getAttribute("col_labels").read<std::vector<std::string>>();
 
-
     // infer the dimension
     Eigen::MatrixXd m;
-    file_
-        .getDataSet(std::format(
-            "{}/rep{:03d}/gen{:03d}", path_raw, 1, 1))
+    file_.getDataSet(std::format("{}/rep{:03d}/gen{:03d}", path_raw, 1, 1))
         .read(m);
 
     std::size_t n_rows = m.rows();
