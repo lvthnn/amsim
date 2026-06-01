@@ -117,6 +117,10 @@ class GenoBuf {
   Eigen::VectorXd& v_lvar() noexcept { return v_lvar_; }
   Eigen::VectorXd& v_lmaf() noexcept { return v_lmaf_; }
 
+  const Eigen::VectorXd& v_lmean() const noexcept { return v_lmean_; }
+  const Eigen::VectorXd& v_lvar() const noexcept { return v_lvar_; }
+  const Eigen::VectorXd& v_lmaf() const noexcept { return v_lmaf_; }
+
   double v_lmean(std::size_t loc) const noexcept { return v_lmean_(loc); }
   double v_lvar(std::size_t loc) const noexcept { return v_lvar_(loc); }
   double v_lmaf(std::size_t loc) const noexcept { return v_lmaf_(loc); }
@@ -255,7 +259,7 @@ inline void GenoBuf::decompress(
 
       for (std::size_t bit = bit_lo; bit < bit_hi; ++bit) {
         out((64 * word) + bit - ind_start, el) =
-            (scl * (((h0 >> bit) & 1ULL) + ((h1 >> bit) & 1ULL))) + cen
+            (scl * (((h0 >> bit) & 1ULL) + ((h1 >> bit) & 1ULL))) + cen;
       }
     }
   }
