@@ -94,7 +94,7 @@ inline void run_simulation(
     state.geno().compute_mafs();
     state.geno().compute_stats();
 
-    // score phenotypes using operator()
+    // score phenotypes
     score(state);
     state.pheno().compute_stats();
 
@@ -137,6 +137,8 @@ inline void run_simulations(
 
   details::setup_log(simulation);
   details::setup_writer(simulation, n_replicates);
+
+  Writer::get_instance().write_params(params);
 
   for (std::size_t thread = 0; thread < n_threads; ++thread) {
     pool.emplace_back([&, thread]() {
