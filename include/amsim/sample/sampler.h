@@ -34,6 +34,17 @@ inline WeightFunction Logistic(const Eigen::VectorXd& effects) {
   };
 }
 
+struct SampleDescription {
+  std::string name;
+  std::string proband_type;
+  std::size_t n_probands;
+  std::vector<std::string> on;
+  std::vector<std::string> of;
+  std::string agg = "identity";
+  std::string weight_function = "uniform()";
+  std::vector<std::string> estimators;
+};
+
 // user-facing specification struct
 template <Proband P>
 struct Sample {
