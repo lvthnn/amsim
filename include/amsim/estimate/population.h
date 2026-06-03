@@ -113,7 +113,49 @@ class EstimatorGenotypeCov : public PopulationEstimatorStrategy {
                  __builtin_popcountll(h11[word] & h12[word]);
 
         data_(loc1, loc2) =
-            (1.0 / n_ind) * acc - geno.v_lmean(loc1) * geno.v_lmean(loc2);
+            ((1.0 / n_ind) * acc) - (geno.v_lmean(loc1) * geno.v_lmean(loc2));
+      }
+    }
+
+    data_.triangularView<Eigen::Lower>() =
+        data_.transpose().triangularView<Eigen::Lower>();
+  }
+
+ private:
+  std::size_t n_loc_;
+};
+
+class EstimatorGenotypeCor : public PopulationEstimatorStrategy {
+ public:
+  explicit EstimatorGenotypeCor(const Params& params)
+      : PopulationEstimatorStrategy(
+            "geno_cor", {}, {}, params.geno.n_loc, params.geno.n_loc) {
+    n_loc_ = params.geno.n_loc;
+  }
+
+  void compute(const State& state) override {
+    const GenoBuf& geno = state.geno();
+    std::size_t n_words = geno.n_words();
+    std::size_t n_ind = geno.n_ind();
+
+    for (std::size_t loc1 = 0; loc1 < n_loc_; ++loc1) {
+      const uint64_t* h01 = geno.h0().rowptr(loc1);
+      const uint64_t* h11 = geno.h1().rowptr(loc1);
+      for (std::size_t loc2 = loc1; loc2 < n_loc_; ++loc2) {
+        const uint64_t* h02 = geno.h0().rowptr(loc2);
+        const uint64_t* h12 = geno.h1().rowptr(loc2);
+        std::size_t acc = 0;
+
+        for (std::size_t word = 0; word < n_words; ++word)
+          acc += __builtin_popcountll(h01[word] & h02[word]) +
+                 __builtin_popcountll(h01[word] & h12[word]) +
+                 __builtin_popcountll(h11[word] & h02[word]) +
+                 __builtin_popcountll(h11[word] & h12[word]);
+
+        double cov = ((1.0 / n_ind) * acc) -
+                     (geno.v_lmean(loc1) * geno.v_lmean(loc2));
+        double denom = std::sqrt(geno.v_lvar(loc1) * geno.v_lvar(loc2));
+        data_(loc1, loc2) = (denom > 0.0) ? cov / denom : 0.0;
       }
     }
 
@@ -219,6 +261,41 @@ class EstimatorComponentCor : public PopulationEstimatorStrategy {
   Eigen::MatrixXd std_r_;
 };
 
+class EstimatorComponentCov : public PopulationEstimatorStrategy {
+ public:
+  explicit EstimatorComponentCov(
+      const Params& params, Component type_l, std::optional<Component> type_r)
+      : PopulationEstimatorStrategy(
+            "pheno_" + to_string(type_l) + "_" +
+                to_string(type_r.value_or(type_l)) + "_cov",
+            utils::vector_suffix(params.pheno.names, "_" + to_string(type_l)),
+            utils::vector_suffix(
+                params.pheno.names, "_" + to_string(type_r.value_or(type_l))),
+            params.pheno.n_pheno,
+            params.pheno.n_pheno),
+        n_ind_(params.geno.n_ind),
+        n_pheno_(params.pheno.n_pheno),
+        type_l_(type_l),
+        type_r_(type_r.value_or(type_l)),
+        centred_l_(n_ind_, n_pheno_),
+        centred_r_(n_ind_, n_pheno_) {}
+
+  void compute(const State& state) override {
+    centred_l_ = utils::standardise(state.pheno()(type_l_), true, true, false);
+    centred_r_ = utils::standardise(state.pheno()(type_r_), true, true, false);
+    data_ = (centred_l_.transpose() * centred_r_) /
+            static_cast<double>(n_ind_ - 1);
+  }
+
+ private:
+  std::size_t n_ind_;
+  std::size_t n_pheno_;
+  Component type_l_;
+  Component type_r_;
+  Eigen::MatrixXd centred_l_;
+  Eigen::MatrixXd centred_r_;
+};
+
 class EstimatorMateCor : public PopulationEstimatorStrategy {
  public:
   explicit EstimatorMateCor(const Params& params, Component type)
@@ -279,6 +356,12 @@ inline PopulationEstimator PopulationGenotypeMAF() {
   };
 }
 
+inline PopulationEstimator PopulationGenotypeCor() {
+  return [](const Params& params) {
+    return std::make_unique<details::EstimatorGenotypeCor>(params);
+  };
+}
+
 inline PopulationEstimator PopulationHeritability() {
   return [](const Params& params) {
     return std::make_unique<details::EstimatorHeritability>(params);
@@ -304,6 +387,15 @@ inline PopulationEstimator PopulationComponentCor(
     std::optional<Component> type_r = std::nullopt) {
   return [type_l, type_r](const Params& params) {
     return std::make_unique<details::EstimatorComponentCor>(
+        params, type_l, type_r);
+  };
+}
+
+inline PopulationEstimator PopulationComponentCov(
+    Component type_l = Component::Total,
+    std::optional<Component> type_r = std::nullopt) {
+  return [type_l, type_r](const Params& params) {
+    return std::make_unique<details::EstimatorComponentCov>(
         params, type_l, type_r);
   };
 }
