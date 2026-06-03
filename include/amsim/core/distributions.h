@@ -149,8 +149,6 @@ inline Distribution make_distribution(
           "0 <= lo < hi <= 1");
   }
   if (dist_name == "rademacher") {
-    if (params.size() != 0)
-      throw std::runtime_error("Rademacher distribution has no parameters.");
     return [](std::size_t n) {
       return amsim::RademacherDistribution::generate(n);
     };
