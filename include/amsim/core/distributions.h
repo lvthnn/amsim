@@ -72,7 +72,7 @@ class BetaDistribution {
       : dist_(alpha, beta) {}
 
   Eigen::VectorXd generate(std::size_t n) const {
-    return rng::generate_dist(dist_, n);
+    return generate_dist(dist_, n);
   }
 
  private:
