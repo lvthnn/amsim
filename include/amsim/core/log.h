@@ -9,11 +9,13 @@
 #include <mutex>
 #include <thread>
 
+#include <boost/algorithm/string.hpp>
+
 namespace amsim {
 
 enum LogLevel { Debug, Info, Warning, Error, None };
 
-inline std::string to_string(LogLevel level) {
+inline std::string LogLevel_to_string(LogLevel level) {
   switch (level) {
     case LogLevel::Debug:
       return "DEBUG";
@@ -29,8 +31,18 @@ inline std::string to_string(LogLevel level) {
   __builtin_unreachable();
 }
 
+inline LogLevel LogLevel_from_string(const std::string& level) {
+  std::string upper = boost::to_upper_copy(level);
+  if (upper == "DEBUG") return LogLevel::Debug;
+  if (upper == "INFO") return LogLevel::Info;
+  if (upper == "WARNING") return LogLevel::Warning;
+  if (upper == "ERROR") return LogLevel::Error;
+  if (upper == "NONE") return LogLevel::None;
+  throw std::runtime_error("Unknown LogLevel " + upper);
+}
+
 inline std::ostream& operator<<(std::ostream& os, LogLevel level) {
-  return os << to_string(level);
+  return os << LogLevel_to_string(level);
 }
 
 class Log {
@@ -127,7 +139,7 @@ inline std::string Log::formatMsg(
   std::string time_str = getTimeStr();
   std::ostringstream msg_format;
 
-  msg_format << "[" << to_string(level) << "] "
+  msg_format << "[" << LogLevel_to_string(level) << "] "
              << "[" << time_str << "] " << "[thread "
              << std::this_thread::get_id() << "] " << msg;
 
