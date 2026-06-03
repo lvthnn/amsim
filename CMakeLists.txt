@@ -43,22 +43,6 @@ find_package(HDF5 REQUIRED COMPONENTS C)
 target_link_libraries(amsimcpp INTERFACE HDF5::HDF5)
 target_compile_definitions(amsimcpp INTERFACE HIGHFIVE_USE_EIGEN)
 
-# Python bindings
-option(BUILD_PYTHON "Build Python bindings for amsimpy" OFF)
-
-if (BUILD_PYTHON)
-  set(PYBIND11_FINDPYTHON ON)
-  set(PYBIND11_DETAILED_ERROR_MESSAGES ON CACHE BOOL "Detailed error messages")
-  find_package(pybind11 REQUIRED)
-
-  pybind11_add_module(_core
-      ${CMAKE_SOURCE_DIR}/python/bindings/python_bindings.cpp
-      ${CMAKE_SOURCE_DIR}/python/bindings/context_wrapper.cpp)
-  target_link_libraries(_core PRIVATE amsimcpp)
-  target_include_directories(_core PRIVATE ${CMAKE_SOURCE_DIR}/include)
-  target_compile_definitions(_core PRIVATE PYBIND11_DETAILED_ERROR_MESSAGES)
-endif()
-
 # Use GoogleTest
 
 # include(FetchContent)
@@ -76,11 +60,35 @@ endif()
 # include(GoogleTest)
 
 # Examples
-option(BUILD_EXAMPLES "Build example applications" ON)
+option(BUILD_EXAMPLES "Build example applications" OFF)
 
 if (BUILD_EXAMPLES)
   add_executable(demo_simulation examples/demo_simulation.cc)
+  add_executable(demo_heritability examples/demo_heritability.cc)
+  add_executable(demo_assortment examples/demo_assortment.cc)
+  add_executable(demo_gwas examples/demo_gwas.cc)
+  add_executable(demo_selection examples/demo_selection.cc)
+  add_executable(demo_mating_regimes examples/demo_mating_regimes.cc)
   target_link_libraries(demo_simulation PRIVATE amsimcpp)
+  target_link_libraries(demo_heritability PRIVATE amsimcpp)
+  target_link_libraries(demo_assortment PRIVATE amsimcpp)
+  target_link_libraries(demo_gwas PRIVATE amsimcpp)
+  target_link_libraries(demo_selection PRIVATE amsimcpp)
+  target_link_libraries(demo_mating_regimes PRIVATE amsimcpp)
+endif()
+
+# The CLI tool
+option(BUILD_EXECUTABLE "Build the amsim CLI tool" ON)
+
+if (BUILD_EXECUTABLE)
+  add_executable(amsim examples/amsim_cli.cc)
+  target_link_libraries(amsim PRIVATE amsimcpp)
+  target_compile_definitions(amsim PRIVATE
+    AMSIM_VERSION="${PROJECT_VERSION}"
+    AMSIM_ARCH="${CMAKE_SYSTEM_PROCESSOR}"
+    AMSIM_BUILD_TYPE="${CMAKE_BUILD_TYPE}"
+    AMSIM_COMPILER="${CMAKE_CXX_COMPILER_ID} {CMAKE_CXX_COMPILER_VERSION}"
+  )
 endif()
 
 # Install rules (so other projects can find+link amsimcpp)
