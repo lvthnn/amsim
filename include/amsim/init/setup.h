@@ -6,6 +6,7 @@
 
 #include <Eigen/Dense>
 #include <cstddef>
+#include <iomanip>
 #include <stdexcept>
 #include <string>
 #include <variant>
@@ -16,11 +17,17 @@ namespace amsim {
 namespace details {
 
 inline Eigen::VectorXd expand(
-    std::variant<double, Eigen::VectorXd> val, std::size_t size) {
+    const std::variant<double, Eigen::VectorXd, Distribution>& val,
+    std::size_t size) {
   if (std::holds_alternative<double>(val))
     return Eigen::VectorXd::Constant(size, std::get<double>(val));
 
-  Eigen::VectorXd res = std::get<Eigen::VectorXd>(val);
+  if (std::holds_alternative<Distribution>(val))
+    return std::get<Distribution>(val)(size);
+
+  const auto& res = std::get<Eigen::VectorXd>(val);
+
+  if (res.size() == 1) return Eigen::VectorXd::Constant(size, res(0));
 
   if (static_cast<std::size_t>(res.size()) != size)
     throw std::runtime_error(
@@ -33,11 +40,11 @@ inline Eigen::VectorXd expand(
 }  // namespace details
 
 struct Genome {
-  std::size_t n_loci;
+  std::size_t n_loci = 5000;
 
-  std::variant<double, Eigen::VectorXd> v_rec = 0.5;
-  std::variant<double, Eigen::VectorXd> v_maf = 0.5;
-  std::variant<double, Eigen::VectorXd> v_mut = 0.0;
+  std::variant<double, Eigen::VectorXd, Distribution> v_rec = 0.5;
+  std::variant<double, Eigen::VectorXd, Distribution> v_maf = 0.5;
+  std::variant<double, Eigen::VectorXd, Distribution> v_mut = 0.0;
 };
 
 struct Phenotype {
@@ -45,12 +52,12 @@ struct Phenotype {
   std::size_t n_causal_loci;
   std::unordered_map<std::string, std::size_t> ids;
 
-  std::optional<Eigen::VectorXd> effects;
+  std::optional<std::variant<Eigen::VectorXd, Distribution>> effects;
   std::optional<std::vector<std::size_t>> causal_loci;
 
-  double h2_genetic = 0.5;
-  double h2_environmental = 0.5;
-  double h2_vertical = 0.0;
+  double var_genetic = 0.5;
+  double var_environmental = 0.5;
+  double var_vertical = 0.0;
 
   double vertical_paternal_ratio = 0.5;
   double nurture_paternal_ratio = 0.5;
@@ -67,7 +74,7 @@ struct Mating {
 };
 
 struct Simulation {
-  std::size_t n_individuals;
+  std::size_t n_individuals = 10000;
 
   Genome genome;
   std::vector<Phenotype> phenotypes;
@@ -79,12 +86,13 @@ struct Simulation {
   std::vector<PopulationEstimator> estimators;  // population-wide estimators
   std::vector<SampleSpec> samples;              // subpopulation estimators
 
-  std::size_t n_generations;
-  std::filesystem::path output_dir;
+  std::size_t n_generations = 15;
+  std::filesystem::path output_dir = ".";
+  std::optional<std::string> output_name;
   std::optional<std::uint64_t> random_seed;
 
-  LogLevel log_level;
-  bool log_file = false;
+  LogLevel log_level = LogLevel::Info;
+  bool log_to_file = true;
 };
 
 inline PhenomeParams build_pheno_params(const Simulation& simulation) {
@@ -108,28 +116,34 @@ inline PhenomeParams build_pheno_params(const Simulation& simulation) {
   for (std::size_t pheno = 0; pheno < n_pheno; ++pheno) {
     Phenotype pheno_data = simulation.phenotypes[pheno];
 
+    if (pheno_data.n_causal_loci == 0)
+      pheno_data.n_causal_loci = simulation.genome.n_loci / n_pheno;
+
     names[pheno] = pheno_data.name;
     n_locs[pheno] = pheno_data.n_causal_loci;
     pheno_ids[pheno_data.name] = pheno;
 
-    if (!pheno_data.effects.has_value())
-      pheno_effects[pheno] = Eigen::VectorXd::Constant(
-          pheno_data.n_causal_loci, 1.0 / std::sqrt(pheno_data.n_causal_loci));
-    else
-      pheno_effects[pheno] =
-          pheno_data.effects->array() / pheno_data.effects->norm();
+    if (!pheno_data.effects.has_value()) {
+      pheno_effects[pheno] = Eigen::VectorXd(pheno_data.n_causal_loci);
+      rng::NormalPolar::fill(
+          pheno_effects[pheno].data(), pheno_data.n_causal_loci);
+      pheno_effects[pheno] = pheno_effects[pheno].array().sign();
+      pheno_effects[pheno] /= std::sqrt(pheno_data.n_causal_loci);
+    } else {
+      Eigen::VectorXd raw_effects;
+      if (std::holds_alternative<Distribution>(*pheno_data.effects))
+        raw_effects = std::get<Distribution>(*pheno_data.effects)(
+            pheno_data.n_causal_loci);
+      else
+        raw_effects = std::get<Eigen::VectorXd>(*pheno_data.effects);
+      pheno_effects[pheno] = raw_effects.array() / raw_effects.norm();
+    }
 
     if (pheno_data.causal_loci.has_value() &&
         simulation.genetic_component_cor.has_value())
       throw std::runtime_error(
           "specify either exclusively phenotype causal loci or genetic "
           "component correlation");
-
-    if (!pheno_data.causal_loci.has_value() &&
-        !simulation.genetic_component_cor.has_value())
-      throw std::runtime_error(
-          "require either causal loci or genetic component correlation to "
-          "intialise phenotypes");
 
     if (pheno_data.causal_loci.has_value()) {
       if (pheno_data.causal_loci.value().size() != pheno_data.n_causal_loci)
@@ -141,9 +155,15 @@ inline PhenomeParams build_pheno_params(const Simulation& simulation) {
     } else
       pheno_loc[pheno].resize(pheno_data.n_causal_loci);
 
-    h2_gen(pheno) = pheno_data.h2_genetic;
-    h2_env(pheno) = pheno_data.h2_environmental;
-    h2_nur(pheno) = pheno_data.h2_vertical;
+    double var_total = pheno_data.var_genetic + pheno_data.var_environmental +
+                       pheno_data.var_vertical;
+    if (var_total <= 0.0)
+      throw std::runtime_error(
+          "phenotype " + pheno_data.name +
+          ": variance components must sum to a positive value");
+    h2_gen(pheno) = pheno_data.var_genetic / var_total;
+    h2_env(pheno) = pheno_data.var_environmental / var_total;
+    h2_nur(pheno) = pheno_data.var_vertical / var_total;
     rnur_pat(pheno) = pheno_data.nurture_paternal_ratio;
     rnur_env(pheno) = pheno_data.nurture_environmental_ratio;
     vert_pat(pheno) = pheno_data.vertical_paternal_ratio;
@@ -187,8 +207,13 @@ inline Params build_params(const Simulation& simulation) {
 
   PhenomeParams pheno = build_pheno_params(simulation);
 
+  Eigen::MatrixXd mate_cor =
+      (simulation.mating.mate_cor.size() == 0)
+          ? Eigen::MatrixXd::Zero(pheno.n_pheno, pheno.n_pheno)
+          : simulation.mating.mate_cor;
+
   MatingParams mate = MatingParams{
-      .mate_cor = std::move(simulation.mating.mate_cor),
+      .mate_cor = std::move(mate_cor),
       .tol_inf = simulation.mating.tolerance,
       .max_itr = simulation.mating.max_iterations,
       .temp_init = simulation.mating.initial_temperature,
@@ -197,13 +222,20 @@ inline Params build_params(const Simulation& simulation) {
   SimulationParams sim = SimulationParams{
       .n_gens = simulation.n_generations,
       .rng_seed = rng::auto_seed(simulation.random_seed),
-      .out_dir = simulation.output_dir};
+      .out_dir = simulation.output_dir,
+      .log_level = simulation.log_level,
+      .log_to_file = simulation.log_to_file
+  };
 
   return Params{
       .geno = std::move(geno),
       .pheno = std::move(pheno),
       .mate = std::move(mate),
       .sim = std::move(sim)};
+}
+
+inline void print_params(const Params& params) {
+
 }
 
 }  // namespace amsim

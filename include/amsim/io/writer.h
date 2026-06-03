@@ -24,10 +24,10 @@ class Writer {
   Writer& operator=(const Writer&) = delete;
 
   static Writer& get_instance(
-      const std::filesystem::path& out_dir,
+      const std::filesystem::path& results_path,
       std::size_t n_gens,
       std::size_t n_reps) {
-    static Writer instance(out_dir, n_gens, n_reps);
+    static Writer instance(results_path, n_gens, n_reps);
     instance_ = &instance;
     return *instance_;
   }
@@ -64,10 +64,10 @@ class Writer {
 
  private:
   explicit Writer(
-      const std::filesystem::path& out_dir,
+      const std::filesystem::path& results_path,
       std::size_t n_gens,
       std::size_t n_reps)
-      : file_(out_dir / "results.h5", HighFive::File::Overwrite),
+      : file_(results_path, HighFive::File::Overwrite),
         n_gens_(n_gens),
         n_reps_(n_reps) {
     thread_ = std::thread(&Writer::threadCallback, this);
@@ -268,8 +268,12 @@ inline void Writer::summarise() {
         std::format("{}/confint_hi", path_summary),
         HighFive::DataSpace({n_gens_, n_rows, n_cols}));
 
-    boost::math::students_t_distribution dist(n_reps_ - 1);
-    double t = boost::math::quantile(dist, 0.975);
+    double t = 1;
+
+    if (n_reps_ > 1) {
+      boost::math::students_t_distribution dist(n_reps_ - 1);
+      t = boost::math::quantile(dist, 0.975);
+    }
 
     for (std::size_t gen = 0; gen < n_gens_; ++gen) {
       mean.setZero();

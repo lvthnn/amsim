@@ -7,8 +7,8 @@
 #include <amsim/transform.h>
 
 #include <atomic>
+#include <chrono>
 #include <iostream>
-#include <stdexcept>
 #include <thread>
 
 namespace amsim {
@@ -29,29 +29,48 @@ inline Params preprocess_simulation(const Simulation& simulation) {
   return params;
 }
 
-inline void setup_outdir(const Simulation& simulation) {
-  if (std::filesystem::exists(simulation.output_dir))
-    throw std::runtime_error(
-        "Directory " + simulation.output_dir.string() + "already exists!");
-  std::filesystem::create_directory(simulation.output_dir);
+inline std::filesystem::path setup_outdir(std::uint64_t seed) {
+  auto now = std::chrono::system_clock::now().time_since_epoch();
+  auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
+  std::filesystem::path tmp =
+      std::filesystem::temp_directory_path() /
+      std::format("amsim_{}_{}", seed, ms);
+  std::filesystem::create_directories(tmp);
+  return tmp;
+}
+
+inline std::string results_filename(const Simulation& simulation) {
+  return simulation.output_name.has_value()
+      ? std::format("results_{}.h5", simulation.output_name.value())
+      : "results.h5";
+}
+
+inline std::string log_filename(const Simulation& simulation) {
+  return simulation.output_name.has_value()
+      ? std::format("amsim_{}.log", simulation.output_name.value())
+      : "amsim.log";
 }
 
 inline void setup_log(const Simulation& simulation) {
-  if (simulation.log_file)
-    Log::file(simulation.output_dir / "amsim.log", simulation.log_level);
-  else
+  if (simulation.log_to_file) {
+    std::filesystem::path log_path =
+        simulation.output_dir / log_filename(simulation);
+    Log::file(log_path, simulation.log_level);
+  } else {
     Log::stream(std::cout, simulation.log_level);
+  }
 }
 
 inline std::filesystem::path setup_replicate(
-    const Simulation& simulation, std::size_t rep_id) {
-  return simulation.output_dir / std::format("rep_{:03}", rep_id + 1);
+    const std::filesystem::path& tmp_dir, std::size_t rep_id) {
+  return tmp_dir / std::format("rep_{:03}", rep_id + 1);
 }
 
 inline void setup_writer(
     const Simulation& simulation, std::size_t n_replicates) {
-  Writer::get_instance(
-      simulation.output_dir, simulation.n_generations, n_replicates);
+  std::filesystem::path results_path =
+      simulation.output_dir / results_filename(simulation);
+  Writer::get_instance(results_path, simulation.n_generations, n_replicates);
 }
 }  // namespace details
 
@@ -129,11 +148,16 @@ inline void run_simulations(
   std::uint64_t seed = rng::auto_seed(simulation.random_seed);
   rng::set_seed(seed);
 
-  // set up the base and replicate directories
-  details::setup_outdir(simulation);
-
   // preprocess parameters
   Params params = details::preprocess_simulation(simulation);
+
+  // validate output directory
+  if (!std::filesystem::exists(simulation.output_dir))
+    throw std::runtime_error(
+        "output directory does not exist: " + simulation.output_dir.string());
+
+  // set up scratch directory in tmp
+  std::filesystem::path tmp_dir = details::setup_outdir(seed);
 
   details::setup_log(simulation);
   details::setup_writer(simulation, n_replicates);
@@ -149,7 +173,7 @@ inline void run_simulations(
         if (rep_id >= n_replicates) return;
 
         thread_params.sim.out_dir =
-            details::setup_replicate(simulation, rep_id);
+            details::setup_replicate(tmp_dir, rep_id);
         thread_params.sim.rng_seed = details::shuffle_seed(seed, rep_id);
         thread_params.sim.rep_id = rep_id;
 
@@ -160,6 +184,8 @@ inline void run_simulations(
   }
 
   for (auto& t : pool) t.join();
+
+  std::filesystem::remove_all(tmp_dir);
 }
 
 }  // namespace amsim

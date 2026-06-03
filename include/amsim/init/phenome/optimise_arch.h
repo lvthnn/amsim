@@ -3,10 +3,10 @@
 #include <amsim/core.h>
 
 #include <Eigen/Dense>
-#include <vector>
 #include <algorithm>
 #include <numeric>
 #include <unordered_set>
+#include <vector>
 
 namespace amsim {
 
@@ -22,7 +22,11 @@ class OptimisePhenotypeArchitecture {
         pheno_loc_(params.pheno.pheno_loc),
         pheno_loc_complement_(n_pheno_),
         pheno_effects_(n_loc_, n_pheno_),
-        diff_cur_(n_pheno_, n_pheno_) {}
+        pheno_fixed_(n_pheno_),
+        diff_cur_(n_pheno_, n_pheno_) {
+    for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
+      pheno_fixed_[pheno] = (n_locs_[pheno] == n_loc_);
+  }
 
   double err_frob() const { return err_frob_opt_; }
 
@@ -39,6 +43,7 @@ class OptimisePhenotypeArchitecture {
   std::vector<std::vector<std::size_t>>& pheno_loc_;
   std::vector<std::vector<std::size_t>> pheno_loc_complement_;
   Eigen::MatrixXd pheno_effects_;
+  std::vector<bool> pheno_fixed_;
 
   std::size_t max_itr_ = 2e6;
   double tol_l2_ = 1e-15;
@@ -61,6 +66,7 @@ class OptimisePhenotypeArchitecture {
   double delta_cur_;
   double err_frob_;
   double err_frob_opt_;
+  bool proposal_valid_;
 
   // generate the initial state
   void randomState();
@@ -120,7 +126,10 @@ inline void OptimisePhenotypeArchitecture::computeExpected() {
 }
 
 inline void OptimisePhenotypeArchitecture::proposeState() {
-  pheno_cur_ = rng::UniformIntRange::sample(n_pheno_);
+  do {
+    pheno_cur_ = rng::UniformIntRange::sample(n_pheno_);
+  } while (pheno_fixed_[pheno_cur_]);
+
   loc_ind_cur_ = rng::UniformIntRange::sample(n_locs_[pheno_cur_]);
   loc_ind_prop_ = rng::UniformIntRange::sample(n_loc_ - n_locs_[pheno_cur_]);
   loc_cur_ = pheno_loc_[pheno_cur_][loc_ind_cur_];
@@ -168,8 +177,14 @@ inline void OptimisePhenotypeArchitecture::updateState() {
 
 inline void OptimisePhenotypeArchitecture::operator()() {
   randomState();
-
   computeInitObjective();
+
+  if (std::ranges::all_of(pheno_fixed_, std::identity{})) {
+    Log::warning(
+        "All phenotypes saturated in the genome; can not optimise phenotype "
+        "architecture. Aborting.");
+    return;
+  }
 
   temp_cur_ = temp_init_;
 
