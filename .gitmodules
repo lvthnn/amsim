@@ -1,6 +1,0 @@
-[submodule "amsimr"]
-	path = r
-	url = https://github.com/lvthnn/amsimr
-[submodule "amsimpy"]
-	path = python
-	url = https://github.com/lvthnn/amsimpy
