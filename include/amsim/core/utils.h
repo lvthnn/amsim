@@ -59,8 +59,14 @@ inline std::vector<std::size_t> order(const Eigen::VectorXd& v) {
 }
 
 inline Eigen::MatrixXd standardise(
-    const Eigen::MatrixXd& mat, bool population = true) {
-  Eigen::RowVectorXd mean = mat.colwise().mean();
+    const Eigen::MatrixXd& mat,
+    bool population = true,
+    bool centre = true,
+    bool scale = true) {
+  Eigen::RowVectorXd mean = centre ? Eigen::RowVectorXd(mat.colwise().mean())
+                                   : Eigen::RowVectorXd::Zero(mat.cols());
+  if (!scale)
+    return mat.rowwise() - mean;
   Eigen::RowVectorXd std =
       ((mat.rowwise() - mean).array().square().colwise().sum() /
        (population ? mat.rows() : mat.rows() - 1))
