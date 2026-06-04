@@ -1,5 +1,5 @@
 #pragma once
 
-#include "sample/member.h"
-#include "sample/sampler.h"
-#include "sample/proband.h"
+#include <amsim/sample/member.h>
+#include <amsim/sample/sampler.h>
+#include <amsim/sample/proband.h>

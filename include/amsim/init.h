@@ -1,5 +1,5 @@
 #pragma once
 
-#include "init/genome/initialise.h"
-#include "init/phenome/optimise_arch.h"
-#include "init/setup.h"
+#include <amsim/init/genome/initialise.h>
+#include <amsim/init/phenome/optimise_arch.h>
+#include <amsim/init/setup.h>

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "estimate/greml.h"
-#include "estimate/gwas.h"
-#include "estimate/haseman_elston.h"
-#include "estimate/population.h"
-#include "estimate/sample.h"
+#include <amsim/estimate/greml.h>
+#include <amsim/estimate/gwas.h>
+#include <amsim/estimate/haseman_elston.h>
+#include <amsim/estimate/population.h>
+#include <amsim/estimate/sample.h>

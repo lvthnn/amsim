@@ -1,5 +1,5 @@
 #pragma once
 
-#include "data/genome.h"
-#include "data/phenome.h"
-#include "data/mating.h"
+#include <amsim/data/genome.h>
+#include <amsim/data/phenome.h>
+#include <amsim/data/mating.h>
