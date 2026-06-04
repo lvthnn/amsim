@@ -9,8 +9,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Add debugging options depending on CMAKE_BUILD_TYPE
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
-    add_link_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
+  add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
+  add_link_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
 endif()
 
 # Register amsim as a header-only library
@@ -28,22 +28,72 @@ if (APPLE)
   find_library(ACCELERATE_FRAMEWORK Accelerate REQUIRED)
   target_link_libraries(amsimcpp INTERFACE ${ACCELERATE_FRAMEWORK})
   target_compile_definitions(amsimcpp INTERFACE ACCELERATE_NEW_LAPACK)
-  target_compile_definitions(amsimcpp INTERFACE EIGEN_USE_BLAS EIGEN_USE_LAPACK)
 else()
   include_directories("/usr/include/openblas")
   find_package(BLAS REQUIRED)
   find_package(LAPACK REQUIRED)
   target_link_libraries(amsimcpp INTERFACE BLAS::BLAS LAPACK::LAPACK)
-  target_compile_definitions(amsimcpp INTERFACE EIGEN_USE_BLAS EIGEN_USE_LAPACK)
 endif()
 
-# Use highfive for HDF5 support
-
+# HDF5 support
 find_package(HDF5 REQUIRED COMPONENTS C)
 target_link_libraries(amsimcpp INTERFACE HDF5::HDF5)
-target_compile_definitions(amsimcpp INTERFACE HIGHFIVE_USE_EIGEN)
 
-# Use GoogleTest
+# Fetch dependencies
+include(FetchContent)
+
+# Verbose downloads
+set(FETCHCONTENT_QUIET False)
+
+# Boost
+set(BOOST_INCLUDE_LIBRARIES algorithm math)
+set(BOOST_ENABLE_CMAKE ON)
+
+message(STATUS "Downloading and extracting Boost library sources.")
+
+FetchContent_Declare(
+  Boost
+  URL https://github.com/boostorg/boost/releases/download/boost-1.91.0-1/boost-1.91.0-1-cmake.tar.gz
+  USES_TERMINAL_DOWNLOAD TRUE
+  GIT_PROGRESS TRUE
+  DOWNLOAD_NO_EXTRACT FALSE
+)
+FetchContent_MakeAvailable(Boost)
+
+target_link_libraries(amsimcpp INTERFACE Boost::math Boost::algorithm)
+
+# Eigen
+message(STATUS "Downloading and extracting Eigen library sources.")
+
+FetchContent_Declare(
+  Eigen
+  GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+  GIT_TAG 5.0.1
+  USES_TERMINAL_DOWNLOAD TRUE
+  DOWNLOAD_EXTRACT_TIMESTAMP ON
+  EXCLUDE_FROM_ALL
+)
+FetchContent_MakeAvailable(Eigen)
+
+target_link_libraries(amsimcpp INTERFACE Eigen3::Eigen)
+
+# HighFive
+message(STATUS "Downloading and extracting HighFive library sources.")
+
+FetchContent_Declare(
+  HighFive
+  GIT_REPOSITORY https://github.com/highfive-devs/highfive.git
+  GIT_TAG v3.3.0
+  USES_TERMINAL_DOWNLOAD TRUE
+  DOWNLOAD_EXTRACT_TIMESTAMP ON
+  EXCLUDE_FROM_ALL
+)
+set(HIGHFIVE_USE_EIGEN ON CACHE BOOL "" FORCE)
+set(HIGHFIVE_UNIT_TESTS OFF CACHE BOOL "" FORCE)
+set(HIGHFIVE_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(HighFive)
+
+target_link_libraries(amsimcpp INTERFACE HighFive::HighFive)
 
 # include(FetchContent)
 # set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
@@ -59,29 +109,22 @@ target_compile_definitions(amsimcpp INTERFACE HIGHFIVE_USE_EIGEN)
 #
 # include(GoogleTest)
 
+target_compile_definitions(amsimcpp INTERFACE EIGEN_USE_BLAS EIGEN_USE_LAPACK)
+target_compile_definitions(amsimcpp INTERFACE HIGHFIVE_USE_EIGEN)
+
 # Examples
 option(BUILD_EXAMPLES "Build example applications" OFF)
 
 if (BUILD_EXAMPLES)
   add_executable(demo_simulation examples/demo_simulation.cc)
-  add_executable(demo_heritability examples/demo_heritability.cc)
-  add_executable(demo_assortment examples/demo_assortment.cc)
-  add_executable(demo_gwas examples/demo_gwas.cc)
-  add_executable(demo_selection examples/demo_selection.cc)
-  add_executable(demo_mating_regimes examples/demo_mating_regimes.cc)
   target_link_libraries(demo_simulation PRIVATE amsimcpp)
-  target_link_libraries(demo_heritability PRIVATE amsimcpp)
-  target_link_libraries(demo_assortment PRIVATE amsimcpp)
-  target_link_libraries(demo_gwas PRIVATE amsimcpp)
-  target_link_libraries(demo_selection PRIVATE amsimcpp)
-  target_link_libraries(demo_mating_regimes PRIVATE amsimcpp)
 endif()
 
 # The CLI tool
 option(BUILD_EXECUTABLE "Build the amsim CLI tool" ON)
 
 if (BUILD_EXECUTABLE)
-  add_executable(amsim examples/amsim_cli.cc)
+  add_executable(amsim src/amsim.cc)
   target_link_libraries(amsim PRIVATE amsimcpp)
   target_compile_definitions(amsim PRIVATE
     AMSIM_VERSION="${PROJECT_VERSION}"
@@ -90,12 +133,3 @@ if (BUILD_EXECUTABLE)
     AMSIM_COMPILER="${CMAKE_CXX_COMPILER_ID} {CMAKE_CXX_COMPILER_VERSION}"
   )
 endif()
-
-# Install rules (so other projects can find+link amsimcpp)
-include(GNUInstallDirs)
-install(TARGETS amsimcpp
-  EXPORT amsimcppTargets)
-install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-install(EXPORT amsimcppTargets
-  NAMESPACE amsimcpp::
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/amsimcpp)
