@@ -1,13 +1,14 @@
 #pragma once
 
 #include <amsim/core/log.h>
+#include <amsim/io/parse.h>
+#include <sys/wait.h>
 
 #include <Eigen/Dense>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <numeric>
-#include <sys/wait.h>
 #include <semaphore>
 #include <stdexcept>
 #include <string>
@@ -41,6 +42,50 @@ inline void bitmatrix_transpose(std::uint64_t* matrix) {
   }
 }
 
+inline Eigen::MatrixXd random_orthogonal(std::size_t dim) {
+  Eigen::MatrixXd random = Eigen::MatrixXd::Random(dim, dim);
+  Eigen::HouseholderQR<Eigen::MatrixXd> qr(random);
+  return qr.householderQ();
+}
+
+inline Eigen::MatrixXd matrix_from_singular_values(
+    const std::string& s, bool symmetric = false) {
+  std::vector<std::string> vs = split_string(s);
+  std::size_t n_pheno = vs.size();
+  Eigen::MatrixXd u_mat;
+  Eigen::MatrixXd v_mat;
+
+  Eigen::VectorXd singular_values(n_pheno);
+  std::ranges::transform(
+      vs, singular_values.begin(), [](const std::string& s_val) {
+        return std::stod(s_val);
+      });
+
+  Eigen::MatrixXd s_mat = singular_values.asDiagonal();
+
+  u_mat = random_orthogonal(n_pheno);
+  if (!symmetric) v_mat = random_orthogonal(n_pheno);
+
+  return (symmetric) ? u_mat * s_mat * u_mat.transpose()
+                     : u_mat * s_mat * v_mat.transpose();
+}
+
+inline Eigen::MatrixXd standardise(
+    const Eigen::MatrixXd& mat,
+    bool population = true,
+    bool centre = true,
+    bool scale = true) {
+  Eigen::RowVectorXd mean = centre ? Eigen::RowVectorXd(mat.colwise().mean())
+                                   : Eigen::RowVectorXd::Zero(mat.cols());
+  if (!scale) return mat.rowwise() - mean;
+  Eigen::RowVectorXd std =
+      ((mat.rowwise() - mean).array().square().colwise().sum() /
+       (population ? mat.rows() : mat.rows() - 1))
+          .sqrt()
+          .max(1e-10);
+  return ((mat.rowwise() - mean).array().rowwise() / std.array());
+}
+
 inline std::vector<std::string> vector_suffix(
     const std::vector<std::string>& labels,
     const std::optional<std::string>& suffix = std::nullopt) {
@@ -58,23 +103,6 @@ inline std::vector<std::size_t> order(const Eigen::VectorXd& v) {
   return idx;
 }
 
-inline Eigen::MatrixXd standardise(
-    const Eigen::MatrixXd& mat,
-    bool population = true,
-    bool centre = true,
-    bool scale = true) {
-  Eigen::RowVectorXd mean = centre ? Eigen::RowVectorXd(mat.colwise().mean())
-                                   : Eigen::RowVectorXd::Zero(mat.cols());
-  if (!scale)
-    return mat.rowwise() - mean;
-  Eigen::RowVectorXd std =
-      ((mat.rowwise() - mean).array().square().colwise().sum() /
-       (population ? mat.rows() : mat.rows() - 1))
-          .sqrt()
-          .max(1e-10);
-  return ((mat.rowwise() - mean).array().rowwise() / std.array());
-}
-
 inline std::counting_semaphore<64> process_semaphore{
     static_cast<std::ptrdiff_t>(
         std::thread::hardware_concurrency() > 0
@@ -87,13 +115,11 @@ inline void system_throttled(const std::string& cmd) {
   std::string output;
   if (pipe) {
     char buffer[512];
-    while (fgets(buffer, sizeof(buffer), pipe))
-      output += buffer;
+    while (fgets(buffer, sizeof(buffer), pipe)) output += buffer;
   }
   int rc = pclose(pipe);
   process_semaphore.release();
   if (WIFEXITED(rc) && WEXITSTATUS(rc) != 0) {
-    Log::error(output);
     throw std::runtime_error(output);
   }
 }
