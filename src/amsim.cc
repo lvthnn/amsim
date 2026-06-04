@@ -8,9 +8,7 @@
 #include <algorithm>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
-#include <filesystem>
 #include <unordered_map>
-#include <utility>
 
 void display_version() {
   std::string version_str = std::format("amsim v" AMSIM_VERSION " " AMSIM_ARCH
@@ -46,7 +44,7 @@ global options:
   --random-seed <rng_seed>
   --output-dir <out_dir>
   --output-name <out_name>
-  --log-level {debug|info|warning|error|none}
+  --log-level {debug | info | warning | error | none}
   --save-config <path>
   --log-to-output
 
@@ -75,25 +73,26 @@ mating options:
     --temp-decay <tmp_decay>
 
 sampling and estimation options:
-  --estimator {genotype-mean|genotype-var|genotype-maf|genotype-cov|
-               genotype-cor|heritability|pheno-mean|pheno-mean-genetic|
-               pheno-mean-environ|pheno-var|pheno-var-genetic|pheno-var-environ|
-               pheno-cov|pheno-cov-genetic|pheno-cov-environ|mate-cor|
-               mate-cor-genetic|mate-cor-environ}
+  --estimator {genotype-mean | genotype-var | genotype-maf | genotype-cov |
+               genotype-cor | heritability | pheno-mean |pheno-mean-genetic |
+               pheno-mean-environ | pheno-var | pheno-var-genetic |
+               pheno-var-environ | pheno-cov | pheno-cov-genetic |
+               pheno-cov-environ | mate-cor | mate-cor-genetic |
+               mate-cor-environ}
   --sample-estimator <name>
-    --type {gwas-plink|haseman-elston|greml|external}
+    --type {gwas-plink | haseman-elston | greml | external}
     --exec <exec_cmd>
     --n-rows <n_rows>
     --n-cols <n_cols>
     --row-names <row_names>
     --col-names <col_names>
   --sample <sample_name>
-    --proband {individual|mate|family}
+    --proband {individual | mate | family}
     --n_probands <n-prob>
-    --weight {logistic(...)|uniform()}
+    --weight {logistic(<pheno_coefs>) | uniform()}
     --on <weight_on>
     --of <weight_of>
-    --agg {max|min|mean|identity}
+    --agg {max | min | mean | identity}
     --estimators <est_names>
   )";
 
@@ -324,6 +323,12 @@ amsim::Distribution parse_distribution(
 }
 
 int main(int argc, char* argv[]) {
+  if (argc == 1) {
+    display_header();
+    display_help();
+    exit(0);
+  }
+
   Context context = Context::Global;
   amsim::Simulation simulation;
 
@@ -337,27 +342,29 @@ int main(int argc, char* argv[]) {
 
   // NOLINTBEGIN(modernize-use-designated-initializers)
   struct option long_opts[] = {
-      // BASIC OPTIONS
+      // Basic options
       {"help", no_argument, nullptr, 'h'},
       {"version", no_argument, nullptr, 'v'},
-      // GLOBAL OPTIONS
+      // global options
       {"n-individuals", required_argument, nullptr, GlobalNumIndividuals},
       {"n-generations", required_argument, nullptr, GlobalNumGenerations},
       {"n-replicates", required_argument, nullptr, GlobalNumReplicates},
       {"n-threads", required_argument, nullptr, GlobalNumThreads},
       {"random-seed", required_argument, nullptr, GlobalRandomSeed},
+      {"out-dir", required_argument, nullptr, GlobalOutputDirectory},
+      {"out-name", required_argument, nullptr, GlobalOutputName},
       {"output-dir", required_argument, nullptr, GlobalOutputDirectory},
       {"output-name", required_argument, nullptr, GlobalOutputName},
       {"log-to-output", no_argument, nullptr, GlobalLogNoFile},
       {"log-level", required_argument, nullptr, GlobalLogLevel},
-      // GENOME OPTIONS
+      // Genome options
       {"loc-maf", no_argument, nullptr, GenomeLocusInitMAFs},
       {"loc-rec", no_argument, nullptr, GenomeLocusRecombinationProbs},
       {"loc-mut", no_argument, nullptr, GenomeLocusMutationProbs},
       {"locus-maf", no_argument, nullptr, GenomeLocusInitMAFs},
       {"locus-rec", no_argument, nullptr, GenomeLocusRecombinationProbs},
       {"locus-mut", no_argument, nullptr, GenomeLocusMutationProbs},
-      // PHENOTYPE OPTIONS
+      // Phenotype options
       {"phenotype", required_argument, nullptr, PhenotypeDecl},
       {"var-genetic", required_argument, nullptr, PhenotypeVarGenetic},
       {"var-environmental",
@@ -374,16 +381,16 @@ int main(int argc, char* argv[]) {
        no_argument,
        nullptr,
        PhenotypeEnvironmentalCor},
-      // MATING OPTIONS
+      // Mating options
       {"mating", required_argument, nullptr, MatingDecl},
       {"mate-cor", no_argument, nullptr, MatingCor},
       {"tol-inf", required_argument, nullptr, MatingErrorTolerance},
       {"max-itr", required_argument, nullptr, MatingMaxIterations},
       {"temp-init", required_argument, nullptr, MatingAnnealingTempInit},
       {"temp-decay", required_argument, nullptr, MatingAnnealingTempDecay},
-      // POPULATION ESTIMATOR OPTIONS
+      // Population estimator options
       {"estimator", required_argument, nullptr, PopulationEstimatorDecl},
-      // SAMPLE OPTIONS
+      // Sample options
       {"sample", required_argument, nullptr, SampleDecl},
       {"proband", required_argument, nullptr, SampleProbandType},
       {"n-probands", required_argument, nullptr, SampleNumProbands},
@@ -391,13 +398,13 @@ int main(int argc, char* argv[]) {
       {"on", required_argument, nullptr, SampleWeightOnPhenotypes},
       {"of", required_argument, nullptr, SampleWeightOfMembers},
       {"agg", required_argument, nullptr, SampleWeightAggregation},
-      // SAMPLE ESTIMATOR OPTIONS
+      // Sample estimator options
       {"sample-estimator", required_argument, nullptr, SampleEstimatorDecl},
       {"type", required_argument, nullptr, SampleEstimatorType},
       {"exec", required_argument, nullptr, SampleEstimatorExec},
       {"n-rows", required_argument, nullptr, SampleEstimatorNumRows},
       {"n-cols", required_argument, nullptr, SampleEstimatorNumCols},
-      // VIRTUAL (CONTEXT-SENSITIVE) OPTIONS
+      // Virtual (context-sensitive) options
       {"n-loci", required_argument, nullptr, VirtualNumLoci},
       {"file", required_argument, nullptr, VirtualFile},
       {"dist", required_argument, nullptr, VirtualDistribution},
@@ -711,7 +718,7 @@ int main(int argc, char* argv[]) {
     amsim::run_simulations(simulation, n_replicates, n_threads);
     exit(0);
   } catch (const std::exception& e) {
-    std::cerr << "error: " << e.what() << "\n";
+    amsim::Log::error(e.what());
     exit(1);
   }
 }
