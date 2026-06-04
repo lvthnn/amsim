@@ -49,22 +49,19 @@ set(FETCHCONTENT_QUIET False)
 set(BOOST_INCLUDE_LIBRARIES algorithm math)
 set(BOOST_ENABLE_CMAKE ON)
 
-message(STATUS "Downloading and extracting Boost library sources.")
-
 FetchContent_Declare(
   Boost
   URL https://github.com/boostorg/boost/releases/download/boost-1.91.0-1/boost-1.91.0-1-cmake.tar.gz
   USES_TERMINAL_DOWNLOAD TRUE
-  GIT_PROGRESS TRUE
+  DOWNLOAD_EXTRACT_TIMESTAMP ON
   DOWNLOAD_NO_EXTRACT FALSE
+  GIT_PROGRESS TRUE
 )
 FetchContent_MakeAvailable(Boost)
 
 target_link_libraries(amsimcpp INTERFACE Boost::math Boost::algorithm)
 
 # Eigen
-message(STATUS "Downloading and extracting Eigen library sources.")
-
 FetchContent_Declare(
   Eigen
   GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
@@ -78,8 +75,6 @@ FetchContent_MakeAvailable(Eigen)
 target_link_libraries(amsimcpp INTERFACE Eigen3::Eigen)
 
 # HighFive
-message(STATUS "Downloading and extracting HighFive library sources.")
-
 FetchContent_Declare(
   HighFive
   GIT_REPOSITORY https://github.com/highfive-devs/highfive.git
@@ -94,6 +89,18 @@ set(HIGHFIVE_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(HighFive)
 
 target_link_libraries(amsimcpp INTERFACE HighFive::HighFive)
+
+# tomlplusplus
+FetchContent_Declare(
+    tomlplusplus
+    GIT_REPOSITORY https://github.com/marzer/tomlplusplus.git
+    GIT_TAG v3.4.0
+    USES_TERMINAL_DOWNLOAD TRUE
+    DOWNLOAD_EXTRACT_TIMESTAMP ON
+)
+FetchContent_MakeAvailable(tomlplusplus)
+
+target_link_libraries(amsimcpp INTERFACE tomlplusplus::tomlplusplus)
 
 # include(FetchContent)
 # set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
