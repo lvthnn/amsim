@@ -1,7 +1,7 @@
 #pragma once
 
 #include <amsim/core.h>
-#include <amsim/io.h>
+#include <amsim/io/writer.h>
 #include <amsim/sample/proband.h>
 
 #include <Eigen/Dense>
@@ -72,11 +72,21 @@ class SampleEstimatorStrategy {
 };
 
 template <Proband P>
-using SampleEstimator =
-    std::function<std::unique_ptr<SampleEstimatorStrategy<P>>(
-        const Params& params,
-        std::size_t n_probands,
-        const std::filesystem::path& sample_dir)>;
+struct SampleEstimator {
+  std::string name;
+  std::function<std::unique_ptr<SampleEstimatorStrategy<P>>(
+      const Params&,
+      std::size_t,
+      const std::filesystem::path&)>
+      fn;
+
+  std::unique_ptr<SampleEstimatorStrategy<P>> operator()(
+      const Params& params,
+      std::size_t n_probands,
+      const std::filesystem::path& sample_dir) const {
+    return fn(params, n_probands, sample_dir);
+  }
+};
 
 template <Proband P>
 using SampleEstimators = std::vector<SampleEstimator<P>>;
@@ -212,42 +222,50 @@ class SampleMateCor : public SampleEstimatorStrategy<P> {
 
 template <Proband P>
 inline SampleEstimator<P> SampleMeanEstimator() {
-  return [](const Params& params,
-            std::size_t /*n_probands*/,
-            const std::filesystem::path& sample_dir) {
-    return std::make_unique<SampleMean<P>>(
-        params, sample_dir.filename().string());
-  };
+  return SampleEstimator<P>{
+      .name = "sample-mean",
+      .fn = [](const Params& params,
+               std::size_t /*n_probands*/,
+               const std::filesystem::path& sample_dir) {
+        return std::make_unique<SampleMean<P>>(
+            params, sample_dir.filename().string());
+      }};
 }
 
 template <Proband P>
 inline SampleEstimator<P> SampleVarEstimator() {
-  return [](const Params& params,
-            std::size_t /*n_probands*/,
-            const std::filesystem::path& sample_dir) {
-    return std::make_unique<SampleVar<P>>(
-        params, sample_dir.filename().string());
-  };
+  return SampleEstimator<P>{
+      .name = "sample-var",
+      .fn = [](const Params& params,
+               std::size_t /*n_probands*/,
+               const std::filesystem::path& sample_dir) {
+        return std::make_unique<SampleVar<P>>(
+            params, sample_dir.filename().string());
+      }};
 }
 
 template <Proband P>
 inline SampleEstimator<P> SampleCovEstimator() {
-  return [](const Params& params,
-            std::size_t /*n_probands*/,
-            const std::filesystem::path& sample_dir) {
-    return std::make_unique<SampleCov<P>>(
-        params, sample_dir.filename().string());
-  };
+  return SampleEstimator<P>{
+      .name = "sample-cov",
+      .fn = [](const Params& params,
+               std::size_t /*n_probands*/,
+               const std::filesystem::path& sample_dir) {
+        return std::make_unique<SampleCov<P>>(
+            params, sample_dir.filename().string());
+      }};
 }
 
 template <Proband P>
 inline SampleEstimator<P> SampleMateCorEstimator() {
-  return [](const Params& params,
-            std::size_t n_probands,
-            const std::filesystem::path& sample_dir) {
-    return std::make_unique<SampleMateCor<P>>(
-        params, sample_dir.filename().string(), n_probands);
-  };
+  return SampleEstimator<P>{
+      .name = "sample-mate-cor",
+      .fn = [](const Params& params,
+               std::size_t n_probands,
+               const std::filesystem::path& sample_dir) {
+        return std::make_unique<SampleMateCor<P>>(
+            params, sample_dir.filename().string(), n_probands);
+      }};
 }
 
 }  // namespace amsim

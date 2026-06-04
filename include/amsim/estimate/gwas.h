@@ -3,7 +3,7 @@
 #include <amsim/core/params.h>
 #include <amsim/core/utils.h>
 #include <amsim/estimate/sample.h>
-#include <amsim/io.h>
+#include <amsim/io/writer.h>
 #include <amsim/sample/proband.h>
 
 #include <Eigen/Dense>

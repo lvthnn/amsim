@@ -3,7 +3,7 @@
 #include <amsim/core/params.h>
 #include <amsim/core/state.h>
 #include <amsim/core/utils.h>
-#include <amsim/io.h>
+#include <amsim/io/writer.h>
 #include <amsim/sample/proband.h>
 
 #include <Eigen/Dense>
@@ -50,9 +50,15 @@ class PopulationEstimatorStrategy {
   Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data_;
 };
 
-using PopulationEstimator =
-    std::function<std::unique_ptr<PopulationEstimatorStrategy>(
-        const Params& params)>;
+struct PopulationEstimator {
+  std::string name;
+  std::function<std::unique_ptr<PopulationEstimatorStrategy>(const Params&)> fn;
+
+  std::unique_ptr<PopulationEstimatorStrategy> operator()(
+      const Params& params) const {
+    return fn(params);
+  }
+};
 
 using PopulationEstimators = std::vector<PopulationEstimator>;
 
@@ -333,78 +339,102 @@ class EstimatorMateCor : public PopulationEstimatorStrategy {
 }  // namespace details
 
 inline PopulationEstimator PopulationGenotypeCov() {
-  return [](const Params& params) {
-    return std::make_unique<details::EstimatorGenotypeCov>(params);
-  };
+  return PopulationEstimator{
+      .name = "genotype-cov",
+      .fn = [](const Params& params) {
+        return std::make_unique<details::EstimatorGenotypeCov>(params);
+      }};
 }
 
 inline PopulationEstimator PopulationGenotypeMean() {
-  return [](const Params& params) {
-    return std::make_unique<details::EstimatorGenotypeMean>(params);
-  };
+  return PopulationEstimator{
+      .name = "genotype-mean",
+      .fn = [](const Params& params) {
+        return std::make_unique<details::EstimatorGenotypeMean>(params);
+      }};
 }
 
 inline PopulationEstimator PopulationGenotypeVar() {
-  return [](const Params& params) {
-    return std::make_unique<details::EstimatorGenotypeVar>(params);
-  };
+  return PopulationEstimator{
+      .name = "genotype-var",
+      .fn = [](const Params& params) {
+        return std::make_unique<details::EstimatorGenotypeVar>(params);
+      }};
 }
 
 inline PopulationEstimator PopulationGenotypeMAF() {
-  return [](const Params& params) {
-    return std::make_unique<details::EstimatorGenotypeMAF>(params);
-  };
+  return PopulationEstimator{
+      .name = "genotype-maf",
+      .fn = [](const Params& params) {
+        return std::make_unique<details::EstimatorGenotypeMAF>(params);
+      }};
 }
 
 inline PopulationEstimator PopulationGenotypeCor() {
-  return [](const Params& params) {
-    return std::make_unique<details::EstimatorGenotypeCor>(params);
-  };
+  return PopulationEstimator{
+      .name = "genotype-cor",
+      .fn = [](const Params& params) {
+        return std::make_unique<details::EstimatorGenotypeCor>(params);
+      }};
 }
 
 inline PopulationEstimator PopulationHeritability() {
-  return [](const Params& params) {
-    return std::make_unique<details::EstimatorHeritability>(params);
-  };
+  return PopulationEstimator{
+      .name = "heritability",
+      .fn = [](const Params& params) {
+        return std::make_unique<details::EstimatorHeritability>(params);
+      }};
 }
 
 inline PopulationEstimator PopulationComponentMean(
     Component type = Component::Total) {
-  return [type](const Params& params) {
-    return std::make_unique<details::EstimatorComponentMean>(params, type);
-  };
+  return PopulationEstimator{
+      .name = "pheno-mean-" + to_string(type),
+      .fn = [type](const Params& params) {
+        return std::make_unique<details::EstimatorComponentMean>(params, type);
+      }};
 }
 
 inline PopulationEstimator PopulationComponentVar(
     Component type = Component::Total) {
-  return [type](const Params& params) {
-    return std::make_unique<details::EstimatorComponentVar>(params, type);
-  };
+  return PopulationEstimator{
+      .name = "pheno-var-" + to_string(type),
+      .fn = [type](const Params& params) {
+        return std::make_unique<details::EstimatorComponentVar>(params, type);
+      }};
 }
 
 inline PopulationEstimator PopulationComponentCor(
     Component type_l = Component::Total,
     std::optional<Component> type_r = std::nullopt) {
-  return [type_l, type_r](const Params& params) {
-    return std::make_unique<details::EstimatorComponentCor>(
-        params, type_l, type_r);
-  };
+  return PopulationEstimator{
+      .name = "pheno-cor-" + to_string(type_l) + "-" +
+              to_string(type_r.value_or(type_l)),
+      .fn = [type_l, type_r](const Params& params) {
+        return std::make_unique<details::EstimatorComponentCor>(
+            params, type_l, type_r);
+      }};
 }
 
 inline PopulationEstimator PopulationComponentCov(
     Component type_l = Component::Total,
     std::optional<Component> type_r = std::nullopt) {
-  return [type_l, type_r](const Params& params) {
-    return std::make_unique<details::EstimatorComponentCov>(
-        params, type_l, type_r);
-  };
+  return PopulationEstimator{
+      .name = "pheno-cov-" + to_string(type_l) + "-" +
+              to_string(type_r.value_or(type_l)),
+      .fn = [type_l, type_r](const Params& params) {
+        return std::make_unique<details::EstimatorComponentCov>(
+            params, type_l, type_r);
+      }};
 }
 
 inline PopulationEstimator PopulationMateCor(
     Component type = Component::Total) {
-  return [type](const Params& params) {
-    return std::make_unique<details::EstimatorMateCor>(params, type);
-  };
+  return PopulationEstimator{
+      .name = "mate-cor-" + to_string(type),
+      .fn = [type](const Params& params) {
+        return std::make_unique<details::EstimatorMateCor>(params, type);
+      }};
 }
 
 // macro class to manage all estimators simultaneously in simulation loop
