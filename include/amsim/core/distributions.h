@@ -23,6 +23,9 @@ class RademacherDistribution {
  public:
   explicit RademacherDistribution() = default;
 
+  static constexpr std::string Name = "rademacher";
+  static constexpr std::size_t NParams = 0;
+
   static Eigen::VectorXd generate(std::size_t n) {
     Eigen::VectorXd random(n);
     rng::NormalPolar::fill(random.data(), n);
@@ -35,6 +38,9 @@ class UniformDistribution {
  public:
   explicit UniformDistribution(double lo = 0, double hi = 1)
       : lo_(lo), hi_(hi) {}
+
+  static constexpr std::string Name = "uniform";
+  static constexpr std::size_t NParams = 2;
 
   Eigen::VectorXd generate(std::size_t n) const {
     Eigen::VectorXd random(n);
@@ -54,6 +60,9 @@ class NormalDistribution {
   explicit NormalDistribution(double mean = 0, double stddev = 1)
       : mean_(mean), stddev_(stddev) {};
 
+  static constexpr std::string Name = "normal";
+  static constexpr std::size_t NParams = 2;
+
   Eigen::VectorXd generate(std::size_t n) const {
     Eigen::VectorXd random(n);
     rng::NormalPolar::fill(random.data(), n);
@@ -71,6 +80,9 @@ class BetaDistribution {
   explicit BetaDistribution(double alpha = 1, double beta = 1)
       : dist_(alpha, beta) {}
 
+  static constexpr std::string Name = "beta";
+  static constexpr std::size_t NParams = 2;
+
   Eigen::VectorXd generate(std::size_t n) const {
     return generate_dist(dist_, n);
   }
@@ -82,6 +94,9 @@ class BetaDistribution {
 class ExponentialDistribution {
  public:
   explicit ExponentialDistribution(double lambda) : dist_(lambda) {}
+
+  static constexpr std::string Name = "exponential";
+  static constexpr std::size_t NParams = 1;
 
   Eigen::VectorXd generate(std::size_t n) const {
     return generate_dist(dist_, n);
@@ -96,6 +111,9 @@ class GammaDistribution {
   explicit GammaDistribution(double shape, double scale)
       : dist_(shape, scale) {}
 
+  static constexpr std::string Name = "gamma";
+  static constexpr std::size_t NParams = 2;
+
   Eigen::VectorXd generate(std::size_t n) const {
     return generate_dist(dist_, n);
   }
@@ -109,6 +127,9 @@ class LaplaceDistribution {
   explicit LaplaceDistribution(double location, double scale)
       : dist_(location, scale) {}
 
+  static constexpr std::string Name = "laplace";
+  static constexpr std::size_t NParams = 2;
+
   Eigen::VectorXd generate(std::size_t n) const {
     return generate_dist(dist_, n);
   }
@@ -121,6 +142,9 @@ class StudentsTDistribution {
  public:
   explicit StudentsTDistribution(double df) : dist_(df) {}
 
+  static constexpr std::string Name = "students_t";
+  static constexpr std::size_t NParams = 1;
+
   Eigen::VectorXd generate(std::size_t n) const {
     return generate_dist(dist_, n);
   }
@@ -129,85 +153,66 @@ class StudentsTDistribution {
   boost::math::students_t_distribution<double> dist_;
 };
 
-using Distribution = std::function<Eigen::VectorXd(std::size_t)>;
+struct Distribution {
+  std::string name;
+  std::vector<double> params;
+  std::function<Eigen::VectorXd(std::size_t)> fn;
 
-inline Distribution make_distribution(
-    const std::string& dist_name,
+  Eigen::VectorXd operator()(std::size_t n) const { return fn(n); }
+};
+
+template <typename Dist, typename... Params>
+inline Distribution make_distribution(Params&&... params) {
+  if constexpr (std::is_same_v<Dist, RademacherDistribution>) {
+    return Distribution{
+        .name = Dist::Name, .params = {}, .fn = [](std::size_t n) {
+          return RademacherDistribution::generate(n);
+        }};
+  } else {
+    if (sizeof...(params) != Dist::NParams) {
+      throw std::runtime_error(std::format(
+          "Distribution {} requires {} parameters", Dist::Name, Dist::NParams));
+    }
+    Dist dist = Dist(std::forward<Params>(params)...);
+    return Distribution{
+        .name = Dist::Name,
+        .params = {static_cast<double>(params)...},
+        .fn = [dist](std::size_t n) { return dist.generate(n); }};
+  }
+}
+
+inline Distribution str_to_distribution(
+    const std::string& name,
     const std::vector<double>& params,
     bool is_probability = false) {
   // does the random variable assume values in the unit interval?
   if (is_probability) {
     std::vector<std::string> valid = {"uniform", "beta"};
-    if (std::ranges::find(valid, dist_name) == valid.end())
+    if (std::ranges::find(valid, name) == valid.end())
       throw std::runtime_error(
           "Distributions for [0,1]-supported random variables must be one of "
           "'uniform(0,1)' or 'beta(a,b)'");
-    if (dist_name == "uniform" && (params[0] < 0 || params[1] > 1 ||
-        params[0] >= params[1]))
+    if (name == "uniform" &&
+        (params[0] < 0 || params[1] > 1 || params[0] >= params[1]))
       throw std::runtime_error(
           "[0,1]-supported random variable with uniform distribution must have "
           "0 <= lo < hi <= 1");
   }
-  if (dist_name == "rademacher") {
-    return [](std::size_t n) {
-      return amsim::RademacherDistribution::generate(n);
-    };
-  }
-  if (dist_name == "uniform") {
-    if (params.size() != 2)
-      throw std::runtime_error("Uniform distribution requires two parameters");
-    return [dist = UniformDistribution(params[0], params[1])](std::size_t n) {
-      return dist.generate(n);
-    };
-  }
-  if (dist_name == "beta") {
-    if (params.size() != 2)
-      throw std::runtime_error("Beta distribution requires two parameters");
-    return [dist = BetaDistribution(params[0], params[1])](std::size_t n) {
-      return dist.generate(n);
-    };
-  }
-  if (dist_name == "exponential") {
-    if (params.size() != 1)
-      throw std::runtime_error(
-          "Exponential distribution requires one parameter");
-    return [dist = ExponentialDistribution(params[0])](std::size_t n) {
-      return dist.generate(n);
-    };
-  }
-  if (dist_name == "gamma") {
-    if (params.size() != 2)
-      throw std::runtime_error("Gamma distribution requires two parameters");
-    return [dist = GammaDistribution(params[0], params[1])](std::size_t n) {
-      return dist.generate(n);
-    };
-  }
-  if (dist_name == "normal") {
-    if (params.size() != 2)
-      throw std::runtime_error("Normal distribution requires two parameters");
-    if (params[1] <= 0)
-      throw std::runtime_error(
-          "Standard deviance must be positive in normal distribution");
-    return [dist = NormalDistribution(params[0], params[1])](std::size_t n) {
-      return dist.generate(n);
-    };
-  }
-  if (dist_name == "laplace") {
-    if (params.size() != 2)
-      throw std::runtime_error("Laplace distribution requires two parameters");
-    return [dist = LaplaceDistribution(params[0], params[1])](std::size_t n) {
-      return dist.generate(n);
-    };
-  }
-  if (dist_name == "students_t") {
-    if (params.size() != 1)
-      throw std::runtime_error(
-          "Student's t distribution requires one parameter");
-    return [dist = StudentsTDistribution(params[0])](std::size_t n) {
-      return dist.generate(n);
-    };
-  }
-  throw std::runtime_error(std::format("Unknown distribution {}", dist_name));
+  if (name == "uniform")
+    return make_distribution<UniformDistribution>(params[0], params[1]);
+  if (name == "beta")
+    return make_distribution<BetaDistribution>(params[0], params[1]);
+  if (name == "exponential")
+    return make_distribution<ExponentialDistribution>(params[0]);
+  if (name == "gamma")
+    return make_distribution<GammaDistribution>(params[0], params[1]);
+  if (name == "normal")
+    return make_distribution<NormalDistribution>(params[0], params[1]);
+  if (name == "laplace")
+    return make_distribution<LaplaceDistribution>(params[0], params[1]);
+  if (name == "students_t")
+    return make_distribution<StudentsTDistribution>(params[0]);
+  throw std::runtime_error(std::format("Unknown distribution {}", name));
 }
 
 }  // namespace amsim
