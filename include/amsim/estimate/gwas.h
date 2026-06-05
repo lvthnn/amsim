@@ -256,18 +256,20 @@ inline SampleEstimator<P> SampleGWASEstimator(
     std::string name = "gwas",
     std::size_t n_pcs = 0,
     double pval_threshold = 5e-8) {
-  return [name = std::move(name), n_pcs, pval_threshold](
-             const Params& params,
-             std::size_t /*n_probands*/,
-             const std::filesystem::path& sample_dir) {
-    return std::make_unique<GWASEstimator<P>>(
-        params,
-        sample_dir.filename().string(),
-        sample_dir,
-        name,
-        n_pcs,
-        pval_threshold);
-  };
+  return SampleEstimator<P>{
+      .name = name,
+      .fn = [name = std::move(name), n_pcs, pval_threshold](
+                const Params& params,
+                std::size_t /*n_probands*/,
+                const std::filesystem::path& sample_dir) {
+        return std::make_unique<GWASEstimator<P>>(
+            params,
+            sample_dir.filename().string(),
+            sample_dir,
+            name,
+            n_pcs,
+            pval_threshold);
+      }};
 }
 
 }  // namespace amsim

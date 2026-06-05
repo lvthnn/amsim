@@ -93,13 +93,15 @@ class GREMLEstimator : public SampleEstimatorStrategy<P> {
 
 template <Proband P>
 inline SampleEstimator<P> SampleGREMLEstimator(std::string name = "greml") {
-  return [name = std::move(name)](
-             const Params& params,
-             std::size_t /*n_probands*/,
-             const std::filesystem::path& sample_dir) {
-    return std::make_unique<GREMLEstimator<P>>(
-        params, sample_dir.filename().string(), sample_dir, name);
-  };
+  return SampleEstimator<P>{
+      .name = name,
+      .fn = [name = std::move(name)](
+                const Params& params,
+                std::size_t /*n_probands*/,
+                const std::filesystem::path& sample_dir) {
+        return std::make_unique<GREMLEstimator<P>>(
+            params, sample_dir.filename().string(), sample_dir, name);
+      }};
 }
 
 }  // namespace amsim
