@@ -34,8 +34,10 @@ jobs:
       - name: Build
         run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
 
+      - name: Package CLI binary
+        run: tar -czf amsim-${{github.ref_name}}-${{matrix.os}}.tar.gz -C ${{github.workspace}}/build amsim
+
       - name: Upload CLI binary
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{github.workspace}}/build/amsim
-          name: amsim-${{github.ref_name}}-${{matrix.os}}
+          files: amsim-${{github.ref_name}}-${{matrix.os}}.tar.gz
