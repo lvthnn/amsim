@@ -29,13 +29,14 @@ if (APPLE)
   target_link_libraries(amsimcpp INTERFACE ${ACCELERATE_FRAMEWORK})
   target_compile_definitions(amsimcpp INTERFACE ACCELERATE_NEW_LAPACK)
 else()
-  include_directories("/usr/include/openblas")
+  set(BLA_STATIC ON)
   find_package(BLAS REQUIRED)
   find_package(LAPACK REQUIRED)
   target_link_libraries(amsimcpp INTERFACE BLAS::BLAS LAPACK::LAPACK)
 endif()
 
 # HDF5 support
+set(HDF5_USE_STATIC_LIBRARIES ON)
 find_package(HDF5 REQUIRED COMPONENTS C)
 target_link_libraries(amsimcpp INTERFACE HDF5::HDF5)
 
@@ -119,14 +120,6 @@ target_link_libraries(amsimcpp INTERFACE tomlplusplus::tomlplusplus)
 target_compile_definitions(amsimcpp INTERFACE EIGEN_USE_BLAS EIGEN_USE_LAPACK)
 target_compile_definitions(amsimcpp INTERFACE HIGHFIVE_USE_EIGEN)
 
-# Examples
-option(BUILD_EXAMPLES "Build example applications" OFF)
-
-if (BUILD_EXAMPLES)
-  add_executable(demo_simulation examples/demo_simulation.cc)
-  target_link_libraries(demo_simulation PRIVATE amsimcpp)
-endif()
-
 # The CLI tool
 option(BUILD_EXECUTABLE "Build the amsim CLI tool" ON)
 
@@ -137,6 +130,6 @@ if (BUILD_EXECUTABLE)
     AMSIM_VERSION="${PROJECT_VERSION}"
     AMSIM_ARCH="${CMAKE_SYSTEM_PROCESSOR}"
     AMSIM_BUILD_TYPE="${CMAKE_BUILD_TYPE}"
-    AMSIM_COMPILER="${CMAKE_CXX_COMPILER_ID} {CMAKE_CXX_COMPILER_VERSION}"
+    AMSIM_COMPILER="${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}"
   )
 endif()
