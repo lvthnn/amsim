@@ -1,10 +1,14 @@
 #pragma once
 
-#include <amsim/core.h>
+#include <amsim/core/params.h>
+#include <amsim/core/state.h>
 #include <amsim/estimate.h>
-#include <amsim/sample.h>
+#include <amsim/io/parse.h>
+#include <amsim/sample/member.h>
+#include <amsim/sample/proband.h>
 
 #include <filesystem>
+#include <optional>
 #include <variant>
 
 namespace amsim {
@@ -22,26 +26,14 @@ auto get_prefix = [](auto member_enum) -> std::string_view {
 
 }  // namespace details
 
-inline WeightFunction Uniform() {
-  return [](const Eigen::MatrixXd& /*agg*/, Eigen::VectorXd& res) {
-    res.setConstant(1.0);
-  };
-}
-
-inline WeightFunction Logistic(const Eigen::VectorXd& effects) {
-  return [effects](const Eigen::MatrixXd& agg, Eigen::VectorXd& res) {
-    res = 1.0 / (1.0 + (-agg * effects).array().exp());
-  };
-}
-
-struct SampleDescription {
+struct SampleDecl {
   std::string name;
   std::string proband_type;
   std::size_t n_probands;
-  std::vector<std::string> on;
-  std::vector<std::string> of;
-  std::string agg = "identity";
-  std::string weight_function = "uniform()";
+  std::optional<std::vector<std::string>> on;
+  std::optional<std::vector<std::string>> of;
+  std::optional<std::string> agg;
+  std::optional<std::string> weight_function;
   std::vector<std::string> estimators;
 };
 
@@ -60,16 +52,67 @@ struct Sample {
   bool decompress_genotypes = false;
 
   // weighting method — probability of selecting based on proband aggregate
-  WeightFunction weighting;
+  WeightFunction weighting = Uniform();
 
   // estimators are declared here
   SampleEstimators<P> estimators;
+
+  void attach_estimator(const SampleEstimatorDecl& decl) {
+    estimators.push_back(make_sample_estimator<P>(decl));
+  }
 };
 
 using SampleSpec = std::variant<
     Sample<Proband::Individual>,
     Sample<Proband::Mate>,
     Sample<Proband::Family>>;
+
+template <Proband P>
+inline Sample<P> make_sample(const SampleDecl& decl) {
+  Sample<P> sample;
+  sample.name = decl.name;
+  sample.n_probands = decl.n_probands;
+  if (decl.on.has_value()) sample.on = decl.on.value();
+  if (decl.of.has_value()) sample.of = parse_proband<P>(decl.of.value());
+  if (decl.agg.has_value())
+    sample.agg = Aggregator_from_string(decl.agg.value());
+  if (decl.weight_function.has_value())
+    sample.weighting = parse_weight_function(decl.weight_function.value());
+  return sample;
+}
+
+inline SampleSpec build_sample(const SampleDecl& decl) {
+  if (decl.proband_type == "individual")
+    return make_sample<Proband::Individual>(decl);
+  if (decl.proband_type == "family") return make_sample<Proband::Family>(decl);
+  if (decl.proband_type == "mate") return make_sample<Proband::Mate>(decl);
+  throw std::runtime_error("Invalid Proband type " + decl.proband_type);
+}
+
+inline std::vector<SampleSpec> build_samples(
+    const std::vector<SampleDecl>& decl,
+    const std::vector<SampleEstimatorDecl>& estimator_decl) {
+  std::vector<SampleSpec> samples;
+  for (const auto& sample_decl : decl) {
+    SampleSpec sample = build_sample(sample_decl);
+    for (const auto& estimator : sample_decl.estimators) {
+      auto it = std::ranges::find_if(
+          estimator_decl, [&](const SampleEstimatorDecl& decl) {
+            return decl.name == estimator;
+          });
+
+      if (it == estimator_decl.end())
+        throw std::runtime_error(
+            "Sample estimator " + estimator + " attached to sample " +
+            sample_decl.name + " not found");
+
+      std::visit(
+          [&](auto& sample) { sample.attach_estimator(*it); }, sample);
+    }
+    samples.push_back(std::move(sample));
+  }
+  return samples;
+}
 
 class Sampler {
  public:
@@ -455,8 +498,10 @@ class ComputeSampleEstimates {
   ComputeSampleEstimates(
       const Params& params, const std::vector<SampleSpec>& samples) {
     for (const auto& sample : samples)
-      estimators_.emplace_back(std::visit(
-          [&params](auto&& spec) { return Sampler(spec, params); }, sample));
+      estimators_.emplace_back(
+          std::visit(
+              [&params](auto&& spec) { return Sampler(spec, params); },
+              sample));
   }
 
   void operator()(const State& state);
