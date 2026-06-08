@@ -1,15 +1,13 @@
 #pragma once
 
+#include <amsim/core/generation.h>
 #include <amsim/core/params.h>
-#include <amsim/core/state.h>
+#include <amsim/core/utils.h>
+#include <amsim/sample/weight.h>
+
+#include <boost/algorithm/string/case_conv.hpp>
 
 namespace amsim {
-
-// which generation the probands are in
-enum class Generation { Current, Parents };
-
-// proband member sex
-enum class Sex : uint8_t { Unknown = 0, Male = 1, Female = 2 };
 
 // proband types — these define the unit of sampling
 enum class Proband { Individual, Mate, Family };
@@ -79,7 +77,16 @@ constexpr Family operator|(Family a, Family b) {
 
 // aggregator types — functions to reduce a proband subtype into a statistics
 // that can enter into a sampling probability transformer
-enum class Aggregator { Max, Mean, Min, Identity };
+enum class Aggregator { Max, Min, Mean, Identity };
+
+inline Aggregator Aggregator_from_string(const std::string& s) {
+  std::string l = boost::to_lower_copy(s);
+  if (l == "max") return Aggregator::Max;
+  if (l == "min") return Aggregator::Min;
+  if (l == "mean") return Aggregator::Mean;
+  if (l == "identity") return Aggregator::Identity;
+  throw std::runtime_error("Unknown aggregator type" + l);
+}
 
 // declares member information
 template <typename ProbandEnum>
@@ -107,6 +114,11 @@ struct ProbandData<Proband::Individual> {
        .generation = Generation::Current,
        .sex = Sex::Unknown}};
   static constexpr Aggregator AggDefault = Aggregator::Identity;
+  static ProbandEnum from_string(const std::string& s) {
+    std::string l = boost::to_lower_copy(s);
+    if (l == "self") return Individual::Self;
+    throw std::runtime_error("Unknown Individual proband member " + s);
+  }
 };
 
 template <>
@@ -151,6 +163,25 @@ struct ProbandData<Proband::Mate> {
        .generation = Generation::Parents,
        .sex = Sex::Female}};
   static constexpr Aggregator AggDefault = Aggregator::Mean;
+  static ProbandEnum from_string(const std::string& s) {
+    std::string l = boost::to_lower_copy(s);
+    if (l == "husband") return Mate::Husband;
+    if (l == "wife") return Mate::Wife;
+    if (l == "husbandfather") return Mate::HusbandFather;
+    if (l == "husbandmother") return Mate::HusbandMother;
+    if (l == "wifefather") return Mate::WifeFather;
+    if (l == "wifemother") return Mate::WifeMother;
+    if (l == "all") return Mate::All;
+    if (l == "couple") return Mate::Couple;
+    if (l == "husbandinlaws") return Mate::HusbandInLaws;
+    if (l == "wifeinlaws") return Mate::WifeInLaws;
+    if (l == "parents") return Mate::Parents;
+    if (l == "husbandfamily") return Mate::HusbandFamily;
+    if (l == "wifefamily") return Mate::WifeFamily;
+    if (l == "males") return Mate::Males;
+    if (l == "females") return Mate::Females;
+    throw std::runtime_error("Unknown Mate proband member " + l);
+  }
 };
 
 template <>
@@ -196,11 +227,42 @@ struct ProbandData<Proband::Family> {
        .sex = Sex::Female},
   };
   static constexpr Aggregator AggDefault = Aggregator::Mean;
+  static ProbandEnum from_string(const std::string& s) {
+    std::string l = boost::to_lower_copy(s);
+    if (l == "father") return Family::Father;
+    if (l == "mother") return Family::Mother;
+    if (l == "son") return Family::Son;
+    if (l == "daughter") return Family::Daughter;
+    if (l == "sonwife") return Family::SonWife;
+    if (l == "daughterhusband") return Family::DaughterHusband;
+    if (l == "all") return Family::All;
+    if (l == "parents") return Family::Parents;
+    if (l == "sibling") return Family::Siblings;
+    if (l == "males") return Family::Males;
+    if (l == "females") return Family::Females;
+    throw std::runtime_error("Unknown Family proband member " + l);
+  }
 };
 
-// weighting functions are functions that act on aggregate proband data
-// and return
-using WeightFunction =
-    std::function<void(const Eigen::MatrixXd&, Eigen::VectorXd&)>;
+template <Proband P>
+typename ProbandData<P>::ProbandEnum parse_proband(
+    const std::vector<std::string>& probands_str) {
+  using ProbandEnum = typename ProbandData<P>::ProbandEnum;
+  std::vector<ProbandEnum> probands(probands_str.size());
+
+  if (probands.empty())
+    throw std::runtime_error("Empty proband string supplied");
+
+  std::ranges::transform(
+      probands_str, probands.begin(), [](const std::string& s) {
+        return ProbandData<P>::from_string(s);
+      });
+
+  return std::accumulate(
+      probands.begin() + 1,
+      probands.end(),
+      probands[0],
+      [](const ProbandEnum& a, ProbandEnum b) { return a | b; });
+}
 
 }  // namespace amsim
