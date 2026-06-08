@@ -32,6 +32,8 @@ void display_help_short() {
   std::string help_str = R"(
   amsim <option(s)>
   amsim --config <config_file> <option(s)>
+  amsim --template <config_path>
+  amsim --template-cmd
 
 To see all options, run "amsim --help".)";
 
@@ -76,7 +78,7 @@ phenome options:
   --pheno-env-cor [--value <vals> | --file <path> | --singular-values <svals>]
 
 mating options:
-  --mating {assortative|random}
+  --mating {assortative | random}
     --mate-cor [--value <vals> | --file <path> | --singular-values <svals>]
     --tol-inf <tol-inf>
     --max-itr <max-itr>
@@ -84,14 +86,18 @@ mating options:
     --temp-decay <tmp_decay>
 
 sampling and estimation options:
-  --estimator {genotype-mean | genotype-var | genotype-maf | genotype-cov |
-               genotype-cor | heritability | pheno-mean |pheno-mean-genetic |
-               pheno-mean-environ | pheno-var | pheno-var-genetic |
-               pheno-var-environ | pheno-cov | pheno-cov-genetic |
-               pheno-cov-environ | mate-cor | mate-cor-genetic |
-               mate-cor-environ}
+  --estimator {genotype-mean |
+               genotype-var |
+               genotype-maf |
+               genotype-cov |
+               genotype-cor |
+               heritability |
+               pheno-mean({genetic | environmental | vertical | total}) |
+               pheno-var({genetic | environmental | vertical | total}) |
+               pheno-cov({genetic | environmental | vertical | total}) |
+               mate-cor({genetic | environmental | vertical | total})}
   --sample-estimator <name>
-    --type {gwas-plink | haseman-elston | greml | external}
+    --type {gwas(<n_pcs>, <pval_thresh>) | haseman-elston | greml | external}
     --exec <exec_cmd>
     --n-rows <n_rows>
     --n-cols <n_cols>
@@ -201,44 +207,70 @@ enum Option {
   VirtualSingularValues
 };
 
-std::unordered_map<std::string, amsim::PopulationEstimator> estimators = {
-    {"genotype-mean", amsim::PopulationGenotypeMean()},
-    {"genotype-var", amsim::PopulationGenotypeVar()},
-    {"genotype-maf", amsim::PopulationGenotypeMAF()},
-    {"genotype-cov", amsim::PopulationGenotypeCov()},
-    {"genotype-cor", amsim::PopulationGenotypeCor()},
-    {"heritability", amsim::PopulationHeritability()},
-    {"pheno-mean", amsim::PopulationComponentMean()},
-    {"pheno-mean-genetic",
-     amsim::PopulationComponentMean(amsim::Component::Genetic)},
-    {"pheno-mean-environ",
-     amsim::PopulationComponentMean(amsim::Component::Environmental)},
-    {"pheno-var", amsim::PopulationComponentVar()},
-    {"pheno-var-genetic",
-     amsim::PopulationComponentVar(amsim::Component::Genetic)},
-    {"pheno-var-environ",
-     amsim::PopulationComponentVar(amsim::Component::Environmental)},
-    {"pheno-cor", amsim::PopulationComponentCor()},
-    {"pheno-cor-genetic",
-     amsim::PopulationComponentCor(amsim::Component::Genetic)},
-    {"pheno-cor-environ",
-     amsim::PopulationComponentCor(amsim::Component::Environmental)},
-    {"pheno-cov", amsim::PopulationComponentCov()},
-    {"pheno-cov-genetic",
-     amsim::PopulationComponentCov(amsim::Component::Genetic)},
-    {"pheno-cov-environ",
-     amsim::PopulationComponentCov(amsim::Component::Environmental)},
-    {"mate-cor", amsim::PopulationMateCor()},
-    {"mate-cor-genetic", amsim::PopulationMateCor(amsim::Component::Genetic)},
-    {"mate-cor-environ",
-     amsim::PopulationMateCor(amsim::Component::Environmental)}};
+std::unordered_map<
+    std::string,
+    std::function<amsim::PopulationEstimator(const std::vector<std::string>&)>>
+    estimators = {
+        {"genotype-mean",
+         [](const std::vector<std::string>& /*s*/) {
+           return amsim::PopulationGenotypeMean();
+         }},
+        {"genotype-var",
+         [](const std::vector<std::string>& /*s*/) {
+           return amsim::PopulationGenotypeVar();
+         }},
+        {"genotype-maf",
+         [](const std::vector<std::string>& /*s*/) {
+           return amsim::PopulationGenotypeMAF();
+         }},
+        {"genotype-cov",
+         [](const std::vector<std::string>& /*s*/) {
+           return amsim::PopulationGenotypeCov();
+         }},
+        {"genotype-cor",
+         [](const std::vector<std::string>& /*s*/) {
+           return amsim::PopulationGenotypeCor();
+         }},
+        {"heritability",
+         [](const std::vector<std::string>& /*s*/) {
+           return amsim::PopulationHeritability();
+         }},
+        {"pheno-mean",
+         [](const std::vector<std::string>& s) {
+           amsim::Component component = amsim::Component::Total;
+           if (!s.empty()) component = amsim::Component_from_string(s[0]);
+           return PopulationComponentMean(component);
+         }},
+        {"pheno-var",
+         [](const std::vector<std::string>& s) {
+           amsim::Component component = amsim::Component::Total;
+           if (!s.empty()) component = amsim::Component_from_string(s[0]);
+           return PopulationComponentMean(component);
+         }},
+        {"pheno-cor",
+         [](const std::vector<std::string>& s) {
+           amsim::Component component = amsim::Component::Total;
+           if (!s.empty()) component = amsim::Component_from_string(s[0]);
+           return PopulationComponentCor(component);
+         }},
+        {"pheno-cov",
+         [](const std::vector<std::string>& s) {
+           amsim::Component component = amsim::Component::Total;
+           if (!s.empty()) component = amsim::Component_from_string(s[0]);
+           return PopulationComponentCov(component);
+         }},
+        {"mate-cor", [](const std::vector<std::string>& s) {
+           amsim::Component component = amsim::Component::Total;
+           if (!s.empty()) component = amsim::Component_from_string(s[0]);
+           return PopulationMateCor(component);
+         }}};
 
 int main(int argc, char* argv[]) {
   try {
     if (argc == 1) {
       display_header();
       display_help_short();
-      exit(0);
+      exit(EXIT_SUCCESS);
     }
 
     Context context = Context::Global;
@@ -344,14 +376,14 @@ int main(int argc, char* argv[]) {
       switch (opt) {
         case 'v':
           display_version();
-          exit(0);
+          exit(EXIT_SUCCESS);
         case '?':
           throw std::runtime_error(
               std::format("Unrecognised option '{}'", argv[optind - 1]));
         case 'h':
           display_header();
           display_help();
-          exit(0);
+          exit(EXIT_SUCCESS);
       }
 
       // Global options
@@ -483,11 +515,16 @@ int main(int argc, char* argv[]) {
       switch (opt) {
         case Option::PopulationEstimatorDecl: {
           context = Context::PopulationEstimator;
-          auto est = estimators.find(optarg);
-          if (est == estimators.end())
+
+          auto [name, params] = amsim::parse_function(optarg);
+          auto it = estimators.find(name);
+
+          if (it == estimators.end())
             throw std::runtime_error(
-                std::format("Unknown estimator '{}'", optarg));
-          simulation.estimators.push_back(est->second);
+                "Could not find population estimator " + name);
+
+          simulation.estimators.push_back(estimators[name](params));
+
           continue;
         }
         case Option::SampleEstimatorDecl: {
@@ -496,10 +533,13 @@ int main(int argc, char* argv[]) {
           sample_estimator_decl.push_back(sample_est_desc);
           continue;
         }
-        case Option::SampleEstimatorType:
+        case Option::SampleEstimatorType: {
           check_context(Context::SampleEstimator, "--type");
-          sample_estimator_decl.back().type = optarg;
+          auto [name, params] = amsim::parse_function(optarg);
+          sample_estimator_decl.back().type = name;
+          if (!params.empty()) sample_estimator_decl.back().params = params;
           continue;
+        }
         case Option::SampleEstimatorExec:
           check_context(Context::SampleEstimator, "--exec");
           sample_estimator_decl.back().exec = optarg;
@@ -634,10 +674,8 @@ int main(int argc, char* argv[]) {
           continue;
         }
         case Option::VirtualDistribution: {
-          amsim::Distribution dist =
-              (context & Context::GenomeProbabilities)
-                  ? amsim::parse_distribution(optarg, true)
-                  : amsim::parse_distribution(optarg, false);
+          amsim::Distribution dist = amsim::parse_distribution(
+              optarg, (context & Context::GenomeProbabilities) != 0U);
 
           if (context == Context::GenomeInitMAFs)
             simulation.genome.v_maf = dist;
@@ -704,10 +742,9 @@ int main(int argc, char* argv[]) {
     }
 
     amsim::run_simulation(simulation, n_replicates, n_threads);
-
-    exit(0);
+    exit(EXIT_SUCCESS);
   } catch (const std::exception& e) {
     amsim::Log::error(e.what());
-    exit(1);
+    exit(EXIT_FAILURE);
   }
 }
