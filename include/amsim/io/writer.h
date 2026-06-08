@@ -268,6 +268,11 @@ inline void Writer::summarise() {
         std::format("{}/confint_hi", path_summary),
         HighFive::DataSpace({n_gens_, n_rows, n_cols}));
 
+    for (auto* ds : {&ds_mean, &ds_stderr, &ds_confint_lo, &ds_confint_hi}) {
+      ds->createAttribute("row_labels", row_labels);
+      ds->createAttribute("col_labels", col_labels);
+    }
+
     double t = 1;
 
     if (n_reps_ > 1) {
