@@ -1,18 +1,19 @@
 #include <amsim/core.h>
 #include <amsim/estimate.h>
 #include <amsim/init.h>
+#include <amsim/io/config.h>
+#include <amsim/io/parse.h>
 #include <amsim/simulation.h>
 #include <getopt.h>
 
 #include <Eigen/Dense>
-#include <algorithm>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
-#include <unordered_map>
 
 void display_version() {
-  std::string version_str = std::format("amsim v" AMSIM_VERSION " " AMSIM_ARCH
-                                        " (" AMSIM_BUILD_TYPE " build)");
+  std::string version_str = std::format(
+      "amsim v" AMSIM_VERSION " " AMSIM_ARCH " (" AMSIM_BUILD_TYPE
+      " build, " __DATE__ ")");
   std::cout << version_str << std::endl;
 }
 
@@ -25,6 +26,16 @@ void display_header() {
       "GNU General Public License v3");
 
   std::cout << header_str << std::endl;
+}
+
+void display_help_short() {
+  std::string help_str = R"(
+  amsim <option(s)>
+  amsim --config <config_file> <option(s)>
+
+To see all options, run "amsim --help".)";
+
+  std::cout << help_str << std::endl;
 }
 
 void display_help() {
@@ -45,7 +56,7 @@ global options:
   --output-dir <out_dir>
   --output-name <out_name>
   --log-level {debug | info | warning | error | none}
-  --save-config <path>
+  --save-config
   --log-to-output
 
 genome options:
@@ -149,6 +160,7 @@ enum Option {
   GlobalOutputName,
   GlobalLogLevel,
   GlobalLogNoFile,
+  GlobalSaveConfig,
   GenomeLocusInitMAFs,
   GenomeLocusRecombinationProbs,
   GenomeLocusMutationProbs,
@@ -221,206 +233,112 @@ std::unordered_map<std::string, amsim::PopulationEstimator> estimators = {
     {"mate-cor-environ",
      amsim::PopulationMateCor(amsim::Component::Environmental)}};
 
-std::vector<std::string> split_string(
-    const std::string& s, const std::string& delim = ",") {
-  std::vector<std::string> split;
-  boost::split(split, s, boost::is_any_of(delim));
-  return split;
-}
-
-// parsing functions
-
-Eigen::MatrixXd parse_matrix_value(const std::string& s) {
-  std::vector<std::string> rows = split_string(s, ";");
-  std::vector<std::vector<double>> matrix(rows.size());
-
-  for (std::size_t row = 0; row < rows.size(); ++row) {
-    std::vector<std::string> row_vals = split_string(rows[row]);
-    std::ranges::transform(
-        row_vals,
-        std::back_inserter(matrix[row]),
-        [](const std::string& s_val) { return std::stod(s_val); });
-  }
-
-  std::size_t n_rows = matrix.size();
-  std::size_t n_cols = matrix[0].size();
-
-  if (n_rows == 1) {
-    Eigen::VectorXd result(n_cols);
-    for (std::size_t col = 0; col < n_cols; ++col) result(col) = matrix[0][col];
-    return result;
-  }
-
-  Eigen::MatrixXd result(n_rows, n_cols);
-  for (std::size_t row = 0; row < n_rows; ++row)
-    for (std::size_t col = 0; col < n_cols; ++col)
-      result(row, col) = matrix[row][col];
-
-  return result;
-}
-
-Eigen::MatrixXd parse_matrix_file(const std::filesystem::path& path) {
-  std::ifstream file(path);
-  std::string contents(
-      (std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  return parse_matrix_value(contents);
-}
-
-// utility for singular value based matrix generation
-Eigen::MatrixXd random_orthogonal(std::size_t dim) {
-  Eigen::MatrixXd random = Eigen::MatrixXd::Random(dim, dim);
-  Eigen::HouseholderQR<Eigen::MatrixXd> qr(random);
-  return qr.householderQ();
-}
-
-Eigen::MatrixXd matrix_from_singular_values(
-    const std::string& s, bool symmetric = false) {
-  std::vector<std::string> vs = split_string(s);
-  std::size_t n_pheno = vs.size();
-  Eigen::MatrixXd u_mat;
-  Eigen::MatrixXd v_mat;
-
-  Eigen::VectorXd singular_values(n_pheno);
-  std::ranges::transform(
-      vs, singular_values.begin(), [](const std::string& s_val) {
-        return std::stod(s_val);
-      });
-
-  Eigen::MatrixXd s_mat = singular_values.asDiagonal();
-
-  u_mat = random_orthogonal(n_pheno);
-  if (!symmetric) v_mat = random_orthogonal(n_pheno);
-
-  return (symmetric) ? u_mat * s_mat * u_mat.transpose()
-                     : u_mat * s_mat * v_mat.transpose();
-}
-
-// function syntax
-
-amsim::Distribution parse_distribution(
-    const std::string& s, bool is_probability = false) {
-  int paren_begin = s.find('(');
-  int paren_end = s.find(')');
-  if (paren_begin == std::string::npos || paren_end == std::string::npos ||
-      paren_begin >= paren_end)
-    throw std::runtime_error("Invalid distribution form");
-
-  std::string dist_name = s.substr(0, paren_begin);
-  std::string params_str =
-      s.substr(paren_begin + 1, paren_end - paren_begin - 1);
-  std::vector<std::string> params_str_vec = split_string(params_str);
-  std::vector<double> params(params_str_vec.size());
-
-  if (!params_str.empty())
-    std::ranges::transform(
-        params_str_vec, params.begin(), [](const std::string& s) {
-          return std::stod(s);
-        });
-
-  boost::to_lower(dist_name);
-
-  return amsim::make_distribution(dist_name, params, is_probability);
-}
-
 int main(int argc, char* argv[]) {
-  if (argc == 1) {
-    display_header();
-    display_help();
-    exit(0);
-  }
-
-  Context context = Context::Global;
-  amsim::Simulation simulation;
-
-  std::size_t n_replicates = 1;
-  std::size_t n_threads = 1;
-
-  std::vector<amsim::SampleDescription> sample_descriptions;
-  std::vector<amsim::SampleEstimatorDescription> sample_est_descriptions;
-
-  int opt;
-
-  // NOLINTBEGIN(modernize-use-designated-initializers)
-  struct option long_opts[] = {
-      // Basic options
-      {"help", no_argument, nullptr, 'h'},
-      {"version", no_argument, nullptr, 'v'},
-      // global options
-      {"n-individuals", required_argument, nullptr, GlobalNumIndividuals},
-      {"n-generations", required_argument, nullptr, GlobalNumGenerations},
-      {"n-replicates", required_argument, nullptr, GlobalNumReplicates},
-      {"n-threads", required_argument, nullptr, GlobalNumThreads},
-      {"random-seed", required_argument, nullptr, GlobalRandomSeed},
-      {"out-dir", required_argument, nullptr, GlobalOutputDirectory},
-      {"out-name", required_argument, nullptr, GlobalOutputName},
-      {"output-dir", required_argument, nullptr, GlobalOutputDirectory},
-      {"output-name", required_argument, nullptr, GlobalOutputName},
-      {"log-to-output", no_argument, nullptr, GlobalLogNoFile},
-      {"log-level", required_argument, nullptr, GlobalLogLevel},
-      // Genome options
-      {"loc-maf", no_argument, nullptr, GenomeLocusInitMAFs},
-      {"loc-rec", no_argument, nullptr, GenomeLocusRecombinationProbs},
-      {"loc-mut", no_argument, nullptr, GenomeLocusMutationProbs},
-      {"locus-maf", no_argument, nullptr, GenomeLocusInitMAFs},
-      {"locus-rec", no_argument, nullptr, GenomeLocusRecombinationProbs},
-      {"locus-mut", no_argument, nullptr, GenomeLocusMutationProbs},
-      // Phenotype options
-      {"phenotype", required_argument, nullptr, PhenotypeDecl},
-      {"var-genetic", required_argument, nullptr, PhenotypeVarGenetic},
-      {"var-environmental",
-       required_argument,
-       nullptr,
-       PhenotypeVarEnvironmental},
-      {"var-vertical", required_argument, nullptr, PhenotypeVarVertical},
-      {"effects", no_argument, nullptr, PhenotypeLocusEffects},
-      {"loci", no_argument, nullptr, PhenotypeLocusIndices},
-      {"pheno-gen-cor", no_argument, nullptr, PhenotypeGeneticCor},
-      {"pheno-env-cor", no_argument, nullptr, PhenotypeEnvironmentalCor},
-      {"pheno-genetic-cor", no_argument, nullptr, PhenotypeGeneticCor},
-      {"pheno-environmental-cor",
-       no_argument,
-       nullptr,
-       PhenotypeEnvironmentalCor},
-      // Mating options
-      {"mating", required_argument, nullptr, MatingDecl},
-      {"mate-cor", no_argument, nullptr, MatingCor},
-      {"tol-inf", required_argument, nullptr, MatingErrorTolerance},
-      {"max-itr", required_argument, nullptr, MatingMaxIterations},
-      {"temp-init", required_argument, nullptr, MatingAnnealingTempInit},
-      {"temp-decay", required_argument, nullptr, MatingAnnealingTempDecay},
-      // Population estimator options
-      {"estimator", required_argument, nullptr, PopulationEstimatorDecl},
-      // Sample options
-      {"sample", required_argument, nullptr, SampleDecl},
-      {"proband", required_argument, nullptr, SampleProbandType},
-      {"n-probands", required_argument, nullptr, SampleNumProbands},
-      {"weight", required_argument, nullptr, SampleWeightFunction},
-      {"on", required_argument, nullptr, SampleWeightOnPhenotypes},
-      {"of", required_argument, nullptr, SampleWeightOfMembers},
-      {"agg", required_argument, nullptr, SampleWeightAggregation},
-      // Sample estimator options
-      {"sample-estimator", required_argument, nullptr, SampleEstimatorDecl},
-      {"type", required_argument, nullptr, SampleEstimatorType},
-      {"exec", required_argument, nullptr, SampleEstimatorExec},
-      {"n-rows", required_argument, nullptr, SampleEstimatorNumRows},
-      {"n-cols", required_argument, nullptr, SampleEstimatorNumCols},
-      // Virtual (context-sensitive) options
-      {"n-loci", required_argument, nullptr, VirtualNumLoci},
-      {"file", required_argument, nullptr, VirtualFile},
-      {"dist", required_argument, nullptr, VirtualDistribution},
-      {"value", required_argument, nullptr, VirtualValue},
-      {"singular-values", required_argument, nullptr, VirtualSingularValues},
-      {nullptr, 0, nullptr, 0}};
-  // NOLINTEND(modernize-use-designated-initializers)
-
-  std::function check_context = [&](Context expected, std::string_view flag) {
-    if (context_domain(context) != expected)
-      throw std::runtime_error(
-          std::format("Unexpected flag '{}' in current context", flag));
-  };
-
-  // NOLINTBEGIN(bugprone-switch-missing-default-case)
   try {
+    if (argc == 1) {
+      display_header();
+      display_help_short();
+      exit(0);
+    }
+
+    Context context = Context::Global;
+    amsim::Simulation simulation;
+
+    std::size_t n_replicates = 1;
+    std::size_t n_threads = 1;
+
+    bool save_config = false;
+    std::filesystem::path config_path;
+
+    std::vector<amsim::SampleDecl> sample_decl;
+    std::vector<amsim::SampleEstimatorDecl> sample_estimator_decl;
+
+    int opt;
+
+    // NOLINTBEGIN(modernize-use-designated-initializers)
+    struct option long_opts[] = {
+        // Basic options
+        {"help", no_argument, nullptr, 'h'},
+        {"version", no_argument, nullptr, 'v'},
+        // global options
+        {"n-individuals", required_argument, nullptr, GlobalNumIndividuals},
+        {"n-generations", required_argument, nullptr, GlobalNumGenerations},
+        {"n-replicates", required_argument, nullptr, GlobalNumReplicates},
+        {"n-threads", required_argument, nullptr, GlobalNumThreads},
+        {"random-seed", required_argument, nullptr, GlobalRandomSeed},
+        {"out-dir", required_argument, nullptr, GlobalOutputDirectory},
+        {"out-name", required_argument, nullptr, GlobalOutputName},
+        {"output-dir", required_argument, nullptr, GlobalOutputDirectory},
+        {"output-name", required_argument, nullptr, GlobalOutputName},
+        {"log-to-output", no_argument, nullptr, GlobalLogNoFile},
+        {"log-level", required_argument, nullptr, GlobalLogLevel},
+        {"save-config", no_argument, nullptr, GlobalSaveConfig},
+        // Genome options
+        {"loc-maf", no_argument, nullptr, GenomeLocusInitMAFs},
+        {"loc-rec", no_argument, nullptr, GenomeLocusRecombinationProbs},
+        {"loc-mut", no_argument, nullptr, GenomeLocusMutationProbs},
+        {"locus-maf", no_argument, nullptr, GenomeLocusInitMAFs},
+        {"locus-rec", no_argument, nullptr, GenomeLocusRecombinationProbs},
+        {"locus-mut", no_argument, nullptr, GenomeLocusMutationProbs},
+        // Phenotype options
+        {"phenotype", required_argument, nullptr, PhenotypeDecl},
+        {"var-genetic", required_argument, nullptr, PhenotypeVarGenetic},
+        {"var-environmental",
+         required_argument,
+         nullptr,
+         PhenotypeVarEnvironmental},
+        {"var-vertical", required_argument, nullptr, PhenotypeVarVertical},
+        {"effects", no_argument, nullptr, PhenotypeLocusEffects},
+        {"loci", no_argument, nullptr, PhenotypeLocusIndices},
+        {"pheno-gen-cor", no_argument, nullptr, PhenotypeGeneticCor},
+        {"pheno-env-cor", no_argument, nullptr, PhenotypeEnvironmentalCor},
+        {"pheno-genetic-cor", no_argument, nullptr, PhenotypeGeneticCor},
+        {"pheno-environmental-cor",
+         no_argument,
+         nullptr,
+         PhenotypeEnvironmentalCor},
+        // Mating options
+        {"mating", required_argument, nullptr, MatingDecl},
+        {"mate-cor", no_argument, nullptr, MatingCor},
+        {"tol-inf", required_argument, nullptr, MatingErrorTolerance},
+        {"max-itr", required_argument, nullptr, MatingMaxIterations},
+        {"temp-init", required_argument, nullptr, MatingAnnealingTempInit},
+        {"temp-decay", required_argument, nullptr, MatingAnnealingTempDecay},
+        // Population estimator options
+        {"estimator", required_argument, nullptr, PopulationEstimatorDecl},
+        // Sample options
+        {"sample", required_argument, nullptr, SampleDecl},
+        {"proband", required_argument, nullptr, SampleProbandType},
+        {"n-probands", required_argument, nullptr, SampleNumProbands},
+        {"weight", required_argument, nullptr, SampleWeightFunction},
+        {"on", required_argument, nullptr, SampleWeightOnPhenotypes},
+        {"of", required_argument, nullptr, SampleWeightOfMembers},
+        {"agg", required_argument, nullptr, SampleWeightAggregation},
+        {"estimators", required_argument, nullptr, SampleEstimators},
+        // Sample estimator options
+        {"sample-estimator", required_argument, nullptr, SampleEstimatorDecl},
+        {"type", required_argument, nullptr, SampleEstimatorType},
+        {"exec", required_argument, nullptr, SampleEstimatorExec},
+        {"n-rows", required_argument, nullptr, SampleEstimatorNumRows},
+        {"n-cols", required_argument, nullptr, SampleEstimatorNumCols},
+        {"row-names", required_argument, nullptr, SampleEstimatorRowNames},
+        {"col-names", required_argument, nullptr, SampleEstimatorColNames},
+        // Virtual (context-sensitive) options
+        {"n-loci", required_argument, nullptr, VirtualNumLoci},
+        {"file", required_argument, nullptr, VirtualFile},
+        {"dist", required_argument, nullptr, VirtualDistribution},
+        {"value", required_argument, nullptr, VirtualValue},
+        {"singular-values", required_argument, nullptr, VirtualSingularValues},
+        {nullptr, 0, nullptr, 0}};
+    // NOLINTEND(modernize-use-designated-initializers)
+
+    auto check_context = [&](Context expected, std::string_view flag) {
+      if (context_domain(context) != expected)
+        throw std::runtime_error(
+            std::format("Unexpected flag '{}' in current context", flag));
+    };
+
+    // NOLINTBEGIN(bugprone-switch-missing-default-case)
     while ((opt = getopt_long(argc, argv, "hv", long_opts, nullptr)) != -1) {
       // Default options
       switch (opt) {
@@ -430,7 +348,6 @@ int main(int argc, char* argv[]) {
         case '?':
           throw std::runtime_error(
               std::format("Unrecognised option '{}'", argv[optind - 1]));
-          continue;
         case 'h':
           display_header();
           display_help();
@@ -474,6 +391,10 @@ int main(int argc, char* argv[]) {
         case Option::GlobalLogNoFile:
           context = Context::Global;
           simulation.log_to_file = false;
+          continue;
+        case Option::GlobalSaveConfig:
+          context = Context::Global;
+          save_config = true;
           continue;
       }
 
@@ -529,7 +450,12 @@ int main(int argc, char* argv[]) {
       // Mating configuration
       switch (opt) {
         case Option::MatingDecl:
-          context = Context::Mating;
+          if (std::string_view(optarg) == "random")
+            simulation.mating.type = "random";
+          if (std::string_view(optarg) == "assortative") {
+            context = Context::Mating;
+            simulation.mating.type = "assortative";
+          }
           continue;
         case Option::MatingCor:
           check_context(Context::Mating, "--mate-cor");
@@ -566,53 +492,70 @@ int main(int argc, char* argv[]) {
         }
         case Option::SampleEstimatorDecl: {
           context = Context::SampleEstimator;
-          amsim::SampleEstimatorDescription sample_est_desc{.name = optarg};
-          sample_est_descriptions.push_back(sample_est_desc);
+          amsim::SampleEstimatorDecl sample_est_desc{.name = optarg};
+          sample_estimator_decl.push_back(sample_est_desc);
           continue;
         }
         case Option::SampleEstimatorType:
           check_context(Context::SampleEstimator, "--type");
-          sample_est_descriptions.back().type = optarg;
+          sample_estimator_decl.back().type = optarg;
           continue;
         case Option::SampleEstimatorExec:
           check_context(Context::SampleEstimator, "--exec");
-          sample_est_descriptions.back().exec = optarg;
+          sample_estimator_decl.back().exec = optarg;
+          continue;
+        case Option::SampleEstimatorNumRows:
+          check_context(Context::SampleEstimator, "--n-rows");
+          sample_estimator_decl.back().n_rows = std::stoull(optarg);
+          continue;
+        case Option::SampleEstimatorNumCols:
+          check_context(Context::SampleEstimator, "--n-cols");
+          sample_estimator_decl.back().n_cols = std::stoull(optarg);
+          continue;
+        case Option::SampleEstimatorRowNames:
+          check_context(Context::SampleEstimator, "--row-names");
+          sample_estimator_decl.back().row_names =
+              amsim::utils::split_string(optarg);
+          continue;
+        case Option::SampleEstimatorColNames:
+          check_context(Context::SampleEstimator, "--col-names");
+          sample_estimator_decl.back().col_names =
+              amsim::utils::split_string(optarg);
           continue;
         case Option::SampleDecl: {
           context = Context::Sample;
-          amsim::SampleDescription sample_desc;
+          amsim::SampleDecl sample_desc;
           sample_desc.name = optarg;
-          sample_descriptions.push_back(sample_desc);
+          sample_decl.push_back(sample_desc);
           continue;
         }
         case Option::SampleProbandType:
-          check_context(Context::Sample, "--proband");
-          sample_descriptions.back().proband_type = optarg;
+          sample_decl.back().proband_type = optarg;
           continue;
         case Option::SampleNumProbands:
           check_context(Context::Sample, "--n-probands");
-          sample_descriptions.back().n_probands = std::stoull(optarg);
+          sample_decl.back().n_probands = std::stoull(optarg);
           continue;
         case Option::SampleWeightOnPhenotypes: {
           check_context(Context::Sample, "--on");
-          sample_descriptions.back().on = split_string(optarg);
+          sample_decl.back().on = amsim::utils::split_string(optarg);
           continue;
         }
         case Option::SampleWeightOfMembers:
           check_context(Context::Sample, "--of");
-          sample_descriptions.back().of = split_string(optarg);
+          sample_decl.back().of = amsim::utils::split_string(optarg);
           continue;
         case Option::SampleWeightAggregation:
           check_context(Context::Sample, "--agg");
-          sample_descriptions.back().agg = optarg;
+          sample_decl.back().agg = optarg;
           continue;
         case Option::SampleWeightFunction:
           check_context(Context::Sample, "--weight");
-          sample_descriptions.back().weight_function = optarg;
+          sample_decl.back().weight_function = optarg;
           continue;
         case Option::SampleEstimators:
           check_context(Context::Sample, "--estimators");
-          sample_descriptions.back().estimators = split_string(optarg);
+          sample_decl.back().estimators = amsim::utils::split_string(optarg);
           continue;
       }
 
@@ -629,74 +572,72 @@ int main(int argc, char* argv[]) {
           continue;
         }
         case Option::VirtualValue: {
-          Eigen::MatrixXd matrix = parse_matrix_value(optarg);
+          if (context == PhenotypeCausalLoci) {
+            std::vector<std::size_t> value = amsim::parse_indices(optarg);
+            simulation.phenotypes.back().causal_loci = value;
+            continue;
+          }
+
+          Eigen::MatrixXd matrix = amsim::parse_matrix_value(optarg);
           if (context == Context::GenomeInitMAFs)
-            simulation.genome.v_maf = matrix;
+            simulation.genome.v_maf = matrix(0);
           if (context == Context::GenomeRecombinationProbs)
-            simulation.genome.v_rec = matrix;
+            simulation.genome.v_rec = matrix(0);
           if (context == Context::GenomeMutationProbs)
-            simulation.genome.v_mut = matrix;
+            simulation.genome.v_mut = matrix(0);
           if (context == Context::PhenotypeGeneticCorrelation)
             simulation.genetic_component_cor = matrix;
           if (context == Context::PhenotypeEnvironmentalCorrelation)
             simulation.environmental_component_cor = matrix;
-          if (context == Context::PhenotypeCausalLoci) {
-            std::vector<std::size_t> loci(matrix.size());
-            std::transform(
-                matrix.data(),
-                matrix.data() + matrix.size(),
-                loci.begin(),
-                [](double v) { return static_cast<std::size_t>(v); });
-            simulation.phenotypes.back().causal_loci = loci;
-          }
           if (context == Context::MatingCorrelation)
             simulation.mating.mate_cor = matrix;
           continue;
         }
         case Option::VirtualFile: {
-          Eigen::MatrixXd matrix = parse_matrix_file(optarg);
-          if (context == Context::GenomeInitMAFs)
-            simulation.genome.v_maf = matrix;
-          if (context == Context::GenomeRecombinationProbs)
-            simulation.genome.v_rec = matrix;
-          if (context == Context::GenomeMutationProbs)
-            simulation.genome.v_mut = matrix;
-          if (context == Context::PhenotypeGeneticCorrelation)
-            simulation.genetic_component_cor = matrix;
-          if (context == Context::PhenotypeEnvironmentalCorrelation)
-            simulation.environmental_component_cor = matrix;
-          if (context == Context::PhenotypeCausalLoci) {
-            std::vector<std::size_t> loci(matrix.size());
-            std::transform(
-                matrix.data(),
-                matrix.data() + matrix.size(),
-                loci.begin(),
-                [](double v) { return static_cast<std::size_t>(v); });
-            simulation.phenotypes.back().causal_loci = loci;
+          if (context == PhenotypeCausalLoci) {
+            auto file = amsim::File<std::vector<std::size_t>>{.path = optarg};
+            simulation.phenotypes.back().causal_loci = file;
+            continue;
           }
+
+          auto file = amsim::File<Eigen::MatrixXd>{.path = optarg};
+          if (context == Context::GenomeInitMAFs)
+            simulation.genome.v_maf = file;
+          if (context == Context::GenomeRecombinationProbs)
+            simulation.genome.v_rec = file;
+          if (context == Context::GenomeMutationProbs)
+            simulation.genome.v_mut = file;
+          if (context == Context::PhenotypeGeneticCorrelation)
+            simulation.genetic_component_cor = file;
+          if (context == Context::PhenotypeEnvironmentalCorrelation)
+            simulation.environmental_component_cor = file;
           if (context == Context::MatingCorrelation)
-            simulation.mating.mate_cor = matrix;
+            simulation.mating.mate_cor = file;
           continue;
         }
         case Option::VirtualSingularValues: {
           if (context == Context::PhenotypeGeneticCorrelation) {
-            Eigen::MatrixXd matrix = matrix_from_singular_values(optarg, true);
+            Eigen::MatrixXd matrix =
+                amsim::utils::matrix_from_singular_values(optarg, true);
             simulation.genetic_component_cor = matrix;
           }
           if (context == Context::PhenotypeEnvironmentalCorrelation) {
-            Eigen::MatrixXd matrix = matrix_from_singular_values(optarg, true);
+            Eigen::MatrixXd matrix =
+                amsim::utils::matrix_from_singular_values(optarg, true);
             simulation.environmental_component_cor = matrix;
           }
           if (context == Context::MatingCorrelation) {
-            Eigen::MatrixXd matrix = matrix_from_singular_values(optarg);
+            Eigen::MatrixXd matrix =
+                amsim::utils::matrix_from_singular_values(optarg);
             simulation.mating.mate_cor = matrix;
           }
           continue;
         }
         case Option::VirtualDistribution: {
-          amsim::Distribution dist = (context & Context::GenomeProbabilities)
-                                         ? parse_distribution(optarg, true)
-                                         : parse_distribution(optarg, false);
+          amsim::Distribution dist =
+              (context & Context::GenomeProbabilities)
+                  ? amsim::parse_distribution(optarg, true)
+                  : amsim::parse_distribution(optarg, false);
 
           if (context == Context::GenomeInitMAFs)
             simulation.genome.v_maf = dist;
@@ -708,14 +649,62 @@ int main(int argc, char* argv[]) {
             simulation.phenotypes.back().effects = dist;
           continue;
         }
+      }
+      // NOLINTEND(bugprone-switch-missing-default-case)
+    }
 
-          exit(1);
-
-          // NOLINTEND(bugprone-switch-missing-default-case)
+    // validate sample estimator declarations
+    for (const auto& se : sample_estimator_decl) {
+      if (se.type == "external") {
+        if (!se.exec.has_value())
+          throw std::runtime_error(
+              std::format(
+                  "sample estimator '{}': type 'external' requires --exec",
+                  se.name));
+        if (!se.n_rows.has_value() || !se.n_cols.has_value())
+          throw std::runtime_error(
+              std::format(
+                  "sample estimator '{}': type 'external' requires --n-rows "
+                  "and --n-cols",
+                  se.name));
+      } else if (se.exec.has_value()) {
+        throw std::runtime_error(
+            std::format(
+                "sample estimator '{}': --exec is only valid for type "
+                "'external'",
+                se.name));
       }
     }
 
-    amsim::run_simulations(simulation, n_replicates, n_threads);
+    // error if any sample has no estimators
+    for (const auto& s : sample_decl)
+      if (s.estimators.empty())
+        throw std::runtime_error(
+            std::format("sample '{}' has no estimators declared", s.name));
+
+    std::vector<amsim::SampleSpec> samples =
+        amsim::build_samples(sample_decl, sample_estimator_decl);
+
+    simulation.samples = std::move(samples);
+
+    if (save_config) {
+      if (simulation.output_name.has_value())
+        config_path = simulation.output_dir /
+                      ("config_" + simulation.output_name.value() + ".toml");
+      else
+        config_path = simulation.output_dir / "config.toml";
+
+      amsim::write_config(
+          simulation,
+          n_replicates,
+          n_threads,
+          sample_decl,
+          sample_estimator_decl,
+          config_path);
+    }
+
+    amsim::run_simulation(simulation, n_replicates, n_threads);
+
     exit(0);
   } catch (const std::exception& e) {
     amsim::Log::error(e.what());
