@@ -28,11 +28,11 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
       : SampleEstimatorStrategy<P>(
             std::move(name),
             std::move(sample_name),
+            sample_dir,
             params.pheno.names,
             {"l2_effect", "fpr", "tpr", "pgs_r2", "pgs_rmse"},
             params.pheno.n_pheno,
             5),
-        sample_dir_(std::move(sample_dir)),
         n_pheno_(params.pheno.n_pheno),
         n_loc_(params.geno.n_loc),
         pval_threshold_(pval_threshold),
@@ -49,9 +49,7 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
       }
   }
 
-  void compute(
-      const Eigen::MatrixXd& /*phenotypes*/,
-      const Eigen::MatrixXd& /*genotypes*/) override {
+  void compute() override {
     runGWAS();
 
     for (std::size_t p = 0; p < n_pheno_; ++p) {
@@ -73,7 +71,6 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
   }
 
  private:
-  std::filesystem::path sample_dir_;
   std::size_t n_pheno_;
   std::size_t n_loc_;
   double pval_threshold_;
@@ -87,26 +84,26 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
     if (n_pcs_ > 0) {
       utils::system_throttled(std::format(
           "plink2 --bfile {} --pca approx {} --out {}",
-          (sample_dir_ / "data").string(),
+          (this->sample_dir_ / "data").string(),
           n_pcs_,
-          (sample_dir_ / (this->name_ + "_pca")).string()));
+          (this->sample_dir_ / (this->name_ + "_pca")).string()));
 
       utils::system_throttled(std::format(
           "plink2 --bfile {} --pheno {} --covar {} "
           "--glm --variance-standardize --no-psam-pheno "
           "--threads 1 --out {}",
-          (sample_dir_ / "data").string(),
-          (sample_dir_ / "data.pheno").string(),
-          (sample_dir_ / (this->name_ + "_pca.eigenvec")).string(),
-          (sample_dir_ / this->name_).string()));
+          (this->sample_dir_ / "data").string(),
+          (this->sample_dir_ / "data.pheno").string(),
+          (this->sample_dir_ / (this->name_ + "_pca.eigenvec")).string(),
+          (this->sample_dir_ / this->name_).string()));
     } else {
       utils::system_throttled(std::format(
           "plink2 --bfile {} --pheno {} --glm allow-no-covars "
           "--variance-standardize --no-psam-pheno "
           "--threads 1 --out {}",
-          (sample_dir_ / "data").string(),
-          (sample_dir_ / "data.pheno").string(),
-          (sample_dir_ / this->name_).string()));
+          (this->sample_dir_ / "data").string(),
+          (this->sample_dir_ / "data.pheno").string(),
+          (this->sample_dir_ / this->name_).string()));
     }
   }
 
@@ -115,7 +112,7 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
     Eigen::VectorXd pvals = Eigen::VectorXd::Ones(n_loc_);
 
     std::ifstream f(
-        sample_dir_ / std::format("{}.{}.glm.linear", this->name_, pheno_names_[p]));
+        this->sample_dir_ / std::format("{}.{}.glm.linear", this->name_, pheno_names_[p]));
 
     if (!f) return {betas, pvals};
 
@@ -153,11 +150,11 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
 
   std::pair<double, double> pgsMetrics(std::size_t p) {
     constexpr auto NaN = std::numeric_limits<double>::quiet_NaN();
-    auto glm = sample_dir_ /
+    auto glm = this->sample_dir_ /
                std::format("{}.{}.glm.linear", this->name_, pheno_names_[p]);
     auto score_file =
-        sample_dir_ / std::format("{}_score_{}.txt", this->name_, p);
-    auto pfix = sample_dir_ / std::format("{}_pgs_{}", this->name_, p);
+        this->sample_dir_ / std::format("{}_score_{}.txt", this->name_, p);
+    auto pfix = this->sample_dir_ / std::format("{}_pgs_{}", this->name_, p);
 
     {
       std::ifstream glm_in(glm);
@@ -199,12 +196,12 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
     utils::system_throttled(std::format(
         "plink2 --bfile {} --score {} 3 7 12 header "
         "--threads 1 --out {}",
-        (sample_dir_ / "data").string(),
+        (this->sample_dir_ / "data").string(),
         score_file.string(),
         pfix.string()));
 
     std::ifstream pgs_file(pfix.string() + ".sscore");
-    std::ifstream gen_file(sample_dir_ / "data.genetic.pheno");
+    std::ifstream gen_file(this->sample_dir_ / "data.genetic.pheno");
     if (!pgs_file || !gen_file) return {NaN, NaN};
 
     std::string pgs_line;

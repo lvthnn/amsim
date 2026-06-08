@@ -1,9 +1,9 @@
 #pragma once
 
 #include <amsim/core/utils.h>
+#include <amsim/estimate/sample.h>
 #include <amsim/io/parse.h>
 #include <amsim/sample/proband.h>
-#include <amsim/sample/sampler.h>
 
 #include <utility>
 
@@ -24,6 +24,7 @@ class ExternalEstimator : public SampleEstimatorStrategy<P> {
       : SampleEstimatorStrategy<P>(
             name,
             sample_name,
+            sample_dir,
             std::move(row_labels.value_or(std::vector<std::string>{})),
             std::move(col_labels.value_or(std::vector<std::string>{})),
             n_rows,
@@ -32,9 +33,7 @@ class ExternalEstimator : public SampleEstimatorStrategy<P> {
         bfile_(sample_dir / "data"),
         out_path_(sample_dir / std::format("results_{}", name)) {}
 
-  void compute(
-      const Eigen::MatrixXd& /*phenotypes*/,
-      const Eigen::MatrixXd& /*genotypes*/) override {
+  void compute() override {
     run_command();
     this->data_ = parse_matrix_file(out_path_);
   }
@@ -75,7 +74,7 @@ inline SampleEstimator<P> SampleExternalEstimator(
                 const std::filesystem::path& sample_dir) {
         return std::make_unique<ExternalEstimator<P>>(
             sample_dir.filename().string(),
-            sample_dir.string(),
+            sample_dir,
             name,
             exec,
             n_rows,

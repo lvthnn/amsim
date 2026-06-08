@@ -25,33 +25,31 @@ class HasemanElstonEstimator : public SampleEstimatorStrategy<P> {
       : SampleEstimatorStrategy<P>(
             std::move(name),
             std::move(sample_name),
+            sample_dir,
             params.pheno.names,
             std::vector<std::string>{"V(G)/Vp"},
             params.pheno.n_pheno,
             1),
-        sample_dir_(std::move(sample_dir)),
         n_pheno_(params.pheno.n_pheno) {
     utils::check_gcta64();
   }
 
-  void compute(
-      const Eigen::MatrixXd& /*phenotypes*/,
-      const Eigen::MatrixXd& /*genotypes*/) override {
-    if (!std::filesystem::exists(sample_dir_ / "grm.grm.bin")) {
+  void compute() override {
+    if (!std::filesystem::exists(this->sample_dir_ / "grm.grm.bin")) {
       utils::system_throttled(std::format(
           "gcta64 --bfile {} --make-grm --out {} "
           "--thread-num 1",
-          (sample_dir_ / "data").string(),
-          (sample_dir_ / "grm").string()));
+          (this->sample_dir_ / "data").string(),
+          (this->sample_dir_ / "grm").string()));
     }
 
     for (std::size_t p = 0; p < n_pheno_; ++p) {
-      auto pfix = sample_dir_ / std::format("he_{}", p);
+      auto pfix = this->sample_dir_ / std::format("he_{}", p);
       utils::system_throttled(std::format(
           "gcta64 --grm {} --pheno {} --mpheno {} --HEreg "
           "--out {} --thread-num 1",
-          (sample_dir_ / "grm").string(),
-          (sample_dir_ / "data.pheno").string(),
+          (this->sample_dir_ / "grm").string(),
+          (this->sample_dir_ / "data.pheno").string(),
           p + 1,
           pfix.string()));
 
@@ -60,7 +58,6 @@ class HasemanElstonEstimator : public SampleEstimatorStrategy<P> {
   }
 
  private:
-  std::filesystem::path sample_dir_;
   std::size_t n_pheno_;
 
   double parseHEreg(const std::string& path) {

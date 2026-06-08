@@ -1,13 +1,14 @@
 #pragma once
 
 #include <amsim/core.h>
+#include <amsim/io/parse.h>
 #include <amsim/io/writer.h>
 #include <amsim/sample/proband.h>
 
 #include <Eigen/Dense>
 #include <filesystem>
 #include <optional>
-#include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace amsim {
@@ -20,7 +21,7 @@ struct SampleEstimatorDecl {
   std::optional<std::size_t> n_cols;
   std::optional<std::vector<std::string>> row_names;
   std::optional<std::vector<std::string>> col_names;
-  std::unordered_map<std::string, std::string> params;
+  std::vector<std::string> params;
 };
 
 template <Proband P>
@@ -29,12 +30,14 @@ class SampleEstimatorStrategy {
   SampleEstimatorStrategy(
       std::string_view estimator_name,
       std::string_view sample_name,
+      std::filesystem::path sample_dir,
       std::vector<std::string> row_labels,
       std::vector<std::string> col_labels,
       std::size_t n_rows,
       std::size_t n_cols = 1)
       : name_(estimator_name),
         name_h5_(std::format("{}/{}", sample_name, estimator_name)),
+        sample_dir_(std::move(sample_dir)),
         row_labels_(std::move(row_labels)),
         col_labels_(std::move(col_labels)),
         n_rows_(n_rows),
@@ -44,8 +47,7 @@ class SampleEstimatorStrategy {
   }
 
   virtual ~SampleEstimatorStrategy() = default;
-  virtual void compute(
-      const Eigen::MatrixXd& phenotypes, const Eigen::MatrixXd& genotypes) = 0;
+  virtual void compute() = 0;
 
   std::string name() const { return name_; }
   std::vector<std::string> row_labels() const { return row_labels_; }
@@ -53,18 +55,15 @@ class SampleEstimatorStrategy {
   std::size_t n_rows() const { return n_rows_; }
   std::size_t n_cols() const { return n_cols_; }
 
-  void operator()(
-      std::size_t gen,
-      std::size_t rep,
-      const Eigen::MatrixXd& phenotypes,
-      const Eigen::MatrixXd& genotypes) {
-    compute(phenotypes, genotypes);
+  void operator()(std::size_t gen, std::size_t rep) {
+    compute();
     Writer::write(data_, name_h5_, rep, gen);
   }
 
  protected:
   std::string name_;
   std::string name_h5_;
+  std::filesystem::path sample_dir_;
   std::vector<std::string> row_labels_;
   std::vector<std::string> col_labels_;
   std::size_t n_rows_;
@@ -93,17 +92,20 @@ using SampleEstimators = std::vector<SampleEstimator<P>>;
 template <Proband P>
 class SampleMean : public SampleEstimatorStrategy<P> {
  public:
-  explicit SampleMean(const Params& params, const std::string& sample_name)
+  explicit SampleMean(
+      const Params& params,
+      const std::string& sample_name,
+      const std::filesystem::path& sample_dir)
       : SampleEstimatorStrategy<P>(
             "sample_mean",
             sample_name,
+            sample_dir,
             {},
             params.pheno.names,
             params.pheno.n_pheno) {}
 
-  void compute(
-      const Eigen::MatrixXd& phenotypes,
-      const Eigen::MatrixXd& /*genotypes*/) override {
+  void compute() override {
+    Eigen::MatrixXd phenotypes = parse_pheno_file(this->sample_dir_ / "data.pheno");
     this->data_ = phenotypes.colwise().mean();
   }
 };
@@ -111,17 +113,20 @@ class SampleMean : public SampleEstimatorStrategy<P> {
 template <Proband P>
 class SampleVar : public SampleEstimatorStrategy<P> {
  public:
-  explicit SampleVar(const Params& params, const std::string& sample_name)
+  explicit SampleVar(
+      const Params& params,
+      const std::string& sample_name,
+      const std::filesystem::path& sample_dir)
       : SampleEstimatorStrategy<P>(
             "sample_var",
             sample_name,
+            sample_dir,
             {},
             params.pheno.names,
             params.pheno.n_pheno) {}
 
-  void compute(
-      const Eigen::MatrixXd& phenotypes,
-      const Eigen::MatrixXd& /*genotypes*/) override {
+  void compute() override {
+    Eigen::MatrixXd phenotypes = parse_pheno_file(this->sample_dir_ / "data.pheno");
     this->data_ = (phenotypes.rowwise() - phenotypes.colwise().mean())
                       .array()
                       .square()
@@ -134,19 +139,22 @@ class SampleVar : public SampleEstimatorStrategy<P> {
 template <Proband P>
 class SampleCov : public SampleEstimatorStrategy<P> {
  public:
-  explicit SampleCov(const Params& params, const std::string& sample_name)
+  explicit SampleCov(
+      const Params& params,
+      const std::string& sample_name,
+      const std::filesystem::path& sample_dir)
       : SampleEstimatorStrategy<P>(
             "sample_cov",
             sample_name,
+            sample_dir,
             params.pheno.names,
             params.pheno.names,
             params.pheno.n_pheno,
             params.pheno.n_pheno),
         n_ind_(params.geno.n_ind) {}
 
-  void compute(
-      const Eigen::MatrixXd& phenotypes,
-      const Eigen::MatrixXd& /*genotypes*/) override {
+  void compute() override {
+    Eigen::MatrixXd phenotypes = parse_pheno_file(this->sample_dir_ / "data.pheno");
     this->data_ =
         (phenotypes.rowwise() - phenotypes.colwise().mean()).transpose() *
         (phenotypes.rowwise() - phenotypes.colwise().mean()) /
@@ -163,10 +171,12 @@ class SampleMateCor : public SampleEstimatorStrategy<P> {
   explicit SampleMateCor(
       const Params& params,
       const std::string& sample_name,
+      const std::filesystem::path& sample_dir,
       std::size_t n_probands)
       : SampleEstimatorStrategy<P>(
             "sample_mate_cor",
             sample_name,
+            sample_dir,
             utils::vector_suffix(params.pheno.names, "_male"),
             utils::vector_suffix(params.pheno.names, "_female"),
             params.pheno.n_pheno,
@@ -183,9 +193,8 @@ class SampleMateCor : public SampleEstimatorStrategy<P> {
   }
 
   // compute centres and standard deviations across columns
-  void compute(
-      const Eigen::MatrixXd& phenotypes,
-      const Eigen::MatrixXd& /*genotypes*/) override {
+  void compute() override {
+    Eigen::MatrixXd phenotypes = parse_pheno_file(this->sample_dir_ / "data.pheno");
     const std::size_t n_pairs = n_probands_ * 3;
     const std::size_t outer = n_probands_ * ProbandData<P>::ProbandSize;
 
@@ -227,7 +236,7 @@ inline SampleEstimator<P> SampleMeanEstimator() {
                std::size_t /*n_probands*/,
                const std::filesystem::path& sample_dir) {
         return std::make_unique<SampleMean<P>>(
-            params, sample_dir.filename().string());
+            params, sample_dir.filename().string(), sample_dir);
       }};
 }
 
@@ -239,7 +248,7 @@ inline SampleEstimator<P> SampleVarEstimator() {
                std::size_t /*n_probands*/,
                const std::filesystem::path& sample_dir) {
         return std::make_unique<SampleVar<P>>(
-            params, sample_dir.filename().string());
+            params, sample_dir.filename().string(), sample_dir);
       }};
 }
 
@@ -251,7 +260,7 @@ inline SampleEstimator<P> SampleCovEstimator() {
                std::size_t /*n_probands*/,
                const std::filesystem::path& sample_dir) {
         return std::make_unique<SampleCov<P>>(
-            params, sample_dir.filename().string());
+            params, sample_dir.filename().string(), sample_dir);
       }};
 }
 
@@ -263,7 +272,7 @@ inline SampleEstimator<P> SampleMateCorEstimator() {
                std::size_t n_probands,
                const std::filesystem::path& sample_dir) {
         return std::make_unique<SampleMateCor<P>>(
-            params, sample_dir.filename().string(), n_probands);
+            params, sample_dir.filename().string(), sample_dir, n_probands);
       }};
 }
 
