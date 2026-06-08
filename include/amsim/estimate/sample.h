@@ -6,19 +6,20 @@
 
 #include <Eigen/Dense>
 #include <filesystem>
-#include <vector>
+#include <optional>
 #include <unordered_map>
+#include <vector>
 
 namespace amsim {
 
-struct SampleEstimatorDescription {
+struct SampleEstimatorDecl {
   std::string name;
   std::string type;
-  std::string exec;
-  std::size_t n_rows;
-  std::size_t n_cols;
-  std::vector<std::string> row_names;
-  std::vector<std::string> col_names;
+  std::optional<std::string> exec;
+  std::optional<std::size_t> n_rows;
+  std::optional<std::size_t> n_cols;
+  std::optional<std::vector<std::string>> row_names;
+  std::optional<std::vector<std::string>> col_names;
   std::unordered_map<std::string, std::string> params;
 };
 
@@ -75,9 +76,7 @@ template <Proband P>
 struct SampleEstimator {
   std::string name;
   std::function<std::unique_ptr<SampleEstimatorStrategy<P>>(
-      const Params&,
-      std::size_t,
-      const std::filesystem::path&)>
+      const Params&, std::size_t, const std::filesystem::path&)>
       fn;
 
   std::unique_ptr<SampleEstimatorStrategy<P>> operator()(

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <amsim/core/log.h>
-#include <amsim/io/parse.h>
 #include <sys/wait.h>
 
 #include <Eigen/Dense>
@@ -16,6 +15,14 @@
 #include <vector>
 
 namespace amsim::utils {
+
+inline std::vector<std::string> split_string(
+    const std::string& s, const std::string& delim = ",") {
+  std::vector<std::string> split;
+  boost::split(split, s, boost::is_any_of(delim));
+  std::erase_if(split, [](const std::string& s) { return s.empty(); });
+  return split;
+}
 
 inline void bitmatrix_swap(
     std::uint64_t matrix[], std::size_t width, std::uint64_t mask) {

@@ -2,6 +2,7 @@
 
 #include <amsim/core.h>
 #include <amsim/estimate.h>
+#include <amsim/io/parse.h>
 #include <amsim/sample.h>
 
 #include <Eigen/Dense>

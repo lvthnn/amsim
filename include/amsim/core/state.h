@@ -1,10 +1,10 @@
 #pragma once
 
+#include <amsim/core/generation.h>
 #include <amsim/core/params.h>
 #include <amsim/data/genome.h>
 #include <amsim/data/mating.h>
 #include <amsim/data/phenome.h>
-#include <amsim/sample/proband.h>
 
 namespace amsim {
 
