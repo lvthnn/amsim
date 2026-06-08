@@ -3,6 +3,7 @@
 #include <amsim/core/params.h>
 
 #include <Eigen/Dense>
+#include <boost/algorithm/string/case_conv.hpp>
 #include <cstddef>
 #include <vector>
 
@@ -21,6 +22,15 @@ inline Component& operator++(Component& type) {
   type = (type == Component::Total) ? Component::Genetic
                                     : Component(static_cast<int>(type) + 1);
   return type;
+}
+
+inline Component Component_from_string(const std::string& s) {
+  std::string l = boost::to_lower_copy(s);
+  if (l == "genetic") return Component::Genetic;
+  if (l == "environmental") return Component::Environmental;
+  if (l == "vertical") return Component::Vertical;
+  if (l == "total") return Component::Total;
+  throw std::runtime_error(std::format("Unknown component type {}", l));
 }
 
 inline std::string to_string(Component type) {
