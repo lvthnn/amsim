@@ -2,7 +2,8 @@
 
 #include <amsim/core/params.h>
 #include <amsim/core/state.h>
-#include <amsim/estimate.h>
+#include <amsim/estimate/sample.h>
+#include <amsim/estimate/factory.h>
 #include <amsim/io/parse.h>
 #include <amsim/sample/member.h>
 #include <amsim/sample/proband.h>
@@ -476,7 +477,7 @@ inline void Sampler::Model<P>::draw(const State& state) {
 template <Proband P>
 inline void Sampler::Model<P>::estimate(const State& state) {
   for (const auto& estimator : estimators)
-    (*estimator)(state.gen, state.rep, phenotypes, genotypes);
+    (*estimator)(state.gen, state.rep);
 }
 
 template <Proband P>
