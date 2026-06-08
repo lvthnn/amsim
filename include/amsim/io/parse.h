@@ -49,6 +49,33 @@ inline Eigen::MatrixXd parse_matrix_value(const std::string& s) {
   return result;
 }
 
+inline Eigen::MatrixXd parse_pheno_file(const std::filesystem::path& path) {
+  std::ifstream file(path);
+  if (!file.is_open())
+    throw std::runtime_error(
+        "Could not open file " + path.string() + " for parsing");
+
+  std::string line;
+  std::getline(file, line);  // skip header
+
+  std::vector<std::vector<double>> matrix;
+  while (std::getline(file, line)) {
+    std::vector<std::string> tokens = utils::split_string(line, "\t");
+    std::vector<double> row;
+    for (std::size_t i = 2; i < tokens.size(); ++i)
+      row.push_back(std::stod(tokens[i]));
+    matrix.push_back(std::move(row));
+  }
+
+  std::size_t n_rows = matrix.size();
+  std::size_t n_cols = matrix[0].size();
+  Eigen::MatrixXd result(n_rows, n_cols);
+  for (std::size_t r = 0; r < n_rows; ++r)
+    for (std::size_t c = 0; c < n_cols; ++c)
+      result(r, c) = matrix[r][c];
+  return result;
+}
+
 inline Eigen::MatrixXd parse_matrix_file(const std::filesystem::path& path) {
   std::ifstream file(path);
   if (!file.is_open())
@@ -97,8 +124,12 @@ inline std::pair<std::string, std::vector<std::string>> parse_function(
   int paren_begin = s.find('(');
   int paren_end = s.find(')');
 
-  if (paren_begin == std::string::npos || paren_end == std::string::npos ||
-      paren_begin >= paren_end)
+  // this is the case where f is used to denote f()
+  if (paren_begin == std::string::npos || paren_end == std::string::npos)
+    return {s, {}};
+
+  // broken string
+  if (paren_begin >= paren_end)
     throw std::runtime_error("Invalid functional form: " + s);
 
   std::string fn_name = s.substr(0, paren_begin);
