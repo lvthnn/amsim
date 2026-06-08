@@ -74,7 +74,7 @@ inline void setup_writer(
 }
 }  // namespace details
 
-inline void run_simulation(
+inline void run_replicate(
     const Params& params,
     const std::vector<PopulationEstimator>& estimators,
     const std::vector<SampleSpec>& samples) {
@@ -135,7 +135,7 @@ inline void run_simulation(
   }
 }
 
-inline void run_simulations(
+inline void run_simulation(
     const Simulation& simulation,
     std::size_t n_replicates,
     std::size_t n_threads) {
@@ -143,6 +143,9 @@ inline void run_simulations(
   std::atomic<std::size_t> next{0};
   std::vector<std::thread> pool;
   pool.reserve(n_threads);
+
+  // set up the log
+  details::setup_log(simulation);
 
   // set up random seed
   std::uint64_t seed = rng::auto_seed(simulation.random_seed);
@@ -159,7 +162,6 @@ inline void run_simulations(
   // set up scratch directory in tmp
   std::filesystem::path tmp_dir = details::setup_outdir(seed);
 
-  details::setup_log(simulation);
   details::setup_writer(simulation, n_replicates);
 
   Writer::get_instance().write_params(params);
@@ -177,7 +179,7 @@ inline void run_simulations(
         thread_params.sim.rng_seed = details::shuffle_seed(seed, rep_id);
         thread_params.sim.rep_id = rep_id;
 
-        run_simulation(
+        run_replicate(
             thread_params, simulation.estimators, simulation.samples);
       }
     });
