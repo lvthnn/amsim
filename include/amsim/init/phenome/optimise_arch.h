@@ -33,12 +33,15 @@ class OptimisePhenotypeArchitecture {
         n_loc_(params.geno.n_loc),
         n_locs_(params.pheno.n_locs),
         gen_cor_(params.pheno.gen_cor),
+        h2_gen_(params.pheno.h2_gen),
         pheno_effects_vec_(params.pheno.pheno_effects),
         pheno_loc_(params.pheno.pheno_loc),
         pheno_loc_complement_(n_pheno_),
         pheno_effects_(n_loc_, n_pheno_),
         pheno_fixed_(n_pheno_),
         diff_cur_(n_pheno_, n_pheno_) {
+    gen_cov_ = h2_gen_.cwiseSqrt().asDiagonal() * gen_cor_ *
+               h2_gen_.cwiseSqrt().asDiagonal();
     for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
       pheno_fixed_[pheno] = (n_locs_[pheno] == n_loc_);
   }
@@ -54,6 +57,8 @@ class OptimisePhenotypeArchitecture {
   const std::size_t n_loc_;
   const std::vector<std::size_t>& n_locs_;
   const Eigen::MatrixXd& gen_cor_;
+  const Eigen::VectorXd& h2_gen_;
+  Eigen::MatrixXd gen_cov_;
   const std::vector<Eigen::VectorXd>& pheno_effects_vec_;
   std::vector<std::vector<std::size_t>>& pheno_loc_;
   std::vector<std::vector<std::size_t>> pheno_loc_complement_;
@@ -131,7 +136,7 @@ inline void OptimisePhenotypeArchitecture::randomState() {
 }
 
 inline void OptimisePhenotypeArchitecture::computeInitObjective() {
-  diff_cur_ = pheno_effects_.transpose() * pheno_effects_ - gen_cor_;
+  diff_cur_ = pheno_effects_.transpose() * pheno_effects_ - gen_cov_;
   err_frob_ = diff_cur_.squaredNorm();
   err_frob_opt_ = err_frob_;
 }

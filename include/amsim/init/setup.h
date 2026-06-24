@@ -167,7 +167,13 @@ inline PhenomeParams build_pheno_params(const Simulation& simulation) {
         raw_effects =
             std::get<File<Eigen::MatrixXd>>(pheno_data.effects.value()).load();
       }
-      pheno_effects[pheno] = raw_effects.array() / raw_effects.norm();
+      {
+        double var_total_tmp = pheno_data.var_genetic +
+                               pheno_data.var_environmental +
+                               pheno_data.var_vertical;
+        pheno_effects[pheno] = raw_effects / raw_effects.norm() *
+                               std::sqrt(pheno_data.var_genetic / var_total_tmp);
+      }
     }
 
     if (pheno_data.causal_loci.has_value() &&

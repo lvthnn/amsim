@@ -32,7 +32,6 @@ class ScorePhenotypes {
         n_pheno_(params.pheno.n_pheno),
         pheno_effects_(params.pheno.pheno_effects),
         pheno_loc_(params.pheno.pheno_loc),
-        h2_gen_(params.pheno.h2_gen),
         h2_env_(params.pheno.h2_env),
         h2_vert_(params.pheno.h2_vert),
         rnur_pat_(params.pheno.rnur_pat),
@@ -57,7 +56,6 @@ class ScorePhenotypes {
 
   const std::vector<Eigen::VectorXd>& pheno_effects_;
   const std::vector<std::vector<std::size_t>>& pheno_loc_;
-  const Eigen::VectorXd& h2_gen_;
   const Eigen::VectorXd& h2_env_;
   const Eigen::VectorXd& h2_vert_;
   const Eigen::VectorXd& rnur_pat_;
@@ -97,7 +95,6 @@ inline void ScorePhenotypes::scoreGenetic(State& state) {
 
       // update the genetic component buffer in-place
       pheno_gen_buf.col(pheno).segment(ind_tile, tile_size).noalias() =
-          std::sqrt(h2_gen_[pheno]) *
           gen_tile_.topRows(tile_size).leftCols(n_causal) * pheno_effects;
     }
   }
