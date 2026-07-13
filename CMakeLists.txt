@@ -127,6 +127,7 @@ if (BUILD_EXECUTABLE)
   add_executable(amsim src/amsim.cc)
   target_link_libraries(amsim PRIVATE amsimcpp)
   target_compile_definitions(amsim PRIVATE
+    AMSIM_OS="${CMAKE_SYSTEM_NAME}"
     AMSIM_VERSION="${PROJECT_VERSION}"
     AMSIM_ARCH="${CMAKE_SYSTEM_PROCESSOR}"
     AMSIM_BUILD_TYPE="${CMAKE_BUILD_TYPE}"
