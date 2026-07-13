@@ -47,6 +47,7 @@ inline void HaplotypeGeneratorIID::generateHaplotypes(GenoBuf& buf) {
 
   HaploBuf& h0 = buf.h0();
   HaploBuf& h1 = buf.h1();
+  std::size_t n_ind = h0.n_ind();
   std::size_t n_loc = buf.n_loc();
   std::size_t n_words = buf.n_words();
 
@@ -59,8 +60,14 @@ inline void HaplotypeGeneratorIID::generateHaplotypes(GenoBuf& buf) {
     std::uint64_t* word1 = h1.rowptr(loc);
 
     for (std::size_t word = 0; word < n_words; ++word) {
-      word0[word] = bw_.sample();
-      word1[word] = bw_.sample();
+      if (word == n_words - 1 && (n_ind % 64)) {
+        std::uint64_t mask = (1ULL << (n_ind % 64)) - 1ULL;
+        word0[word] = bw_.sample() & mask;
+        word1[word] = bw_.sample() & mask;
+      } else {
+        word0[word] = bw_.sample();
+        word1[word] = bw_.sample();
+      }
     }
   }
 }
