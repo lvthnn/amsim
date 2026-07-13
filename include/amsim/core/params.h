@@ -20,6 +20,7 @@
 #include <Eigen/Dense>
 #include <cstddef>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -66,6 +67,7 @@ struct MatingParams {
 struct SimulationParams {
   std::size_t n_gens;
   std::uint64_t rng_seed;
+  std::optional<std::uint64_t> post_init_seed;
   std::filesystem::path out_dir;
   std::size_t rep_id;
 

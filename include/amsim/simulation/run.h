@@ -122,6 +122,9 @@ inline void run_replicate(
   state.transpose();
   state.advance();
 
+  if (params.sim.post_init_seed.has_value())
+    rng::set_seed(params.sim.post_init_seed.value());
+
   // run the core simulation loop
   while (state.gen <= params.sim.n_gens) {
     Log::info("Simulating generation " + std::to_string(state.gen));
@@ -191,7 +194,12 @@ inline void run_simulation(
 
         thread_params.sim.out_dir =
             details::setup_replicate(tmp_dir, rep_id);
-        thread_params.sim.rng_seed = details::shuffle_seed(seed, rep_id);
+        if (simulation.share_init_state) {
+          thread_params.sim.rng_seed = seed;
+          thread_params.sim.post_init_seed = details::shuffle_seed(seed, rep_id);
+        } else {
+          thread_params.sim.rng_seed = details::shuffle_seed(seed, rep_id);
+        }
         thread_params.sim.rep_id = rep_id;
 
         run_replicate(

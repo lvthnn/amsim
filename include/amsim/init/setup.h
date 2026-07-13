@@ -119,6 +119,7 @@ struct Simulation {
   std::filesystem::path output_dir = ".";
   std::optional<std::string> output_name;
   std::optional<std::uint64_t> random_seed;
+  bool share_init_state = false; // start all replicates from the same state
 
   LogLevel log_level = LogLevel::Info;
   bool log_to_file = true;

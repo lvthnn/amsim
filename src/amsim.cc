@@ -25,17 +25,33 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 
+constexpr std::string OS_NAME() {
+  std::string os = AMSIM_OS;
+  if (os == "Darwin") return "macOS";
+  return os;
+}
+
 void display_version() {
   std::string version_str = std::format(
-      "amsim v" AMSIM_VERSION " " AMSIM_ARCH " (" AMSIM_BUILD_TYPE
-      " build, " __DATE__ ")");
+      "amsim v{} {} {} ({} build, {})",
+      AMSIM_VERSION,
+      OS_NAME(),
+      AMSIM_ARCH,
+      AMSIM_BUILD_TYPE,
+      __DATE__);
+
   std::cout << version_str << std::endl;
 }
 
 void display_header() {
   std::string header_str = std::format(
       "{:<40}{:>40}\n{:<40}{:>40}",
-      "amsim v" AMSIM_VERSION " " AMSIM_ARCH " (" AMSIM_BUILD_TYPE " build)",
+      std::format(
+          "amsim v{} {} {} ({} build)",
+          AMSIM_VERSION,
+          OS_NAME(),
+          AMSIM_ARCH,
+          AMSIM_BUILD_TYPE),
       "https://github.com/lvthnn/amsim",
       "(C) 2025-2026 Kári Hlynsson",
       "GNU General Public License v3");
@@ -75,6 +91,7 @@ global options:
   --log-level {debug | info | warning | error | none}
   --save-config
   --log-to-output
+  --share-init-state
 
 genome options:
   --locus-maf [--val <value> | --file <path> | --dist <distribution>]
@@ -163,7 +180,10 @@ enum Context : uint32_t {
 
   // Base domain
   ContextDomain = Global | Genome | Phenotype | Mating | Sample |
-                  SampleEstimator | PopulationEstimator
+                  SampleEstimator | PopulationEstimator,
+
+  // To allow help messages for flags
+  Help = 1 << 14
 };
 
 Context context_domain(Context context) {
@@ -182,6 +202,7 @@ enum Option {
   GlobalLogLevel,
   GlobalLogNoFile,
   GlobalSaveConfig,
+  GlobalShareInitState,
   GenomeLocusInitMAFs,
   GenomeLocusRecombinationProbs,
   GenomeLocusMutationProbs,
@@ -320,6 +341,7 @@ int main(int argc, char* argv[]) {
         {"log-to-output", no_argument, nullptr, GlobalLogNoFile},
         {"log-level", required_argument, nullptr, GlobalLogLevel},
         {"save-config", no_argument, nullptr, GlobalSaveConfig},
+        {"share-init-state", no_argument, nullptr, GlobalShareInitState},
         // Genome options
         {"loc-maf", no_argument, nullptr, GenomeLocusInitMAFs},
         {"loc-rec", no_argument, nullptr, GenomeLocusRecombinationProbs},
@@ -396,6 +418,7 @@ int main(int argc, char* argv[]) {
           throw std::runtime_error(
               std::format("Unrecognised option '{}'", argv[optind - 1]));
         case 'h':
+          context = Context::Help;
           display_header();
           display_help();
           exit(EXIT_SUCCESS);
@@ -442,6 +465,10 @@ int main(int argc, char* argv[]) {
         case Option::GlobalSaveConfig:
           context = Context::Global;
           save_config = true;
+          continue;
+        case Option::GlobalShareInitState:
+          context = Context::Global;
+          simulation.share_init_state = true;
           continue;
       }
 
