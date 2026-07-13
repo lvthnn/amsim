@@ -127,11 +127,18 @@ class EstimatorGenotypeCov : public PopulationEstimatorStrategy {
         std::size_t acc = 0;
 
         for (std::size_t word = 0; word < n_words; ++word)
-          // can express the inner product as popcounts like so
-          acc += __builtin_popcountll(h01[word] & h02[word]) +
-                 __builtin_popcountll(h01[word] & h12[word]) +
-                 __builtin_popcountll(h11[word] & h02[word]) +
-                 __builtin_popcountll(h11[word] & h12[word]);
+          if (word == n_words - 1 && (n_ind % 64)) {
+            std::uint64_t mask = (1ULL << (n_ind % 64)) - 1ULL;
+            acc += __builtin_popcountll(h01[word] & h02[word] & mask) +
+                   __builtin_popcountll(h01[word] & h12[word] & mask) +
+                   __builtin_popcountll(h11[word] & h02[word] & mask) +
+                   __builtin_popcountll(h11[word] & h12[word] & mask);
+         } else {
+            acc += __builtin_popcountll(h01[word] & h02[word]) +
+                   __builtin_popcountll(h01[word] & h12[word]) +
+                   __builtin_popcountll(h11[word] & h02[word]) +
+                   __builtin_popcountll(h11[word] & h12[word]);
+          }
 
         data_(loc1, loc2) =
             ((1.0 / n_ind) * acc) - (geno.v_lmean(loc1) * geno.v_lmean(loc2));
@@ -167,11 +174,20 @@ class EstimatorGenotypeCor : public PopulationEstimatorStrategy {
         const uint64_t* h12 = geno.h1().rowptr(loc2);
         std::size_t acc = 0;
 
-        for (std::size_t word = 0; word < n_words; ++word)
-          acc += __builtin_popcountll(h01[word] & h02[word]) +
-                 __builtin_popcountll(h01[word] & h12[word]) +
-                 __builtin_popcountll(h11[word] & h02[word]) +
-                 __builtin_popcountll(h11[word] & h12[word]);
+        for (std::size_t word = 0; word < n_words; ++word) {
+          if (word == n_words - 1 && (n_ind % 64)) {
+            std::uint64_t mask = (1ULL << (n_ind % 64)) - 1ULL;
+            acc += __builtin_popcountll(h01[word] & h02[word] & mask) +
+                   __builtin_popcountll(h01[word] & h12[word] & mask) +
+                   __builtin_popcountll(h11[word] & h02[word] & mask) +
+                   __builtin_popcountll(h11[word] & h12[word] & mask);
+          } else {
+            acc += __builtin_popcountll(h01[word] & h02[word]) +
+                   __builtin_popcountll(h01[word] & h12[word]) +
+                   __builtin_popcountll(h11[word] & h02[word]) +
+                   __builtin_popcountll(h11[word] & h12[word]);
+          }
+        }
 
         double cov = ((1.0 / n_ind) * acc) -
                      (geno.v_lmean(loc1) * geno.v_lmean(loc2));
