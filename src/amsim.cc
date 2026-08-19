@@ -89,9 +89,10 @@ global options:
   --output-dir <out_dir>
   --output-name <out_name>
   --log-level {debug | info | warning | error | none}
-  --save-config
   --log-to-output
+  --save-config
   --share-init-state
+  --no-run
 
 genome options:
   --locus-maf [--val <value> | --file <path> | --dist <distribution>]
@@ -203,6 +204,7 @@ enum Option {
   GlobalLogNoFile,
   GlobalSaveConfig,
   GlobalShareInitState,
+  GlobalNoRun,
   GenomeLocusInitMAFs,
   GenomeLocusRecombinationProbs,
   GenomeLocusMutationProbs,
@@ -315,6 +317,7 @@ int main(int argc, char* argv[]) {
     std::size_t n_replicates = 1;
     std::size_t n_threads = 1;
 
+    bool run = true;
     bool save_config = false;
     std::filesystem::path config_path;
 
@@ -342,6 +345,7 @@ int main(int argc, char* argv[]) {
         {"log-level", required_argument, nullptr, GlobalLogLevel},
         {"save-config", no_argument, nullptr, GlobalSaveConfig},
         {"share-init-state", no_argument, nullptr, GlobalShareInitState},
+        {"no-run", no_argument, nullptr, GlobalNoRun},
         // Genome options
         {"loc-maf", no_argument, nullptr, GenomeLocusInitMAFs},
         {"loc-rec", no_argument, nullptr, GenomeLocusRecombinationProbs},
@@ -469,6 +473,10 @@ int main(int argc, char* argv[]) {
         case Option::GlobalShareInitState:
           context = Context::Global;
           simulation.share_init_state = true;
+          continue;
+        case Option::GlobalNoRun:
+          context = Context::Global;
+          run = false;
           continue;
       }
 
@@ -783,7 +791,7 @@ int main(int argc, char* argv[]) {
           config_path);
     }
 
-    amsim::run_simulation(simulation, n_replicates, n_threads);
+    if (run) amsim::run_simulation(simulation, n_replicates, n_threads);
     exit(EXIT_SUCCESS);
   } catch (const std::exception& e) {
     amsim::Log::error(e.what());
