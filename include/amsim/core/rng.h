@@ -246,9 +246,9 @@ struct NormalPolar {
     double v;
     double s;
     do {
-      u = 2.0 * u01_53(Xoshiro256ss::get_instance().next()) - 1.0;
-      v = 2.0 * u01_53(Xoshiro256ss::get_instance().next()) - 1.0;
-      s = u * u + v * v;
+      u = (2.0 * u01_53(Xoshiro256ss::get_instance().next())) - 1.0;
+      v = (2.0 * u01_53(Xoshiro256ss::get_instance().next())) - 1.0;
+      s = (u * u) + (v * v);
     } while (s >= 1.0 || s == 0.0);
     const double m = std::sqrt(-2.0 * std::log(s) / s);
     return {u * m, v * m};

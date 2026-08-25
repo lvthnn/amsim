@@ -163,7 +163,7 @@ inline void AssortativeMating::proposeState() {
 
   // compute the energy differential
   alpha_cur_ =
-      delta_cur_.squaredNorm() + 2 * delta_cur_.cwiseProduct(ell_cur_).sum();
+      delta_cur_.squaredNorm() + (2 * delta_cur_.cwiseProduct(ell_cur_).sum());
 }
 
 inline void AssortativeMating::updateState() {
