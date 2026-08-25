@@ -34,16 +34,16 @@ inline std::size_t member_index(
       case Family::Father:
         return proband_id;
       case Family::Mother:
-        return state.matching(Generation::Parents)[proband_id];
+        return state.n_sex + state.matching(Generation::Parents)[proband_id];
       case Family::Son:
         return proband_id;
       case Family::SonWife:
-        return state.matching()[proband_id];
+        return state.n_sex + state.matching()[proband_id];
       case Family::DaughterHusband:
         return state
             .inv_matching()[state.matching(Generation::Parents)[proband_id]];
       case Family::Daughter:
-        return state.n_sex + state.inv_matching()[proband_id];
+        return state.n_sex + state.matching(Generation::Parents)[proband_id];
       default:
         throw std::invalid_argument("Invalid or compound Family member type");
     }
