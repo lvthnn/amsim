@@ -19,6 +19,7 @@
 #include <amsim/core/params.h>
 #include <amsim/data/genome.h>
 #include <amsim/data/mating.h>
+#include <amsim/data/pedigree.h>
 #include <amsim/data/phenome.h>
 
 namespace amsim {
@@ -35,6 +36,9 @@ struct State {
   std::array<PhenoBuf, 2> phenos;
   std::array<Matching, 2> matchings;
   std::array<Matching, 2> inv_matchings;
+
+  // for stoing family data
+  Pedigree pedigree;
 
   std::size_t get_parity(Generation generation) const {
     return (generation == Generation::Current) ? parity : 1 - parity;
@@ -82,6 +86,8 @@ struct State {
     gen += 1;
     parity = gen % 2;
   }
+
+  void update_pedigree() { pedigree.push(matching(), inv_matching()); }
 };
 
 inline State build_state(const Params& params) {
@@ -93,9 +99,10 @@ inline State build_state(const Params& params) {
       .matchings =
           {std::vector<std::size_t>(params.geno.n_ind / 2),
            std::vector<std::size_t>(params.geno.n_ind / 2)},
-      .inv_matchings = {
-          std::vector<std::size_t>(params.geno.n_ind / 2),
-          std::vector<std::size_t>(params.geno.n_ind / 2)}};
+      .inv_matchings =
+          {std::vector<std::size_t>(params.geno.n_ind / 2),
+           std::vector<std::size_t>(params.geno.n_ind / 2)},
+      .pedigree = Pedigree(params)};
 }
 
 }  // namespace amsim

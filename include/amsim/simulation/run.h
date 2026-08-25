@@ -117,6 +117,7 @@ inline void run_replicate(
   score(state);
   state.pheno().compute_stats();
   founder_mate(state);
+  state.update_pedigree();
   state.transpose();
   update(state);
   state.transpose();
@@ -137,6 +138,7 @@ inline void run_replicate(
 
     // match mates
     mate(state);
+    state.update_pedigree();
 
     // sample and estimate subpopulations
     sample_est(state);
