@@ -108,6 +108,15 @@ inline Eigen::MatrixXd standardise(
   return ((mat.rowwise() - mean).array().rowwise() / std.array());
 }
 
+inline std::vector<std::string> vector_prefix(
+    const std::vector<std::string>& labels,
+    const std::optional<std::string>& prefix = std::nullopt) {
+  std::vector<std::string> result(labels.size());
+  for (std::size_t i = 0; i < labels.size(); ++i)
+    result[i] = prefix.value_or("") + labels[i];
+  return result;
+}
+
 inline std::vector<std::string> vector_suffix(
     const std::vector<std::string>& labels,
     const std::optional<std::string>& suffix = std::nullopt) {
