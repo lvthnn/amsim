@@ -44,6 +44,10 @@ class Pedigree {
 
   void push(const Matching& matching, const Matching& inv_matching);
 
+  std::size_t depth() const;
+
+  std::size_t max_depth() const;
+
   std::vector<std::vector<PedigreeNode>> find_cousins(
       const PedigreeNode& self, std::size_t degree = 1) const;
 
@@ -81,6 +85,14 @@ inline void Pedigree::push(
   if (mate_history_.size() == max_depth_) mate_history_.pop_back();
 
   mate_history_.emplace_front(matching, inv_matching);
+}
+
+inline std::size_t Pedigree::depth() const {
+  return mate_history_.size();
+}
+
+inline std::size_t Pedigree::max_depth() const {
+  return max_depth_;
 }
 
 inline std::vector<std::vector<PedigreeNode>> Pedigree::find_cousins(
