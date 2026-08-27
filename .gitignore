@@ -8,7 +8,7 @@
 .vscode
 
 # Build directories
-build/
+build*/
 out/
 bin/
 lib/

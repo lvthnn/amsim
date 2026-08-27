@@ -22,6 +22,7 @@
 #include <amsim/sample/proband.h>
 
 #include <Eigen/Dense>
+#include <deque>
 
 namespace amsim {
 
@@ -133,7 +134,7 @@ class EstimatorGenotypeCov : public PopulationEstimatorStrategy {
                    __builtin_popcountll(h01[word] & h12[word] & mask) +
                    __builtin_popcountll(h11[word] & h02[word] & mask) +
                    __builtin_popcountll(h11[word] & h12[word] & mask);
-         } else {
+          } else {
             acc += __builtin_popcountll(h01[word] & h02[word]) +
                    __builtin_popcountll(h01[word] & h12[word]) +
                    __builtin_popcountll(h11[word] & h02[word]) +
@@ -189,8 +190,8 @@ class EstimatorGenotypeCor : public PopulationEstimatorStrategy {
           }
         }
 
-        double cov = ((1.0 / n_ind) * acc) -
-                     (geno.v_lmean(loc1) * geno.v_lmean(loc2));
+        double cov =
+            ((1.0 / n_ind) * acc) - (geno.v_lmean(loc1) * geno.v_lmean(loc2));
         double denom = std::sqrt(geno.v_lvar(loc1) * geno.v_lvar(loc2));
         data_(loc1, loc2) = (denom > 0.0) ? cov / denom : 0.0;
       }
@@ -276,7 +277,7 @@ class EstimatorComponentCor : public PopulationEstimatorStrategy {
                 params.pheno.names, "_" + to_string(type_r.value_or(type_l))),
             params.pheno.n_pheno,
             params.pheno.n_pheno),
-        n_ind_(params.geno.n_ind),
+        n_ind_(params.sim.n_ind),
         n_pheno_(params.pheno.n_pheno),
         type_l_(type_l),
         type_r_(type_r.value_or(type_l)),
@@ -310,7 +311,7 @@ class EstimatorComponentCov : public PopulationEstimatorStrategy {
                 params.pheno.names, "_" + to_string(type_r.value_or(type_l))),
             params.pheno.n_pheno,
             params.pheno.n_pheno),
-        n_ind_(params.geno.n_ind),
+        n_ind_(params.sim.n_ind),
         n_pheno_(params.pheno.n_pheno),
         type_l_(type_l),
         type_r_(type_r.value_or(type_l)),
@@ -320,8 +321,8 @@ class EstimatorComponentCov : public PopulationEstimatorStrategy {
   void compute(const State& state) override {
     centred_l_ = utils::standardise(state.pheno()(type_l_), true, true, false);
     centred_r_ = utils::standardise(state.pheno()(type_r_), true, true, false);
-    data_ = (centred_l_.transpose() * centred_r_) /
-            static_cast<double>(n_ind_ - 1);
+    data_ =
+        (centred_l_.transpose() * centred_r_) / static_cast<double>(n_ind_ - 1);
   }
 
  private:
@@ -343,7 +344,7 @@ class EstimatorMateCor : public PopulationEstimatorStrategy {
             params.pheno.n_pheno,
             params.pheno.n_pheno),
         type_(type),
-        n_sex_(params.geno.n_ind / 2),
+        n_sex_(params.sim.n_ind / 2),
         n_pheno_(params.pheno.n_pheno),
         std_male_(n_sex_, n_pheno_),
         std_female_(n_sex_, n_pheno_) {}
@@ -367,52 +368,173 @@ class EstimatorMateCor : public PopulationEstimatorStrategy {
   Eigen::MatrixXd std_female_;
 };
 
+class EstimatorCousinCov : public PopulationEstimatorStrategy {
+ public:
+  explicit EstimatorCousinCov(
+      const Params& params, std::size_t degree, Component type)
+      : type_(type),
+        degree_(degree),
+        n_ind_(params.sim.n_ind),
+        n_pheno_(params.pheno.n_pheno),
+        self_(params.sim.n_ind * (1ULL << (2 * degree)), params.pheno.n_pheno),
+        cousin_(
+            params.sim.n_ind * (1ULL << (2 * degree)), params.pheno.n_pheno),
+        PopulationEstimatorStrategy(
+            "cousin_" + std::to_string(degree) + "_" + to_string(type) + "_cov",
+            utils::vector_prefix(params.pheno.names, "self_"),
+            utils::vector_prefix(params.pheno.names, "cousin_"),
+            params.pheno.n_pheno,
+            params.pheno.n_pheno) {
+    if (params.sim.pedigree_max_depth < degree_ + 2)
+      Log::warning(
+          "Pedigree depth is insufficient to compute cousin covariance of "
+          "degree " +
+          std::to_string(degree_));
+  }
+
+  void compute(const State& state) override {
+    if (state.pedigree.depth() < degree_ + 2) {
+      data_.setConstant(std::numeric_limits<double>::quiet_NaN());
+      return;
+    }
+
+    std::vector<std::vector<PedigreeNode>> paths =
+        state.pedigree.find_cousins(degree_);
+
+    auto buf = state.pheno()(type_);
+    for (std::size_t ind = 0; ind < paths.size(); ++ind) {
+      auto self = paths[ind].front().index;
+      auto cousin = paths[ind].back().index;
+      self_.row(ind) = buf.row(self);
+      cousin_.row(ind) = buf.row(cousin);
+    }
+
+    self_ = utils::standardise(self_, true, true, false);
+    cousin_ = utils::standardise(cousin_, true, true, false);
+
+    data_ =
+        (self_.transpose() * cousin_) / static_cast<double>(paths.size() - 1);
+  }
+
+ private:
+  Component type_;
+  std::size_t degree_;
+  std::size_t n_ind_;
+  std::size_t n_pheno_;
+  Eigen::MatrixXd self_;
+  Eigen::MatrixXd cousin_;
+};
+
+class EstimatorAncestorCov : public PopulationEstimatorStrategy {
+ public:
+  explicit EstimatorAncestorCov(
+      const Params& params,
+      std::size_t degree = 1,
+      Component type = Component::Genetic)
+      : type_(type),
+        degree_(degree),
+        n_ind_(params.sim.n_ind),
+        n_pheno_(params.pheno.n_pheno),
+        self_(params.sim.n_ind * (1ULL << degree), params.pheno.n_pheno),
+        ancestor_(params.sim.n_ind * (1ULL << degree), params.pheno.n_pheno),
+        PopulationEstimatorStrategy(
+            "ancestor_" + std::to_string(degree) + "_" + to_string(type) +
+                "_cov",
+            utils::vector_prefix(params.pheno.names, "self_"),
+            utils::vector_prefix(params.pheno.names, "ancestor_"),
+            params.pheno.n_pheno,
+            params.pheno.n_pheno) {}
+
+  void compute(const State& state) override {
+    syncPhenotypes(state);
+
+    if (state.pedigree.depth() < degree_) {
+      data_.setConstant(std::numeric_limits<double>::quiet_NaN());
+      return;
+    }
+
+    std::vector<std::vector<PedigreeNode>> paths =
+        state.pedigree.find_ancestors(degree_);
+
+    auto self_buf = state.pheno()(type_);
+    auto ancestor_buf = history_[degree_](type_);
+
+    for (std::size_t ind = 0; ind < paths.size(); ++ind) {
+      auto self = paths[ind].front().index;
+      auto ancestor = paths[ind].back().index;
+      self_.row(ind) = self_buf.row(self);
+      ancestor_.row(ind) = ancestor_buf.row(ancestor);
+    }
+
+    self_ = utils::standardise(self_, true, true, false);
+    ancestor_ = utils::standardise(ancestor_, true, true, false);
+
+    data_ =
+        (self_.transpose() * ancestor_) / static_cast<double>(paths.size() - 1);
+  }
+
+ private:
+  Component type_;
+  std::size_t degree_;
+  std::size_t n_ind_;
+  std::size_t n_pheno_;
+  std::deque<PhenoBuf> history_;
+  Eigen::MatrixXd self_;
+  Eigen::MatrixXd ancestor_;
+
+  void syncPhenotypes(const State& state);
+};
+
+inline void EstimatorAncestorCov::syncPhenotypes(const State& state) {
+  if (state.gen == 1) {
+    history_.emplace_front(state.pheno(Generation::Parents));
+    history_.emplace_front(state.pheno(Generation::Current));
+  } else {
+    if (history_.size() == degree_ + 1) history_.pop_back();
+    history_.emplace_front(state.pheno(Generation::Current));
+  }
+}
+
 }  // namespace details
 
 inline PopulationEstimator PopulationGenotypeCov() {
   return PopulationEstimator{
-      .name = "genotype-cov",
-      .fn = [](const Params& params) {
+      .name = "genotype-cov", .fn = [](const Params& params) {
         return std::make_unique<details::EstimatorGenotypeCov>(params);
       }};
 }
 
 inline PopulationEstimator PopulationGenotypeMean() {
   return PopulationEstimator{
-      .name = "genotype-mean",
-      .fn = [](const Params& params) {
+      .name = "genotype-mean", .fn = [](const Params& params) {
         return std::make_unique<details::EstimatorGenotypeMean>(params);
       }};
 }
 
 inline PopulationEstimator PopulationGenotypeVar() {
   return PopulationEstimator{
-      .name = "genotype-var",
-      .fn = [](const Params& params) {
+      .name = "genotype-var", .fn = [](const Params& params) {
         return std::make_unique<details::EstimatorGenotypeVar>(params);
       }};
 }
 
 inline PopulationEstimator PopulationGenotypeMAF() {
   return PopulationEstimator{
-      .name = "genotype-maf",
-      .fn = [](const Params& params) {
+      .name = "genotype-maf", .fn = [](const Params& params) {
         return std::make_unique<details::EstimatorGenotypeMAF>(params);
       }};
 }
 
 inline PopulationEstimator PopulationGenotypeCor() {
   return PopulationEstimator{
-      .name = "genotype-cor",
-      .fn = [](const Params& params) {
+      .name = "genotype-cor", .fn = [](const Params& params) {
         return std::make_unique<details::EstimatorGenotypeCor>(params);
       }};
 }
 
 inline PopulationEstimator PopulationHeritability() {
   return PopulationEstimator{
-      .name = "heritability",
-      .fn = [](const Params& params) {
+      .name = "heritability", .fn = [](const Params& params) {
         return std::make_unique<details::EstimatorHeritability>(params);
       }};
 }
@@ -465,6 +587,26 @@ inline PopulationEstimator PopulationMateCor(
       .name = "mate-cor-" + to_string(type),
       .fn = [type](const Params& params) {
         return std::make_unique<details::EstimatorMateCor>(params, type);
+      }};
+}
+
+inline PopulationEstimator PopulationCousinCov(
+    std::size_t degree = 1, Component type = Component::Genetic) {
+  return PopulationEstimator{
+      .name = "cousin-" + std::to_string(degree) + "-cov-" + to_string(type),
+      .fn = [degree, type](const Params& params) {
+        return std::make_unique<details::EstimatorCousinCov>(
+            params, degree, type);
+      }};
+}
+
+inline PopulationEstimator PopulationAncestorCov(
+    std::size_t degree = 1, Component type = Component::Genetic) {
+  return PopulationEstimator{
+      .name = "ancestor-" + std::to_string(degree) + "-cov-" + to_string(type),
+      .fn = [degree, type](const Params& params) {
+        return std::make_unique<details::EstimatorAncestorCov>(
+            params, degree, type);
       }};
 }
 

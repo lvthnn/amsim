@@ -201,7 +201,8 @@ inline void OptimisePhenotypeArchitecture::operator()() {
 
   if (std::ranges::all_of(pheno_fixed_, std::identity{})) {
     Log::warning(
-        "All phenotypes saturated in the genome; can not optimise phenotype "
+        "OptimisePhenotypeArchitecture::operator(): All phenotypes saturated "
+        "in the genome; can not optimise phenotype "
         "architecture. Aborting.");
     return;
   }
