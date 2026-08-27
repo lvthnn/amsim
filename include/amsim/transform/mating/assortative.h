@@ -32,7 +32,7 @@ class AssortativeMating {
   AssortativeMating& operator=(const AssortativeMating&) = default;
   AssortativeMating& operator=(AssortativeMating&&) = default;
   explicit AssortativeMating(const Params& params)
-      : n_sex_(params.geno.n_ind / 2),
+      : n_sex_(params.sim.n_ind / 2),
         n_pheno_(params.pheno.n_pheno),
         mate_cor_(std::move(params.mate.mate_cor)),
         match_cur_(n_sex_),

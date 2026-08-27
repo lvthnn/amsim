@@ -197,7 +197,6 @@ inline void Writer::write_params(const Params& params) {
   }
 
   file_.createGroup("params/genome");
-  file_.createDataSet("params/genome/n_ind", params.geno.n_ind);
   file_.createDataSet("params/genome/n_loc", params.geno.n_loc);
   file_.createDataSet("params/genome/v_maf", params.geno.v_maf);
   file_.createDataSet("params/genome/v_rec", params.geno.v_rec);
@@ -222,6 +221,7 @@ inline void Writer::write_params(const Params& params) {
   file_.createDataSet("params/mating/temp_decay", params.mate.temp_decay);
 
   file_.createGroup("params/simulation");
+  file_.createDataSet("params/simulation/n_ind", params.sim.n_ind);
   file_.createDataSet("params/simulation/n_gens", params.sim.n_gens);
   file_.createDataSet("params/simulation/rng_seed", params.sim.rng_seed);
 }

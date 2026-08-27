@@ -27,7 +27,7 @@ namespace amsim {
 class ScorePhenotypes {
  public:
   explicit ScorePhenotypes(const Params& params)
-      : n_ind_(params.geno.n_ind),
+      : n_ind_(params.sim.n_ind),
         n_sex_(n_ind_ / 2),
         n_pheno_(params.pheno.n_pheno),
         pheno_effects_(params.pheno.pheno_effects),

@@ -92,16 +92,16 @@ struct State {
 
 inline State build_state(const Params& params) {
   return State{
-      .n_sex = params.geno.n_ind / 2,
+      .n_sex = params.sim.n_ind / 2,
       .rep = params.sim.rep_id,
       .genos = {GenoBuf(params), GenoBuf(params)},
       .phenos = {PhenoBuf(params), PhenoBuf(params)},
       .matchings =
-          {std::vector<std::size_t>(params.geno.n_ind / 2),
-           std::vector<std::size_t>(params.geno.n_ind / 2)},
+          {std::vector<std::size_t>(params.sim.n_ind / 2),
+           std::vector<std::size_t>(params.sim.n_ind / 2)},
       .inv_matchings =
-          {std::vector<std::size_t>(params.geno.n_ind / 2),
-           std::vector<std::size_t>(params.geno.n_ind / 2)},
+          {std::vector<std::size_t>(params.sim.n_ind / 2),
+           std::vector<std::size_t>(params.sim.n_ind / 2)},
       .pedigree = Pedigree(params)};
 }
 

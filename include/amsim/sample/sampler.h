@@ -159,9 +159,9 @@ class Sampler {
           weighting(std::move(sample.weighting)),
           decompress_genotypes(sample.decompress_genotypes),
           n_probands_total(
-              P == Proband::Individual ? params.geno.n_ind
-                                       : params.geno.n_ind / 2),
-          n_sex(params.geno.n_ind / 2),
+              P == Proband::Individual ? params.sim.n_ind
+                                       : params.sim.n_ind / 2),
+          n_sex(params.sim.n_ind / 2),
           n_members(__builtin_popcountll(static_cast<uint8_t>(sample.of))),
           n_pheno(params.pheno.n_pheno),
           n_loc(params.geno.n_loc),

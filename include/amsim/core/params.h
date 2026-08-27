@@ -28,7 +28,6 @@
 namespace amsim {
 
 struct GenomeParams {
-  std::size_t n_ind;
   std::size_t n_loc;
   Eigen::VectorXd v_maf;
   Eigen::VectorXd v_rec;
@@ -67,6 +66,7 @@ struct MatingParams {
 struct SimulationParams {
   std::size_t n_ind;
   std::size_t n_gens;
+  bool pedigree_warmup;
   std::size_t pedigree_max_depth;
   std::uint64_t rng_seed;
   std::optional<std::uint64_t> post_init_seed;

@@ -166,7 +166,7 @@ class SampleCov : public SampleEstimatorStrategy<P> {
             params.pheno.names,
             params.pheno.n_pheno,
             params.pheno.n_pheno),
-        n_ind_(params.geno.n_ind) {}
+        n_ind_(params.sim.n_ind) {}
 
   void compute() override {
     Eigen::MatrixXd phenotypes = parse_pheno_file(this->sample_dir_ / "data.pheno");
