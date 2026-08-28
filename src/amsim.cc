@@ -88,6 +88,8 @@ global options:
   --random-seed <rng_seed>
   --output-dir <out_dir>
   --output-name <out_name>
+  --pedigree-max-depth <max_depth>
+  --pedigree-warmup
   --log-level {debug | info | warning | error | none}
   --log-to-output
   --save-config
@@ -128,7 +130,9 @@ sampling and estimation options:
                pheno-mean({genetic | environmental | vertical | total}) |
                pheno-var({genetic | environmental | vertical | total}) |
                pheno-cov({genetic | environmental | vertical | total}) |
-               mate-cor({genetic | environmental | vertical | total})}
+               mate-cor({genetic | environmental | vertical | total}) |
+               cousin-cov({genetic | environmental | vertical | total}) |
+               ancestor-cov({genetic | environmental | vertical | total})}
   --sample-estimator <name>
     --type {gwas(<n_pcs>, <pval_thresh>) | haseman-elston | greml | external}
     --exec <exec_cmd>
@@ -202,6 +206,8 @@ enum Option {
   GlobalOutputName,
   GlobalLogLevel,
   GlobalLogNoFile,
+  GlobalPedigreeMaxDepth,
+  GlobalPedigreeWarmup,
   GlobalSaveConfig,
   GlobalShareInitState,
   GlobalNoRun,
@@ -301,7 +307,24 @@ std::unordered_map<
            amsim::Component component = amsim::Component::Total;
            if (!s.empty()) component = amsim::Component_from_string(s[0]);
            return PopulationMateCor(component);
-         }}};
+         }},
+        {"cousin-cov", [](const std::vector<std::string>& s) {
+          std::size_t degree = 1;
+          amsim::Component component = amsim::Component::Total;
+          if (!s.empty()) component = amsim::Component_from_string(s[0]);
+          if (s.size() > 1) degree = std::stoull(s[1]);
+
+          return PopulationCousinCov(degree, component);
+        }},
+        {"ancestor-cov", [](const std::vector<std::string>& s) {
+          std::size_t degree = 1;
+          amsim::Component component = amsim::Component::Total;
+          if (!s.empty()) component = amsim::Component_from_string(s[0]);
+          if (s.size() > 1) degree = std::stoull(s[1]);
+
+          return PopulationAncestorCov(degree, component);
+        }}
+    };
 
 int main(int argc, char* argv[]) {
   try {
@@ -341,6 +364,11 @@ int main(int argc, char* argv[]) {
         {"out-name", required_argument, nullptr, GlobalOutputName},
         {"output-dir", required_argument, nullptr, GlobalOutputDirectory},
         {"output-name", required_argument, nullptr, GlobalOutputName},
+        {"pedigree-max-depth",
+         required_argument,
+         nullptr,
+         GlobalPedigreeMaxDepth},
+        {"pedigree-warmup", no_argument, nullptr, GlobalPedigreeWarmup},
         {"log-to-output", no_argument, nullptr, GlobalLogNoFile},
         {"log-level", required_argument, nullptr, GlobalLogLevel},
         {"save-config", no_argument, nullptr, GlobalSaveConfig},
@@ -457,6 +485,14 @@ int main(int argc, char* argv[]) {
         case Option::GlobalOutputName:
           context = Context::Global;
           simulation.output_name = optarg;
+          continue;
+        case Option::GlobalPedigreeMaxDepth:
+          context = Context::Global;
+          simulation.pedigree_max_depth = std::stoull(optarg);
+          continue;
+        case Option::GlobalPedigreeWarmup:
+          context = Context::Global;
+          simulation.pedigree_warmup = true;
           continue;
         case Option::GlobalLogLevel:
           context = Context::Global;
