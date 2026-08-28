@@ -47,23 +47,22 @@ inline Params preprocess_simulation(const Simulation& simulation) {
 inline std::filesystem::path setup_outdir(std::uint64_t seed) {
   auto now = std::chrono::system_clock::now().time_since_epoch();
   auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
-  std::filesystem::path tmp =
-      std::filesystem::temp_directory_path() /
-      std::format("amsim_{}_{}", seed, ms);
+  std::filesystem::path tmp = std::filesystem::temp_directory_path() /
+                              std::format("amsim_{}_{}", seed, ms);
   std::filesystem::create_directories(tmp);
   return tmp;
 }
 
 inline std::string results_filename(const Simulation& simulation) {
   return simulation.output_name.has_value()
-      ? std::format("results_{}.h5", simulation.output_name.value())
-      : "results.h5";
+             ? std::format("results_{}.h5", simulation.output_name.value())
+             : "results.h5";
 }
 
 inline std::string log_filename(const Simulation& simulation) {
   return simulation.output_name.has_value()
-      ? std::format("amsim_{}.log", simulation.output_name.value())
-      : "amsim.log";
+             ? std::format("amsim_{}.log", simulation.output_name.value())
+             : "amsim.log";
 }
 
 inline void setup_log(const Simulation& simulation) {
@@ -114,14 +113,21 @@ inline void run_replicate(
   state.geno().compute_mafs();
   state.geno().compute_stats();
 
-  score(state);
-  state.pheno().compute_stats();
-  founder_mate(state);
-  state.update_pedigree();
-  state.transpose();
-  update(state);
-  state.transpose();
-  state.advance();
+  // if pedigree_warmup is true, then we simulate pedigree_max_depth
+  // panmictic generations
+  std::size_t n_it =
+      params.sim.pedigree_warmup ? params.sim.pedigree_max_depth : 1;
+
+  for (std::size_t it = 0; it < n_it; ++it) {
+    score(state);
+    state.pheno().compute_stats();
+    founder_mate(state);
+    state.update_pedigree();
+    state.transpose();
+    update(state);
+    state.transpose();
+    state.advance();
+  }
 
   if (params.sim.post_init_seed.has_value())
     rng::set_seed(params.sim.post_init_seed.value());
@@ -194,18 +200,17 @@ inline void run_simulation(
         auto rep_id = next.fetch_add(1);
         if (rep_id >= n_replicates) return;
 
-        thread_params.sim.out_dir =
-            details::setup_replicate(tmp_dir, rep_id);
+        thread_params.sim.out_dir = details::setup_replicate(tmp_dir, rep_id);
         if (simulation.share_init_state) {
           thread_params.sim.rng_seed = seed;
-          thread_params.sim.post_init_seed = details::shuffle_seed(seed, rep_id);
+          thread_params.sim.post_init_seed =
+              details::shuffle_seed(seed, rep_id);
         } else {
           thread_params.sim.rng_seed = details::shuffle_seed(seed, rep_id);
         }
         thread_params.sim.rep_id = rep_id;
 
-        run_replicate(
-            thread_params, simulation.estimators, simulation.samples);
+        run_replicate(thread_params, simulation.estimators, simulation.samples);
       }
     });
   }

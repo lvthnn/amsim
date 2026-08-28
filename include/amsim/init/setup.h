@@ -115,11 +115,14 @@ struct Simulation {
   std::vector<PopulationEstimator> estimators;  // population-wide estimators
   std::vector<SampleSpec> samples;              // subpopulation estimators
 
+  std::size_t pedigree_max_depth = 1;
+  bool pedigree_warmup = false;
+
   std::size_t n_generations = 15;
   std::filesystem::path output_dir = ".";
   std::optional<std::string> output_name;
   std::optional<std::uint64_t> random_seed;
-  bool share_init_state = false; // start all replicates from the same state
+  bool share_init_state = false;  // start all replicates from the same state
 
   LogLevel log_level = LogLevel::Info;
   bool log_to_file = true;
@@ -156,12 +159,14 @@ inline PhenomeParams build_pheno_params(const Simulation& simulation) {
     {
       Eigen::VectorXd raw_effects;
       if (!pheno_data.effects.has_value()) {
-        raw_effects = RademacherDistribution::generate(pheno_data.n_causal_loci);
+        raw_effects =
+            RademacherDistribution::generate(pheno_data.n_causal_loci);
       } else if (std::holds_alternative<double>(pheno_data.effects.value())) {
         raw_effects = Eigen::VectorXd::Constant(
             pheno_data.n_causal_loci,
             std::get<double>(pheno_data.effects.value()));
-      } else if (std::holds_alternative<Distribution>(pheno_data.effects.value())) {
+      } else if (std::holds_alternative<Distribution>(
+                     pheno_data.effects.value())) {
         raw_effects = std::get<Distribution>(pheno_data.effects.value())(
             pheno_data.n_causal_loci);
       } else {
@@ -172,8 +177,9 @@ inline PhenomeParams build_pheno_params(const Simulation& simulation) {
         double var_total_tmp = pheno_data.var_genetic +
                                pheno_data.var_environmental +
                                pheno_data.var_vertical;
-        pheno_effects[pheno] = raw_effects / raw_effects.norm() *
-                               std::sqrt(pheno_data.var_genetic / var_total_tmp);
+        pheno_effects[pheno] =
+            raw_effects / raw_effects.norm() *
+            std::sqrt(pheno_data.var_genetic / var_total_tmp);
       }
     }
 
@@ -246,7 +252,6 @@ inline PhenomeParams build_pheno_params(const Simulation& simulation) {
 
 inline Params build_params(const Simulation& simulation) {
   GenomeParams geno = GenomeParams{
-      .n_ind = simulation.n_individuals,
       .n_loc = simulation.genome.n_loci,
       .v_maf =
           details::expand(simulation.genome.v_maf, simulation.genome.n_loci),
@@ -270,7 +275,10 @@ inline Params build_params(const Simulation& simulation) {
       .temp_decay = simulation.mating.temperature_decay};
 
   SimulationParams sim = SimulationParams{
+      .n_ind = simulation.n_individuals,
       .n_gens = simulation.n_generations,
+      .pedigree_warmup = simulation.pedigree_warmup,
+      .pedigree_max_depth = simulation.pedigree_max_depth,
       .rng_seed = rng::auto_seed(simulation.random_seed),
       .out_dir = simulation.output_dir,
       .log_level = simulation.log_level,
