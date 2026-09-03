@@ -221,9 +221,9 @@ inline void Writer::write_params(const Params& params) {
   file_.createDataSet("params/mating/temp_decay", params.mate.temp_decay);
 
   file_.createGroup("params/simulation");
-  file_.createDataSet("params/simulation/n_ind", params.sim.n_ind);
-  file_.createDataSet("params/simulation/n_gens", params.sim.n_gens);
-  file_.createDataSet("params/simulation/rng_seed", params.sim.rng_seed);
+  file_.createDataSet("params/simulation/n_ind", params.global.n_ind);
+  file_.createDataSet("params/simulation/n_gens", params.global.n_gens);
+  file_.createDataSet("params/simulation/rng_seed", params.global.rng_seed);
 }
 
 template <typename T>

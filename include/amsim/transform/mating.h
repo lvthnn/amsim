@@ -28,7 +28,7 @@ namespace amsim {
 class RandomMating {
  public:
   explicit RandomMating(const Params& params)
-    : n_sex_(params.sim.n_ind / 2),
+    : n_sex_(params.run.n_ind / 2),
       match_cur_(n_sex_) {}
 
   void operator()(State& state);
@@ -62,7 +62,7 @@ class AssortativeMating {
   AssortativeMating& operator=(const AssortativeMating&) = default;
   AssortativeMating& operator=(AssortativeMating&&) = default;
   explicit AssortativeMating(const Params& params)
-      : n_sex_(params.sim.n_ind / 2),
+      : n_sex_(params.run.n_ind / 2),
         n_pheno_(params.pheno.n_pheno),
         mate_cor_(std::move(params.mate.mate_cor)),
         match_cur_(n_sex_),

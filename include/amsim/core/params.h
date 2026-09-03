@@ -63,7 +63,11 @@ struct MatingParams {
   double temp_decay;
 };
 
-struct SimulationParams {
+struct EstimatorParams {
+
+};
+
+struct GlobalParams {
   std::size_t n_ind;
   std::size_t n_gens;
   bool pedigree_warmup;
@@ -81,6 +85,6 @@ struct Params {
   GenomeParams geno;
   PhenomeParams pheno;
   MatingParams mate;
-  SimulationParams sim;
+  GlobalParams global;
 };
 }  // namespace amsim

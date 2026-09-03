@@ -26,7 +26,7 @@ class UpdateGenome {
  public:
   explicit UpdateGenome(const Params& params)
       : n_loc_(params.geno.n_loc),
-        n_ind_(params.sim.n_ind),
+        n_ind_(params.global.n_ind),
         n_sex_(n_ind_ / 2),
         v_rec_(params.geno.v_rec),
         v_mut_(params.geno.v_mut),

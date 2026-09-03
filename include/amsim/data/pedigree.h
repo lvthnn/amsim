@@ -13,6 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#pragma once
+
 #include <amsim/core/generation.h>
 #include <amsim/core/params.h>
 #include <amsim/data/mating.h>
@@ -38,9 +40,9 @@ struct PedigreePath {
 class Pedigree {
  public:
   explicit Pedigree(const Params& params)
-      : max_depth_(params.sim.pedigree_max_depth),
-        n_ind_(params.sim.n_ind),
-        n_sex_(params.sim.n_ind / 2) {}
+      : max_depth_(params.global.pedigree_max_depth),
+        n_ind_(params.global.n_ind),
+        n_sex_(params.global.n_ind / 2) {}
 
   void push(const Matching& matching, const Matching& inv_matching);
 

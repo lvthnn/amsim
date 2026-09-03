@@ -153,15 +153,15 @@ class Sampler {
     explicit Model(Sample<P> sample, const Params& params)
         : name(sample.name),
           n_probands(sample.n_probands),
-          sample_dir(params.sim.out_dir / name),
+          sample_dir(params.global.out_dir / name),
           of(sample.of),
           agg(std::move(sample.agg)),
           weighting(std::move(sample.weighting)),
           decompress_genotypes(sample.decompress_genotypes),
           n_probands_total(
-              P == Proband::Individual ? params.sim.n_ind
-                                       : params.sim.n_ind / 2),
-          n_sex(params.sim.n_ind / 2),
+              P == Proband::Individual ? params.global.n_ind
+                                       : params.global.n_ind / 2),
+          n_sex(params.global.n_ind / 2),
           n_members(__builtin_popcountll(static_cast<uint8_t>(sample.of))),
           n_pheno(params.pheno.n_pheno),
           n_loc(params.geno.n_loc),

@@ -70,7 +70,7 @@ inline std::ostream& operator<<(std::ostream& os, Component type) {
 class PhenoBuf {
  public:
   explicit PhenoBuf(const Params& params)
-      : n_ind_(params.sim.n_ind),
+      : n_ind_(params.global.n_ind),
         n_sex_(n_ind_ / 2),
         n_pheno_(params.pheno.n_pheno),
         data_(4 * n_ind_ * n_pheno_),

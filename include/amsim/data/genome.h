@@ -125,8 +125,8 @@ class GenoBuf {
         v_lvar_(params.geno.n_loc),
         v_lmaf_(params.geno.n_loc),
         bw_(),
-        h0_(params.sim.n_ind, params.geno.n_loc),
-        h1_(params.sim.n_ind, params.geno.n_loc) {};
+        h0_(params.global.n_ind, params.geno.n_loc),
+        h1_(params.global.n_ind, params.geno.n_loc) {};
 
   Eigen::VectorXd& v_lmean() noexcept { return v_lmean_; }
   Eigen::VectorXd& v_lvar() noexcept { return v_lvar_; }
