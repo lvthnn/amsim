@@ -35,7 +35,7 @@ inline std::uint64_t shuffle_seed(std::uint64_t rng_seed, std::size_t rep_id) {
   return rng_seed + (Phi * rep_id);
 }
 
-inline Params preprocess_simulation(const Simulation& simulation) {
+inline Params preprocess_simulation(const SimulationSpec& simulation) {
   Params params = build_params(simulation);
   OptimisePhenotypeArchitecture opt(params);
   opt();
@@ -53,19 +53,19 @@ inline std::filesystem::path setup_outdir(std::uint64_t seed) {
   return tmp;
 }
 
-inline std::string results_filename(const Simulation& simulation) {
+inline std::string results_filename(const SimulationSpec& simulation) {
   return simulation.output_name.has_value()
              ? std::format("results_{}.h5", simulation.output_name.value())
              : "results.h5";
 }
 
-inline std::string log_filename(const Simulation& simulation) {
+inline std::string log_filename(const SimulationSpec& simulation) {
   return simulation.output_name.has_value()
              ? std::format("amsim_{}.log", simulation.output_name.value())
              : "amsim.log";
 }
 
-inline void setup_log(const Simulation& simulation) {
+inline void setup_log(const SimulationSpec& simulation) {
   if (simulation.log_to_file) {
     std::filesystem::path log_path =
         simulation.output_dir / log_filename(simulation);
@@ -81,7 +81,7 @@ inline std::filesystem::path setup_replicate(
 }
 
 inline void setup_writer(
-    const Simulation& simulation, std::size_t n_replicates) {
+    const SimulationSpec& simulation, std::size_t n_replicates) {
   std::filesystem::path results_path =
       simulation.output_dir / results_filename(simulation);
   Writer::get_instance(results_path, simulation.n_generations, n_replicates);
@@ -92,10 +92,10 @@ inline void run_replicate(
     const Params& params,
     const std::vector<PopulationEstimator>& estimators,
     const std::vector<SampleSpec>& samples) {
-  rng::set_seed(params.sim.rng_seed);
+  rng::set_seed(params.global.rng_seed);
 
-  if (!std::filesystem::exists(params.sim.out_dir))
-    std::filesystem::create_directory(params.sim.out_dir);
+  if (!std::filesystem::exists(params.global.out_dir))
+    std::filesystem::create_directory(params.global.out_dir);
 
   State state = build_state(params);
 
@@ -116,7 +116,7 @@ inline void run_replicate(
   // if pedigree_warmup is true, then we simulate pedigree_max_depth
   // panmictic generations
   std::size_t n_it =
-      params.sim.pedigree_warmup ? params.sim.pedigree_max_depth : 1;
+      params.global.pedigree_warmup ? params.global.pedigree_max_depth : 1;
 
   for (std::size_t it = 0; it < n_it; ++it) {
     score(state);
@@ -129,11 +129,11 @@ inline void run_replicate(
     state.advance();
   }
 
-  if (params.sim.post_init_seed.has_value())
-    rng::set_seed(params.sim.post_init_seed.value());
+  if (params.global.post_init_seed.has_value())
+    rng::set_seed(params.global.post_init_seed.value());
 
   // run the core simulation loop
-  while (state.gen <= params.sim.n_gens) {
+  while (state.gen <= params.global.n_gens) {
     Log::info("Simulating generation " + std::to_string(state.gen));
     state.geno().compute_mafs();
     state.geno().compute_stats();
@@ -162,7 +162,7 @@ inline void run_replicate(
 }
 
 inline void run_simulation(
-    const Simulation& simulation,
+    const SimulationSpec& simulation,
     std::size_t n_replicates,
     std::size_t n_threads) {
   // set up thread pool for parallel simulation
@@ -200,15 +200,15 @@ inline void run_simulation(
         auto rep_id = next.fetch_add(1);
         if (rep_id >= n_replicates) return;
 
-        thread_params.sim.out_dir = details::setup_replicate(tmp_dir, rep_id);
+        thread_params.global.out_dir = details::setup_replicate(tmp_dir, rep_id);
         if (simulation.share_init_state) {
-          thread_params.sim.rng_seed = seed;
-          thread_params.sim.post_init_seed =
+          thread_params.global.rng_seed = seed;
+          thread_params.global.post_init_seed =
               details::shuffle_seed(seed, rep_id);
         } else {
-          thread_params.sim.rng_seed = details::shuffle_seed(seed, rep_id);
+          thread_params.global.rng_seed = details::shuffle_seed(seed, rep_id);
         }
-        thread_params.sim.rep_id = rep_id;
+        thread_params.global.rep_id = rep_id;
 
         run_replicate(thread_params, simulation.estimators, simulation.samples);
       }
