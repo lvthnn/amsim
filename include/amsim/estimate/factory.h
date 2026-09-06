@@ -15,49 +15,48 @@
 
 #pragma once
 
-#include <amsim/sample/proband.h>
-#include <amsim/estimate/sample.h>
-#include <amsim/estimate/gwas.h>
-#include <amsim/estimate/haseman_elston.h>
 #include <amsim/estimate/external.h>
 #include <amsim/estimate/greml.h>
+#include <amsim/estimate/gwas.h>
+#include <amsim/estimate/haseman_elston.h>
+#include <amsim/estimate/sample.h>
+#include <amsim/sample/proband.h>
 
 namespace amsim {
 
 template <Proband P>
-inline SampleEstimator<P> make_sample_estimator(
-    const SampleEstimatorDecl& decl) {
-  if (decl.type == "external") {
+inline SampleEstimator<P> build_sample_estimator(
+    const SampleEstimatorSpec& spec) {
+  if (spec.type == "external") {
     return SampleExternalEstimator<P>(
-        decl.name,
-        decl.exec.value(),
-        decl.n_rows.value(),
-        decl.n_cols.value(),
-        decl.row_names,
-        decl.col_names);
+        spec.name,
+        spec.exec.value(),
+        spec.n_rows.value(),
+        spec.n_cols.value(),
+        spec.row_names,
+        spec.col_names);
   }
-  if (decl.type == "sample-mean") return SampleMeanEstimator<P>();
-  if (decl.type == "sample-var") return SampleVarEstimator<P>();
-  if (decl.type == "sample-cov") return SampleCovEstimator<P>();
-  if (decl.type == "sample-mate-cor") return SampleMateCorEstimator<P>();
-  if (decl.type == "haseman-elston")
-    return SampleHasemanElstonEstimator<P>(decl.name);
-  if (decl.type == "greml") return SampleGREMLEstimator<P>(decl.name);
-  if (decl.type == "gwas") {
+  if (spec.type == "sample-mean") return SampleMeanEstimator<P>();
+  if (spec.type == "sample-var") return SampleVarEstimator<P>();
+  if (spec.type == "sample-cov") return SampleCovEstimator<P>();
+  if (spec.type == "sample-mate-cor") return SampleMateCorEstimator<P>();
+  if (spec.type == "haseman-elston")
+    return SampleHasemanElstonEstimator<P>(spec.name);
+  if (spec.type == "greml") return SampleGREMLEstimator<P>(spec.name);
+  if (spec.type == "gwas") {
     std::size_t n_pcs = 0;
     double pval_threshold = 5e-8;
 
-    if (decl.params.size() == 1)
-      n_pcs = std::stoull(decl.params[0]);
+    if (spec.params.size() == 1) n_pcs = std::stoull(spec.params[0]);
 
-    if (decl.params.size() == 2) {
-      n_pcs = std::stoull(decl.params[0]);
-      pval_threshold = std::stod(decl.params[1]);
+    if (spec.params.size() == 2) {
+      n_pcs = std::stoull(spec.params[0]);
+      pval_threshold = std::stod(spec.params[1]);
     }
 
-    return SampleGWASEstimator<P>(decl.name, n_pcs, pval_threshold);
+    return SampleGWASEstimator<P>(spec.name, n_pcs, pval_threshold);
   }
-  throw std::runtime_error("Unknown sample estimator type: " + decl.type);
+  throw std::runtime_error("Unknown sample estimator type: " + spec.type);
 }
 
 }  // namespace amsim

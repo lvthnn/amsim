@@ -16,6 +16,7 @@
 #pragma once
 
 #include <amsim/sample/member.h>
+#include <amsim/sample/sample_variant.h>
 #include <amsim/sample/sampler.h>
 #include <amsim/sample/proband.h>
 #include <amsim/sample/weight.h>

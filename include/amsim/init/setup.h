@@ -64,7 +64,6 @@ inline Eigen::MatrixXd expand_matrix(
 
 struct Genome {
   std::size_t n_loci = 5000;
-
   std::variant<double, File<Eigen::MatrixXd>, Distribution> v_rec = 0.5;
   std::variant<double, File<Eigen::MatrixXd>, Distribution> v_maf = 0.5;
   std::variant<double, File<Eigen::MatrixXd>, Distribution> v_mut = 0.0;
@@ -78,7 +77,7 @@ struct Phenotype {
   std::optional<std::variant<double, File<Eigen::MatrixXd>, Distribution>>
       effects;
   std::optional<
-      std::variant<std::vector<std::size_t>, File<std::vector<std::size_t>>>>
+      std::variant<File<std::vector<std::size_t>>, std::vector<std::size_t>>>
       causal_loci;
 
   double var_genetic = 0.5;
@@ -100,7 +99,7 @@ struct Mating {
   double temperature_decay = 0.99;
 };
 
-struct Simulation {
+struct SimulationSpec {
   std::size_t n_individuals = 10000;
 
   Genome genome;
@@ -113,11 +112,16 @@ struct Simulation {
   Mating mating;
 
   std::vector<PopulationEstimator> estimators;  // population-wide estimators
-  std::vector<SampleSpec> samples;              // subpopulation estimators
+  std::vector<SampleVariant> samples;           // subpopulation estimators
+
+  std::vector<SampleSpec> sample_spec;
+  std::vector<SampleEstimatorSpec> sample_estimator_spec;
 
   std::size_t pedigree_max_depth = 1;
   bool pedigree_warmup = false;
 
+  std::size_t n_replicates = 1;
+  std::size_t n_threads = 1;
   std::size_t n_generations = 15;
   std::filesystem::path output_dir = ".";
   std::optional<std::string> output_name;
@@ -128,8 +132,8 @@ struct Simulation {
   bool log_to_file = true;
 };
 
-inline PhenomeParams build_pheno_params(const Simulation& simulation) {
-  std::size_t n_pheno = simulation.phenotypes.size();
+inline PhenomeParams build_pheno_params(const SimulationSpec& spec) {
+  std::size_t n_pheno = spec.phenotypes.size();
 
   std::vector<std::string> names(n_pheno);
   std::vector<std::size_t> n_locs(n_pheno);
@@ -147,10 +151,10 @@ inline PhenomeParams build_pheno_params(const Simulation& simulation) {
   Eigen::VectorXd vert_pat(n_pheno);
 
   for (std::size_t pheno = 0; pheno < n_pheno; ++pheno) {
-    Phenotype pheno_data = simulation.phenotypes[pheno];
+    Phenotype pheno_data = spec.phenotypes[pheno];
 
     if (pheno_data.n_causal_loci == 0)
-      pheno_data.n_causal_loci = simulation.genome.n_loci / n_pheno;
+      pheno_data.n_causal_loci = spec.genome.n_loci / n_pheno;
 
     names[pheno] = pheno_data.name;
     n_locs[pheno] = pheno_data.n_causal_loci;
@@ -184,7 +188,7 @@ inline PhenomeParams build_pheno_params(const Simulation& simulation) {
     }
 
     if (pheno_data.causal_loci.has_value() &&
-        simulation.genetic_component_cor.has_value())
+        spec.genetic_component_cor.has_value())
       throw std::runtime_error(
           "specify either exclusively phenotype causal loci or genetic "
           "component correlation");
@@ -223,14 +227,13 @@ inline PhenomeParams build_pheno_params(const Simulation& simulation) {
   }
 
   Eigen::MatrixXd gen_cor =
-      simulation.genetic_component_cor.has_value()
-          ? details::expand_matrix(simulation.genetic_component_cor.value())
+      spec.genetic_component_cor.has_value()
+          ? details::expand_matrix(spec.genetic_component_cor.value())
           : Eigen::MatrixXd::Identity(n_pheno, n_pheno);
 
   Eigen::MatrixXd env_cor =
-      simulation.environmental_component_cor.has_value()
-          ? details::expand_matrix(
-                simulation.environmental_component_cor.value())
+      spec.environmental_component_cor.has_value()
+          ? details::expand_matrix(spec.environmental_component_cor.value())
           : Eigen::MatrixXd::Identity(n_pheno, n_pheno);
 
   return PhenomeParams{
@@ -250,45 +253,47 @@ inline PhenomeParams build_pheno_params(const Simulation& simulation) {
       .vert_pat = vert_pat};
 }
 
-inline Params build_params(const Simulation& simulation) {
+inline Params build_params(const SimulationSpec& spec) {
   GenomeParams geno = GenomeParams{
-      .n_loc = simulation.genome.n_loci,
-      .v_maf =
-          details::expand(simulation.genome.v_maf, simulation.genome.n_loci),
-      .v_rec =
-          details::expand(simulation.genome.v_rec, simulation.genome.n_loci),
-      .v_mut =
-          details::expand(simulation.genome.v_mut, simulation.genome.n_loci)};
+      .n_loc = spec.genome.n_loci,
+      .v_maf = details::expand(spec.genome.v_maf, spec.genome.n_loci),
+      .v_rec = details::expand(spec.genome.v_rec, spec.genome.n_loci),
+      .v_mut = details::expand(spec.genome.v_mut, spec.genome.n_loci)};
 
-  PhenomeParams pheno = build_pheno_params(simulation);
+  PhenomeParams pheno = build_pheno_params(spec);
 
   Eigen::MatrixXd mate_cor =
-      (simulation.mating.mate_cor.has_value())
-          ? details::expand_matrix(simulation.mating.mate_cor.value())
+      (spec.mating.mate_cor.has_value())
+          ? details::expand_matrix(spec.mating.mate_cor.value())
           : Eigen::MatrixXd::Zero(pheno.n_pheno, pheno.n_pheno);
 
   MatingParams mate = MatingParams{
       .mate_cor = std::move(mate_cor),
-      .tol_inf = simulation.mating.tolerance,
-      .max_itr = simulation.mating.max_iterations,
-      .temp_init = simulation.mating.initial_temperature,
-      .temp_decay = simulation.mating.temperature_decay};
+      .tol_inf = spec.mating.tolerance,
+      .max_itr = spec.mating.max_iterations,
+      .temp_init = spec.mating.initial_temperature,
+      .temp_decay = spec.mating.temperature_decay};
 
-  SimulationParams sim = SimulationParams{
-      .n_ind = simulation.n_individuals,
-      .n_gens = simulation.n_generations,
-      .pedigree_warmup = simulation.pedigree_warmup,
-      .pedigree_max_depth = simulation.pedigree_max_depth,
-      .rng_seed = rng::auto_seed(simulation.random_seed),
-      .out_dir = simulation.output_dir,
-      .log_level = simulation.log_level,
-      .log_to_file = simulation.log_to_file};
+  EstimatorParams estimate = EstimatorParams{
+      .population_estimators = spec.estimators,
+      .samples = build_samples(spec.sample_spec, spec.sample_estimator_spec)};
+
+  GlobalParams sim = GlobalParams{
+      .n_ind = spec.n_individuals,
+      .n_gens = spec.n_generations,
+      .pedigree_warmup = spec.pedigree_warmup,
+      .pedigree_max_depth = spec.pedigree_max_depth,
+      .rng_seed = rng::auto_seed(spec.random_seed),
+      .out_dir = spec.output_dir,
+      .log_level = spec.log_level,
+      .log_to_file = spec.log_to_file};
 
   return Params{
       .geno = std::move(geno),
       .pheno = std::move(pheno),
       .mate = std::move(mate),
-      .sim = std::move(sim)};
+      .estimate = std::move(estimate),
+      .global = std::move(sim)};
 }
 
 }  // namespace amsim

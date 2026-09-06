@@ -16,55 +16,13 @@
 #pragma once
 
 #include <amsim/core/params.h>
+#include <amsim/data/component.h>
 
 #include <Eigen/Dense>
-#include <boost/algorithm/string/case_conv.hpp>
 #include <cstddef>
 #include <vector>
 
 namespace amsim {
-
-enum Component { Genetic = 0, Environmental = 1, Vertical = 2, Total = 3 };
-
-inline Component operator++(Component& type, int) {
-  Component old = type;
-  type = (type == Component::Total) ? Component::Genetic
-                                    : Component(static_cast<int>(type) + 1);
-  return old;
-}
-
-inline Component& operator++(Component& type) {
-  type = (type == Component::Total) ? Component::Genetic
-                                    : Component(static_cast<int>(type) + 1);
-  return type;
-}
-
-inline Component Component_from_string(const std::string& s) {
-  std::string l = boost::to_lower_copy(s);
-  if (l == "genetic") return Component::Genetic;
-  if (l == "environmental") return Component::Environmental;
-  if (l == "vertical") return Component::Vertical;
-  if (l == "total") return Component::Total;
-  throw std::runtime_error(std::format("Unknown component type {}", l));
-}
-
-inline std::string to_string(Component type) {
-  switch (type) {
-    case Component::Genetic:
-      return "genetic";
-    case Component::Environmental:
-      return "environ";
-    case Component::Vertical:
-      return "vertical";
-    case Component::Total:
-      return "total";
-  }
-  __builtin_unreachable();
-}
-
-inline std::ostream& operator<<(std::ostream& os, Component type) {
-  return os << to_string(type);
-}
 
 // Buffer structure to store phenotype data
 class PhenoBuf {

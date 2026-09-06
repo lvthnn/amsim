@@ -16,6 +16,8 @@
 #pragma once
 
 #include <amsim/core/log.h>
+#include <amsim/estimate/estimator.h>
+#include <amsim/sample/sample_variant.h>
 
 #include <Eigen/Dense>
 #include <cstddef>
@@ -64,7 +66,8 @@ struct MatingParams {
 };
 
 struct EstimatorParams {
-
+  std::vector<PopulationEstimator> population_estimators;
+  std::vector<SampleVariant> samples;
 };
 
 struct GlobalParams {
@@ -85,6 +88,7 @@ struct Params {
   GenomeParams geno;
   PhenomeParams pheno;
   MatingParams mate;
+  EstimatorParams estimate;
   GlobalParams global;
 };
 }  // namespace amsim

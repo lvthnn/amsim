@@ -35,8 +35,8 @@ inline std::uint64_t shuffle_seed(std::uint64_t rng_seed, std::size_t rep_id) {
   return rng_seed + (Phi * rep_id);
 }
 
-inline Params preprocess_simulation(const SimulationSpec& simulation) {
-  Params params = build_params(simulation);
+inline Params preprocess_simulation(const SimulationSpec& spec) {
+  Params params = build_params(spec);
   OptimisePhenotypeArchitecture opt(params);
   opt();
   std::cout << opt.expected() << "\n";
@@ -53,25 +53,24 @@ inline std::filesystem::path setup_outdir(std::uint64_t seed) {
   return tmp;
 }
 
-inline std::string results_filename(const SimulationSpec& simulation) {
-  return simulation.output_name.has_value()
-             ? std::format("results_{}.h5", simulation.output_name.value())
+inline std::string results_filename(const SimulationSpec& spec) {
+  return spec.output_name.has_value()
+             ? std::format("results_{}.h5", spec.output_name.value())
              : "results.h5";
 }
 
-inline std::string log_filename(const SimulationSpec& simulation) {
-  return simulation.output_name.has_value()
-             ? std::format("amsim_{}.log", simulation.output_name.value())
+inline std::string log_filename(const SimulationSpec& spec) {
+  return spec.output_name.has_value()
+             ? std::format("amsim_{}.log", spec.output_name.value())
              : "amsim.log";
 }
 
-inline void setup_log(const SimulationSpec& simulation) {
-  if (simulation.log_to_file) {
-    std::filesystem::path log_path =
-        simulation.output_dir / log_filename(simulation);
-    Log::file(log_path, simulation.log_level);
+inline void setup_log(const SimulationSpec& spec) {
+  if (spec.log_to_file) {
+    std::filesystem::path log_path = spec.output_dir / log_filename(spec);
+    Log::file(log_path, spec.log_level);
   } else {
-    Log::stream(std::cout, simulation.log_level);
+    Log::stream(std::cout, spec.log_level);
   }
 }
 
@@ -80,18 +79,13 @@ inline std::filesystem::path setup_replicate(
   return tmp_dir / std::format("rep_{:03}", rep_id + 1);
 }
 
-inline void setup_writer(
-    const SimulationSpec& simulation, std::size_t n_replicates) {
-  std::filesystem::path results_path =
-      simulation.output_dir / results_filename(simulation);
-  Writer::get_instance(results_path, simulation.n_generations, n_replicates);
+inline void setup_writer(const SimulationSpec& spec) {
+  std::filesystem::path results_path = spec.output_dir / results_filename(spec);
+  Writer::get_instance(results_path, spec.n_generations, spec.n_replicates);
 }
 }  // namespace details
 
-inline void run_replicate(
-    const Params& params,
-    const std::vector<PopulationEstimator>& estimators,
-    const std::vector<SampleSpec>& samples) {
+inline void run_replicate(const Params& params) {
   rng::set_seed(params.global.rng_seed);
 
   if (!std::filesystem::exists(params.global.out_dir))
@@ -99,8 +93,8 @@ inline void run_replicate(
 
   State state = build_state(params);
 
-  ComputePopulationEstimates population_est(params, estimators);
-  ComputeSampleEstimates sample_est(params, samples);
+  ComputePopulationEstimates population_est(params);
+  ComputeSampleEstimates sample_est(params);
 
   HaplotypeGeneratorIID haplo(params);
   RandomMating founder_mate(params);
@@ -161,47 +155,45 @@ inline void run_replicate(
   }
 }
 
-inline void run_simulation(
-    const SimulationSpec& simulation,
-    std::size_t n_replicates,
-    std::size_t n_threads) {
+inline void run_simulation(const SimulationSpec& spec) {
   // set up thread pool for parallel simulation
   std::atomic<std::size_t> next{0};
   std::vector<std::thread> pool;
-  pool.reserve(n_threads);
+  pool.reserve(spec.n_threads);
 
   // set up the log
-  details::setup_log(simulation);
+  details::setup_log(spec);
 
   // set up random seed
-  std::uint64_t seed = rng::auto_seed(simulation.random_seed);
+  std::uint64_t seed = rng::auto_seed(spec.random_seed);
   rng::set_seed(seed);
 
   // preprocess parameters
-  Params params = details::preprocess_simulation(simulation);
+  Params params = details::preprocess_simulation(spec);
 
   // validate output directory
-  if (!std::filesystem::exists(simulation.output_dir))
+  if (!std::filesystem::exists(spec.output_dir))
     throw std::runtime_error(
-        "output directory does not exist: " + simulation.output_dir.string());
+        "output directory does not exist: " + spec.output_dir.string());
 
   // set up scratch directory in tmp
   std::filesystem::path tmp_dir = details::setup_outdir(seed);
 
-  details::setup_writer(simulation, n_replicates);
+  details::setup_writer(spec);
 
   Writer::get_instance().write_params(params);
 
-  for (std::size_t thread = 0; thread < n_threads; ++thread) {
+  for (std::size_t thread = 0; thread < spec.n_threads; ++thread) {
     pool.emplace_back([&, thread]() {
       while (true) {
         Params thread_params = params;
 
         auto rep_id = next.fetch_add(1);
-        if (rep_id >= n_replicates) return;
+        if (rep_id >= spec.n_replicates) return;
 
-        thread_params.global.out_dir = details::setup_replicate(tmp_dir, rep_id);
-        if (simulation.share_init_state) {
+        thread_params.global.out_dir =
+            details::setup_replicate(tmp_dir, rep_id);
+        if (spec.share_init_state) {
           thread_params.global.rng_seed = seed;
           thread_params.global.post_init_seed =
               details::shuffle_seed(seed, rep_id);
@@ -210,7 +202,7 @@ inline void run_simulation(
         }
         thread_params.global.rep_id = rep_id;
 
-        run_replicate(thread_params, simulation.estimators, simulation.samples);
+        run_replicate(thread_params);
       }
     });
   }

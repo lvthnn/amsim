@@ -15,18 +15,23 @@
 
 #pragma once
 
-#include <amsim/estimate/estimator.h>
-#include <amsim/estimate/external.h>
-#include <amsim/estimate/factory.h>
-#include <amsim/estimate/genome_estimators.h>
-#include <amsim/estimate/greml.h>
-#include <amsim/estimate/gwas.h>
-#include <amsim/estimate/haseman_elston.h>
-#include <amsim/estimate/mating_estimators.h>
-#include <amsim/estimate/pedigree_estimators.h>
-#include <amsim/estimate/phenome_estimators.h>
-#include <amsim/estimate/population.h>
-#include <amsim/estimate/registry.h>
-#include <amsim/estimate/sample.h>
-#include <amsim/estimate/sample_estimator.h>
-#include <amsim/estimate/strategy.h>
+#include <functional>
+#include <memory>
+#include <string>
+
+namespace amsim {
+
+struct Params;
+class PopulationEstimatorStrategy;
+
+struct PopulationEstimator {
+  std::string name;
+  std::function<std::unique_ptr<PopulationEstimatorStrategy>(const Params&)> fn;
+
+  std::unique_ptr<PopulationEstimatorStrategy> operator()(
+      const Params& params) const {
+    return fn(params);
+  }
+};
+
+}  // namespace amsim

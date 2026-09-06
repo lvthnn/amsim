@@ -16,6 +16,7 @@
 #pragma once
 
 #include <amsim/core.h>
+#include <amsim/estimate/sample_estimator.h>
 #include <amsim/io/parse.h>
 #include <amsim/io/writer.h>
 #include <amsim/sample/proband.h>
@@ -27,17 +28,6 @@
 #include <vector>
 
 namespace amsim {
-
-struct SampleEstimatorDecl {
-  std::string name;
-  std::string type;
-  std::optional<std::string> exec;
-  std::optional<std::size_t> n_rows;
-  std::optional<std::size_t> n_cols;
-  std::optional<std::vector<std::string>> row_names;
-  std::optional<std::vector<std::string>> col_names;
-  std::vector<std::string> params;
-};
 
 template <Proband P>
 class SampleEstimatorStrategy {
@@ -85,24 +75,6 @@ class SampleEstimatorStrategy {
   std::size_t n_cols_;
   Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data_;
 };
-
-template <Proband P>
-struct SampleEstimator {
-  std::string name;
-  std::function<std::unique_ptr<SampleEstimatorStrategy<P>>(
-      const Params&, std::size_t, const std::filesystem::path&)>
-      fn;
-
-  std::unique_ptr<SampleEstimatorStrategy<P>> operator()(
-      const Params& params,
-      std::size_t n_probands,
-      const std::filesystem::path& sample_dir) const {
-    return fn(params, n_probands, sample_dir);
-  }
-};
-
-template <Proband P>
-using SampleEstimators = std::vector<SampleEstimator<P>>;
 
 template <Proband P>
 class SampleMean : public SampleEstimatorStrategy<P> {
