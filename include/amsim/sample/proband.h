@@ -16,7 +16,6 @@
 #pragma once
 
 #include <amsim/core/generation.h>
-#include <amsim/core/params.h>
 #include <amsim/core/utils.h>
 #include <amsim/sample/weight.h>
 
