@@ -112,7 +112,6 @@ struct SimulationSpec {
   Mating mating;
 
   std::vector<PopulationEstimator> estimators;  // population-wide estimators
-  std::vector<SampleVariant> samples;           // subpopulation estimators
 
   std::vector<SampleSpec> sample_spec;
   std::vector<SampleEstimatorSpec> sample_estimator_spec;
