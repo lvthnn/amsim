@@ -95,8 +95,29 @@ inline SampleVariant build_sample(const SampleSpec& spec) {
 inline std::vector<SampleVariant> build_samples(
     const std::vector<SampleSpec>& spec,
     const std::vector<SampleEstimatorSpec>& estimator_spec) {
+  for (const auto& se : estimator_spec) {
+    if (se.type == "external") {
+      if (!se.exec.has_value())
+        throw std::runtime_error(
+            "sample estimator '" + se.name +
+            "': type 'external' requires --exec");
+      if (!se.n_rows.has_value() || !se.n_cols.has_value())
+        throw std::runtime_error(
+            "sample estimator '" + se.name +
+            "': type 'external' requires --n-rows and --n-cols");
+    } else if (se.exec.has_value()) {
+      throw std::runtime_error(
+          "sample estimator '" + se.name +
+          "': --exec is only valid for type 'external'");
+    }
+  }
+
   std::vector<SampleVariant> samples;
   for (const auto& sample_spec : spec) {
+    if (sample_spec.estimators.empty())
+      throw std::runtime_error(
+          "sample '" + sample_spec.name + "' has no estimators declared");
+
     SampleVariant sample = build_sample(sample_spec);
     for (const auto& estimator : sample_spec.estimators) {
       auto it = std::ranges::find_if(
