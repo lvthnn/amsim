@@ -253,7 +253,7 @@ inline void AssortativeMating::operator()(State& state) {
     temp_cur_ *= temp_decay_;
 
     if (err_linfty_opt_ < tol_inf_) {
-      n_itr_ = itr;
+      n_itr_ = itr + 1;
       break;
     }
   }
