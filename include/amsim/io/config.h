@@ -15,259 +15,603 @@
 
 #pragma once
 
+#include <amsim/core/log.h>
+#include <amsim/estimate/registry.h>
 #include <amsim/init/setup.h>
 #include <toml++/toml.h>
 
 #include <fstream>
-#include <numeric>
 
 namespace amsim {
 
-template <typename V>
-inline std::string vec_to_string(const V& vec) {
-  return std::accumulate(
-      vec.begin() + 1,
-      vec.end(),
-      std::format("{:g}", vec[0]),
-      [](const std::string& a, double b) {
-        return a + "," + std::format("{:g}", b);
-      });
-}
+class WriteGuard {
+ public:
+  explicit WriteGuard(toml::table& table)
+      : table_(table), checkpoint_(std::move(table)) {}
 
-inline std::string to_string(
-    const std::variant<double, File<Eigen::MatrixXd>, Distribution>& val) {
-  if (std::holds_alternative<double>(val))
-    return std::format("{:g}", std::get<double>(val));
+  ~WriteGuard() { table_ = std::move(checkpoint_); }
+  WriteGuard(const WriteGuard&) = delete;
+  WriteGuard& operator=(const WriteGuard&) = delete;
 
-  if (std::holds_alternative<Distribution>(val)) {
-    const auto& dist = std::get<Distribution>(val);
-    return dist.name + "(" + vec_to_string(dist.params) + ")";
+ private:
+  toml::table& table_;
+  toml::table checkpoint_;
+};
+
+class ConfigWriter {
+ public:
+  explicit ConfigWriter(const SimulationSpec& spec)
+      : config_(
+            toml::table{
+                {"global", toml::table{}},
+                {"genome", toml::table{}},
+                {"phenotypes", toml::table{}},
+                {"mating", toml::table{}},
+                {"estimators", toml::table{}},
+                {"samples", toml::table{}}}),
+        spec_(spec),
+        write_to_(*config_["global"].as_table()) {
+    std::filesystem::path config_path =
+        spec.output_name.has_value()
+            ? spec.output_dir / ("config_" + spec.output_name.value() + ".toml")
+            : spec.output_dir / "config.toml";
+
+    writeConfig(config_path);
   }
 
-  return "file(" + std::get<File<Eigen::MatrixXd>>(val).path.string() + ")";
+ private:
+  toml::table config_;
+  toml::table write_to_;
+  const SimulationSpec& spec_;
+
+  void writeToSection(const std::string& name);
+
+  template <typename T>
+  auto toTOML(const T& val);
+
+  template <typename T>
+  auto toTOML(const File<T>& val);
+
+  template <typename T>
+  auto toTOML(const std::vector<T>& val);
+
+  template <typename T>
+  toml::array toArrayTOML(const std::vector<T>& val);
+
+  template <typename T>
+  toml::table toTableTOML(const std::vector<T>& val);
+
+  template <typename T>
+  void writeParam(const T& val, const std::string& name);
+
+  template <typename T>
+  void writeParam(const std::optional<T>& val, const std::string& name);
+
+  template <typename T>
+  void writeParam(const std::vector<T>& val, const std::string& name);
+
+  template <typename... Ts>
+  void writeParam(const std::variant<Ts...>& val, const std::string& name);
+
+  void writeGlobalConfig();
+  void writeGenomeConfig();
+  void writePhenotypeConfig();
+  void writeMatingConfig();
+  void writeEstimatorConfig();
+  void writeSampleConfig();
+  void writeConfig(const std::filesystem::path& config_path);
+};
+
+inline void ConfigWriter::writeToSection(const std::string& name) {
+  write_to_ = *config_[name].as_table();
 }
 
-inline toml::array to_toml_array(const Eigen::MatrixXd& mat) {
-  toml::array rows;
-  for (int i = 0; i < mat.rows(); ++i) {
-    toml::array row;
-    for (int j = 0; j < mat.cols(); ++j) row.push_back(mat(i, j));
-    rows.push_back(row);
-  }
-  return rows;
+template <typename T>
+inline auto ConfigWriter::toTOML(const T& val) {
+  static_assert(
+      toml::impl::is_native<T> || toml::is_container<T>,
+      "toTOML: no conversion known for this type — add specialisation");
+  return val;
 }
 
-inline toml::array to_toml_array(const std::vector<std::string>& vec) {
+template <typename T>
+inline auto ConfigWriter::toTOML(const File<T>& val) {
+  return "file(" + val.path.string() + ")";
+}
+
+template <typename T>
+inline auto ConfigWriter::toTOML(const std::vector<T>& val) {
+  return toArrayTOML(val);
+}
+
+template <>
+inline auto ConfigWriter::toTOML(const std::size_t& val) {
+  return static_cast<int64_t>(val);
+}
+
+template <>
+inline auto ConfigWriter::toTOML(const std::uint64_t& val) {
+  return static_cast<int64_t>(val);
+}
+
+template <>
+inline auto ConfigWriter::toTOML(const std::filesystem::path& val) {
+  return val.string();
+}
+
+template <>
+inline auto ConfigWriter::toTOML(const LogLevel& val) {
+  return LogLevel_to_string(val);
+}
+
+template <>
+inline auto ConfigWriter::toTOML(const Distribution& val) {
+  return val.name + "(" + utils::vector_to_string(val.params) + ")";
+}
+
+template <>
+inline auto ConfigWriter::toTOML(const Eigen::MatrixXd& val) {
   toml::array arr;
-  for (const auto& s : vec) arr.push_back(s);
+
+  for (std::size_t row = 0; row < val.rows(); ++row) {
+    arr.push_back(toml::array{});
+    auto* row_arr = arr.back().as_array();
+    for (std::size_t col = 0; col < val.cols(); ++col)
+      row_arr->push_back(val(row, col));
+  }
+
   return arr;
 }
 
-inline void insert_const_file_or_dist(
-    toml::table& table,
-    const std::string& name,
-    const std::variant<double, File<Eigen::MatrixXd>, Distribution>& variant) {
-  if (std::holds_alternative<double>(variant)) {
-    table.insert(name, std::get<double>(variant));
-    return;
-  }
-  if (std::holds_alternative<File<Eigen::MatrixXd>>(variant)) {
-    table.insert(
-        name,
-        "file(" + std::get<File<Eigen::MatrixXd>>(variant).path.string() + ")");
-    return;
-  }
-
-  Distribution dist = std::get<Distribution>(variant);
-  table.insert(name, dist.name + "(" + vec_to_string(dist.params) + ")");
+template <>
+inline auto ConfigWriter::toTOML(const PopulationEstimator& val) {
+  return val.name;
 }
 
-inline void insert_matrix_or_file(
-    toml::table& table,
-    const std::string& name,
-    const std::variant<File<Eigen::MatrixXd>, Eigen::MatrixXd>& variant) {
-  if (std::holds_alternative<File<Eigen::MatrixXd>>(variant))
-    table.insert(
-        name,
-        "file(" + std::get<File<Eigen::MatrixXd>>(variant).path.string() + ")");
+template <>
+inline auto ConfigWriter::toTOML(const Phenotype& val) {
+  toml::table phenotype;
+
+  {
+    WriteGuard write(phenotype);
+    writeParam(val.n_causal_loci, "name");
+    writeParam(val.causal_loci, "causal_loci");
+    writeParam(val.var_genetic, "var_genetic");
+    writeParam(val.var_environmental, "var_environmental");
+    writeParam(val.var_vertical, "var_vertical");
+  }
+
+  return phenotype;
+}
+
+template <>
+inline auto ConfigWriter::toTOML(const SampleSpec& val) {
+  toml::table sample;
+
+  {
+    WriteGuard write(sample);
+    writeParam(val.proband_type, "proband_type");
+    writeParam(val.n_probands, "n_probands");
+    writeParam(val.on, "on");
+    writeParam(val.of, "of");
+    writeParam(val.weight_function, "weight_function");
+    writeParam(val.agg, "agg");
+    writeParam(val.estimators, "estimators");
+  }
+
+  return sample;
+}
+
+template <>
+inline auto ConfigWriter::toTOML(const SampleEstimatorSpec& val) {
+  toml::table sample_estimator;
+
+  {
+    WriteGuard write(sample_estimator);
+    writeParam(val.params, "params");
+    writeParam(val.exec, "exec");
+    writeParam(val.n_rows, "n_rows");
+    writeParam(val.n_cols, "n_cols");
+    writeParam(val.row_names, "row_names");
+    writeParam(val.col_names, "col_names");
+  }
+
+  return sample_estimator;
+}
+
+template <typename T>
+inline toml::array ConfigWriter::toArrayTOML(const std::vector<T>& val) {
+  toml::array arr{};
+  for (std::size_t el = 0; el < val.size(); ++el)
+    arr.push_back(toTOML(val[el]));
+  return arr;
+}
+
+template <typename T>
+inline toml::table ConfigWriter::toTableTOML(const std::vector<T>& val) {
+  toml::table tbl{};
+  for (const auto& item : val) tbl.insert(item.name, toTOML(item));
+  return tbl;
+}
+
+template <typename T>
+inline void ConfigWriter::writeParam(const T& val, const std::string& name) {
+  write_to_.insert(name, toTOML(val));
+}
+
+template <typename T>
+inline void ConfigWriter::writeParam(
+    const std::optional<T>& val, const std::string& name) {
+  if (val.has_value()) writeParam(val.value(), name);
+}
+
+template <typename T>
+inline void ConfigWriter::writeParam(
+    const std::vector<T>& val, const std::string& name) {
+  if constexpr (std::
+                    is_same_v<decltype(toTOML(std::declval<T>())), toml::table>)
+    write_to_.insert(name, toTableTOML(val));
   else
-    table.insert(name, to_toml_array(std::get<Eigen::MatrixXd>(variant)));
+    write_to_.insert(name, toArrayTOML(val));
 }
 
-inline void insert_list_or_file(
-    const std::variant<
-        std::vector<std::size_t>,
-        File<std::vector<std::size_t>>>& variant,
-    const std::string& name,
-    toml::table& table) {
-  if (std::holds_alternative<File<std::vector<std::size_t>>>(variant)) {
-    table.insert(
-        name,
-        "file(" +
-            std::get<File<std::vector<std::size_t>>>(variant).path.string() +
-            ")");
-  } else {
-    toml::array arr;
-    for (auto idx : std::get<std::vector<std::size_t>>(variant))
-      arr.push_back(static_cast<int64_t>(idx));
-    table.insert(name, arr);
+template <typename... Ts>
+inline void ConfigWriter::writeParam(
+    const std::variant<Ts...>& val, const std::string& name) {
+  std::visit([this, name](const auto& v) { writeParam(v, name); }, val);
+}
+
+inline void ConfigWriter::writeGlobalConfig() {
+  writeToSection("global");
+  writeParam(spec_.n_individuals, "n_individuals");
+  writeParam(spec_.n_generations, "n_generations");
+  writeParam(spec_.n_replicates, "n_replicates");
+  writeParam(spec_.n_threads, "n_threads");
+  writeParam(spec_.random_seed, "random_seed");
+  writeParam(spec_.output_dir, "output_dir");
+  writeParam(spec_.output_name, "output_name");
+  writeParam(spec_.log_level, "log_level");
+  writeParam(spec_.log_to_file, "log_to_file");
+  writeParam(spec_.share_init_state, "share_init_state");
+}
+
+inline void ConfigWriter::writeGenomeConfig() {
+  writeToSection("genome");
+  writeParam(spec_.genome.n_loci, "n_loci");
+  writeParam(spec_.genome.v_maf, "locus_maf");
+  writeParam(spec_.genome.v_rec, "locus_rec");
+  writeParam(spec_.genome.v_mut, "locus_mut");
+}
+
+inline void ConfigWriter::writePhenotypeConfig() {
+  writeToSection("phenotypes");
+  writeParam(spec_.genetic_component_cor, "genetic_cor");
+  writeParam(spec_.environmental_component_cor, "environmental_cor");
+  writeParam(spec_.phenotypes, "phenotypes");
+}
+
+inline void ConfigWriter::writeMatingConfig() {
+  writeToSection("mating");
+  writeParam(spec_.mating.type, "type");
+
+  if (spec_.mating.type == "assortative") {
+    if (spec_.mating.mate_cor.has_value())
+      writeParam(spec_.mating.mate_cor.value(), "mate_cor");
+
+    writeParam(spec_.mating.tolerance, "tol_inf");
+    writeParam(spec_.mating.max_iterations, "max_itr");
+    writeParam(spec_.mating.initial_temperature, "temp_init");
+    writeParam(spec_.mating.temperature_decay, "temp_decay");
   }
 }
 
-inline void write_config(
-    const Simulation& simulation,
-    std::size_t n_replicates,
-    std::size_t n_threads,
-    const std::vector<SampleDecl>& sample_decl,
-    const std::vector<SampleEstimatorDecl>& sample_estimator_decl,
-    const std::filesystem::path& config_file) {
-  auto config = toml::table{
-      {"simulation", toml::table{}},
-      {"genome", toml::table{}},
-      {"phenotypes", toml::table{}},
-      {"mating", toml::table{}},
-      {"estimators", toml::table{}},
-      {"samples", toml::table{}}};
+inline void ConfigWriter::writeEstimatorConfig() {
+  writeToSection("estimators");
+  writeParam(spec_.estimators, "population");
+}
 
-  // GLOBAL SIMULATION OPTIONS
+inline void ConfigWriter::writeSampleConfig() {
+  writeToSection("samples");
+  writeParam(spec_.sample_spec, "sample");
 
-  auto& sim = *config["simulation"].as_table();
-  sim.insert("n_individuals", static_cast<int64_t>(simulation.n_individuals));
-  sim.insert("n_generations", static_cast<int64_t>(simulation.n_generations));
-  sim.insert("n_replications", static_cast<int64_t>(n_replicates));
-  sim.insert("n_threads", static_cast<int64_t>(n_threads));
+  writeToSection("sample_estimators");
+  writeParam(spec_.sample_estimator_spec, "sample_estimator");
+}
 
-  if (simulation.random_seed.has_value())
-    sim.insert(
-        "random_seed", static_cast<int64_t>(simulation.random_seed.value()));
+inline void ConfigWriter::writeConfig(const std::filesystem::path& path) {
+  writeGlobalConfig();
+  writeGenomeConfig();
+  writePhenotypeConfig();
+  writeMatingConfig();
+  writeEstimatorConfig();
+  writeSampleConfig();
 
-  sim.insert("output_dir", simulation.output_dir.string());
-
-  if (simulation.output_name.has_value())
-    sim.insert("output_name", simulation.output_name.value());
-
-  sim.insert("log_level", LogLevel_to_string(simulation.log_level));
-  sim.insert("log_to_output", !simulation.log_to_file);
-
-  // GENOME OPTIONS
-  auto& genome = *config["genome"].as_table();
-  genome.insert("n_loci", static_cast<int64_t>(simulation.genome.n_loci));
-  insert_const_file_or_dist(genome, "locus_maf", simulation.genome.v_maf);
-  insert_const_file_or_dist(genome, "locus_rec", simulation.genome.v_rec);
-  insert_const_file_or_dist(genome, "locus_mut", simulation.genome.v_mut);
-
-  // PHENOME OPTIONS
-  auto& phenotype_sec = *config["phenotypes"].as_table();
-
-  if (simulation.genetic_component_cor.has_value())
-    insert_matrix_or_file(
-        phenotype_sec, "genetic_cor", simulation.genetic_component_cor.value());
-
-  if (simulation.environmental_component_cor.has_value())
-    insert_matrix_or_file(
-        phenotype_sec,
-        "environmental_cor",
-        simulation.environmental_component_cor.value());
-
-  auto phenotypes = toml::array{};
-  for (const auto& phenotype : simulation.phenotypes) {
-    toml::table phenotype_tbl{};
-    phenotype_tbl.insert("name", phenotype.name);
-    phenotype_tbl.insert(
-        "n_loci", static_cast<int64_t>(phenotype.n_causal_loci));
-    if (phenotype.effects.has_value())
-      phenotype_tbl.insert("effects", to_string(phenotype.effects.value()));
-    if (phenotype.causal_loci.has_value())
-      insert_list_or_file(
-          phenotype.causal_loci.value(), "causal_loci", phenotype_tbl);
-    phenotype_tbl.insert("var_genetic", phenotype.var_genetic);
-    phenotype_tbl.insert("var_environmental", phenotype.var_environmental);
-    phenotype_tbl.insert("var_vertical", phenotype.var_vertical);
-    phenotypes.push_back(phenotype_tbl);
-  }
-  phenotype_sec.insert("phenotype", phenotypes);
-
-  // mating — if it is assortative, need to log some extra information
-  if (simulation.mating.type == "assortative") {
-    auto& mating = *config["mating"].as_table();
-    if (simulation.mating.mate_cor.has_value())
-      insert_matrix_or_file(
-          mating, "mate_cor", simulation.mating.mate_cor.value());
-    mating.insert("tol_inf", simulation.mating.tolerance);
-    mating.insert(
-        "max_itr", static_cast<int64_t>(simulation.mating.max_iterations));
-    mating.insert("temp_init", simulation.mating.initial_temperature);
-    mating.insert("temp_decay", simulation.mating.temperature_decay);
-  }
-
-  // estimators
-  auto& estimators = *config["estimators"].as_table();
-
-  toml::array estimator_names;
-  for (const auto& estimator : simulation.estimators)
-    estimator_names.push_back(estimator.name);
-
-  estimators.insert("population", estimator_names);
-
-  // samples
-  if (!sample_decl.empty()) {
-    auto& sample_section = *config["samples"].as_table();
-
-    toml::array samples{};
-    for (const auto& sample : sample_decl) {
-      toml::table sample_tbl{};
-      sample_tbl.insert("name", sample.name);
-      sample_tbl.insert("proband_type", sample.proband_type);
-      sample_tbl.insert("n_probands", static_cast<int64_t>(sample.n_probands));
-      if (sample.on.has_value())
-        sample_tbl.insert("on", to_toml_array(sample.on.value()));
-      if (sample.of.has_value())
-        sample_tbl.insert("of", to_toml_array(sample.of.value()));
-      if (sample.weight_function.has_value())
-        sample_tbl.insert("weight_function", sample.weight_function.value());
-      if (sample.agg.has_value())
-        sample_tbl.insert("agg", sample.agg.value());
-      if (!sample.estimators.empty())
-        sample_tbl.insert("estimators", to_toml_array(sample.estimators));
-      samples.push_back(sample_tbl);
-    }
-    sample_section.insert("sample", samples);
-
-    toml::array sample_estimators{};
-    for (const auto& sample_estimator : sample_estimator_decl) {
-      toml::table sample_estimator_tbl{};
-      sample_estimator_tbl.insert("name", sample_estimator.name);
-      sample_estimator_tbl.insert("type", sample_estimator.type);
-      if (sample_estimator.exec.has_value()) {
-        sample_estimator_tbl.insert("exec", sample_estimator.exec.value());
-        if (sample_estimator.n_rows.has_value())
-          sample_estimator_tbl.insert(
-              "n_rows", static_cast<int64_t>(sample_estimator.n_rows.value()));
-        if (sample_estimator.n_cols.has_value())
-          sample_estimator_tbl.insert(
-              "n_cols", static_cast<int64_t>(sample_estimator.n_cols.value()));
-        if (sample_estimator.row_names.has_value())
-          sample_estimator_tbl.insert(
-              "row_names", to_toml_array(sample_estimator.row_names.value()));
-        if (sample_estimator.col_names.has_value())
-          sample_estimator_tbl.insert(
-              "col_names", to_toml_array(sample_estimator.col_names.value()));
-      }
-      sample_estimators.push_back(sample_estimator_tbl);
-    }
-    sample_section.insert("sample_estimators", sample_estimators);
-  }
-
-  std::ofstream out(config_file);
-
+  std::ofstream out(path);
   if (!out.is_open())
     throw std::runtime_error("Could not open configuration file for writing");
 
   out << toml::
-             toml_formatter{config, toml::format_flags::relaxed_float_precision}
+             toml_formatter{config_, toml::format_flags::relaxed_float_precision}
       << std::endl;
 }
 
-inline void read_config(const std::filesystem::path& config_file) {}
+class ConfigReader {
+ public:
+  explicit ConfigReader(const std::filesystem::path& config_path)
+      : config_(toml::parse_file(config_path.string())) {
+    readConfig();
+  }
+
+  SimulationSpec& result() { return spec_; }
+
+ private:
+  toml::table config_;
+  SimulationSpec spec_;
+  toml::node_view<toml::node> visit(const std::string& path);
+
+  template <typename T>
+  T readParam(const std::string& read_from);
+
+  template <typename T>
+  void readParam(T& read_to, const std::string& read_from);
+
+  template <typename T>
+  void readParam(
+      std::variant<File<T>, T>& read_to, const std::string& read_from);
+
+  template <typename T>
+  void readParam(std::optional<T>& read_to, const std::string& read_from);
+
+  void readGlobalConfig();
+  void readGenomeConfig();
+  void readPhenotypeConfig();
+  void readMatingConfig();
+  void readEstimatorConfig();
+  void readSampleConfig();
+  void readConfig();
+};
+
+inline toml::node_view<toml::node> ConfigReader::visit(
+    const std::string& path) {
+  std::vector<std::string> tokens = utils::split_string(path, "/");
+  toml::node_view<toml::node> node{config_};
+  for (const auto& token : tokens) node = node[token];
+  return node;
+}
+
+template <typename T>
+inline T ConfigReader::readParam(const std::string& read_from) {
+  T result{};
+  toml::node_view<toml::node> node = visit(read_from);
+  if (auto val = node.value<T>()) result = *val;
+  return result;
+}
+
+template <typename T>
+inline void ConfigReader::readParam(T& read_to, const std::string& read_from) {
+  read_to = readParam<T>(read_from);
+}
+
+template <typename T>
+inline void ConfigReader::readParam(
+    std::variant<File<T>, T>& read_to, const std::string& read_from) {
+  toml::node_view<toml::node> node = visit(read_from);
+
+  if constexpr (std::is_same_v<T, Eigen::MatrixXd>) {
+    if (auto* arr = node.as_array()) {
+      auto rows = arr->size();
+      auto cols = arr->at(0).as_array()->size();
+      Eigen::MatrixXd matrix(rows, cols);
+
+      for (std::size_t r = 0; r < rows; ++r) {
+        auto* row = arr->at(r).as_array();
+        for (std::size_t c = 0; c < cols; ++c)
+          matrix(r, c) = row->at(c).value<double>().value();
+      }
+      read_to = matrix;
+    } else if (const auto& val = node.value<std::string>()) {
+      auto [file_tag, file_params] = parse_function(*val);
+      read_to = parse_matrix_file(file_params[0]);
+    }
+  } else if constexpr (std::is_same_v<T, std::vector<std::size_t>>) {
+    if (auto* arr = node.as_array()) {
+      auto n_elem = arr->size();
+      std::vector<std::size_t> vector(n_elem);
+
+      for (std::size_t el = 0; el < n_elem; ++el)
+        vector[el] = arr->at(el).value<std::size_t>().value();
+
+      read_to = vector;
+    } else if (const auto& val = node.value<std::string>()) {
+      auto [file_tag, file_params] = parse_function(*val);
+      read_to = parse_indices_file(file_params[0]);
+    }
+  } else {
+    throw std::invalid_argument(
+        "Invalid argument supplied to ConfigReader::readParam for file / "
+        "container parsing");
+  }
+}
+
+template <>
+inline void ConfigReader::readParam(
+    std::variant<double, File<Eigen::MatrixXd>, Distribution>& read_to,
+    const std::string& read_from) {
+  toml::node_view<toml::node> node = visit(read_from);
+
+  if (auto val = node.value<double>()) {
+    read_to = *val;
+  } else if (const auto& val = node.value<std::string>()) {
+    auto [fn_name, params] = parse_function(*val);
+
+    if (fn_name == "file")
+      read_to = File<Eigen::MatrixXd>{params[0]};
+    else
+      read_to = parse_distribution(*val);
+  } else {
+    throw std::runtime_error(
+        "Unrecognised type; expecting functional or double");
+  }
+}
+
+template <>
+inline void ConfigReader::readParam(
+    std::filesystem::path& read_to, const std::string& read_from) {
+  std::string string_path;
+  readParam<std::string>(string_path, read_from);
+  read_to = static_cast<std::filesystem::path>(string_path);
+}
+
+template <>
+inline void ConfigReader::readParam(
+    LogLevel& read_to, const std::string& read_from) {
+  std::string string_log_level;
+  readParam<std::string>(string_log_level, read_from);
+  read_to = LogLevel_from_string(string_log_level);
+}
+
+template <>
+inline std::vector<std::string> ConfigReader::readParam(
+    const std::string& read_from) {
+  std::vector<std::string> result;
+  auto* arr = visit(read_from).as_array();
+  if (!arr) return result;
+
+  result.reserve(arr->size());
+  for (auto&& el : *arr) result.push_back(el.value<std::string>().value());
+  return result;
+}
+
+template <typename T>
+inline void ConfigReader::readParam(
+    std::optional<T>& read_to, const std::string& read_from) {
+  toml::node_view<toml::node> node = visit(read_from);
+
+  if (!node) {
+    read_to = std::nullopt;
+    return;
+  }
+
+  read_to.emplace();
+  readParam(read_to.value(), read_from);
+}
+
+inline void ConfigReader::readGlobalConfig() {
+  readParam(spec_.n_individuals, "global/n_individuals");
+  readParam(spec_.n_generations, "global/n_generations");
+  readParam(spec_.n_replicates, "global/n_replicates");
+  readParam(spec_.n_threads, "global/n_threads");
+  readParam(spec_.pedigree_max_depth, "global/pedigree_max_depth");
+  readParam(spec_.pedigree_warmup, "global/pedigree_warmup");
+  readParam(spec_.random_seed, "global/random_seed");
+  readParam(spec_.output_dir, "global/output_dir");
+  readParam(spec_.output_name, "global/output_name");
+  readParam(spec_.log_level, "global/log_level");
+  readParam(spec_.log_to_file, "global/log_to_file");
+  readParam(spec_.share_init_state, "global/share_init_state");
+}
+
+inline void ConfigReader::readGenomeConfig() {
+  readParam(spec_.genome.n_loci, "genome/n_loci");
+  readParam(spec_.genome.v_maf, "genome/locus_maf");
+  readParam(spec_.genome.v_mut, "genome/locus_mut");
+  readParam(spec_.genome.v_rec, "genome/locus_rec");
+}
+
+inline void ConfigReader::readPhenotypeConfig() {
+  const auto& phenotypes = config_["phenotypes"]["phenotype"].as_table();
+
+  for (auto&& [pheno_name, pheno_spec] : *phenotypes) {
+    std::string pheno_path =
+        std::format("phenotypes/phenotype/{}", pheno_name.str());
+    auto& pheno = *pheno_spec.as_table();
+    Phenotype phenotype;
+
+    phenotype.name = pheno_name.str();
+    readParam(phenotype.n_causal_loci, pheno_path + "/n_loci");
+    readParam(phenotype.effects, pheno_path + "/effects");
+    readParam(phenotype.causal_loci, pheno_path + "/causal_loci");
+    readParam(phenotype.var_genetic, pheno_path + "/var_genetic");
+    readParam(phenotype.var_environmental, pheno_path + "/var_environmental");
+    readParam(phenotype.var_vertical, pheno_path + "/var_vertical");
+
+    spec_.phenotypes.push_back(phenotype);
+  }
+
+  readParam(spec_.genetic_component_cor, "phenotypes/genetic_cor");
+  readParam(spec_.environmental_component_cor, "phenotypes/environmental_cor");
+}
+
+inline void ConfigReader::readMatingConfig() {
+  readParam(spec_.mating.type, "mating/type");
+  if (spec_.mating.type == "assortative") {
+    readParam(spec_.mating.mate_cor, "mating/mate_cor");
+    readParam(spec_.mating.tolerance, "mating/tol_inf");
+    readParam(spec_.mating.max_iterations, "mating/max_itr");
+    readParam(spec_.mating.initial_temperature, "mating/temp_init");
+    readParam(spec_.mating.temperature_decay, "mating/temp_decay");
+  }
+}
+
+inline void ConfigReader::readEstimatorConfig() {
+  const auto& estimators = config_["estimators"]["population"].as_array();
+
+  for (auto&& estimator : *estimators) {
+    std::string raw = *estimator.value<std::string>();
+    auto [name, params] = parse_function(raw);
+    PopulationEstimator est = build_population_estimator(name, params);
+    est.name = raw;
+    spec_.estimators.push_back(std::move(est));
+  }
+}
+
+inline void ConfigReader::readSampleConfig() {
+  if (const auto* sample_estimators_tbl =
+          config_["samples"]["sample_estimators"].as_table()) {
+    for (auto&& [est_name, est_node] : *sample_estimators_tbl) {
+      std::string est_path =
+          std::format("samples/sample_estimators/{}", est_name.str());
+
+      SampleEstimatorSpec est_spec;
+      est_spec.name = est_name.str();
+      readParam(est_spec.type, est_path + "/type");
+      readParam(est_spec.params, est_path + "/params");
+      readParam(est_spec.exec, est_path + "/exec");
+      readParam(est_spec.n_rows, est_path + "/n_rows");
+      readParam(est_spec.n_cols, est_path + "/n_cols");
+      readParam(est_spec.row_names, est_path + "/row_names");
+      readParam(est_spec.col_names, est_path + "/col_names");
+
+      spec_.sample_estimator_spec.push_back(std::move(est_spec));
+    }
+  }
+
+  if (const auto* samples_tbl = config_["samples"]["sample"].as_table()) {
+    for (auto&& [s_name, s_node] : *samples_tbl) {
+      std::string s_path = std::format("samples/sample/{}", s_name.str());
+
+      SampleSpec s_spec;
+      s_spec.name = s_name.str();
+      readParam(s_spec.proband_type, s_path + "/proband_type");
+      readParam(s_spec.n_probands, s_path + "/n_probands");
+      readParam(s_spec.on, s_path + "/on");
+      readParam(s_spec.of, s_path + "/of");
+      readParam(s_spec.weight_function, s_path + "/weight_function");
+      readParam(s_spec.agg, s_path + "/agg");
+      readParam(s_spec.estimators, s_path + "/estimators");
+
+      spec_.sample_spec.push_back(std::move(s_spec));
+    }
+  }
+}
+
+inline void ConfigReader::readConfig() {
+  readGlobalConfig();
+  readGenomeConfig();
+  readPhenotypeConfig();
+  readMatingConfig();
+  readEstimatorConfig();
+  readSampleConfig();
+}
 
 }  // namespace amsim
