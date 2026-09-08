@@ -100,17 +100,13 @@ inline Eigen::MatrixXd random_orthogonal(std::size_t dim) {
 }
 
 inline Eigen::MatrixXd matrix_from_singular_values(
-    const std::string& s, bool symmetric = false) {
-  std::vector<std::string> vs = split_string(s);
-  std::size_t n_pheno = vs.size();
+    const std::vector<double>& values, bool symmetric = false) {
+  std::size_t n_pheno = values.size();
   Eigen::MatrixXd u_mat;
   Eigen::MatrixXd v_mat;
 
   Eigen::VectorXd singular_values(n_pheno);
-  std::ranges::transform(
-      vs, singular_values.begin(), [](const std::string& s_val) {
-        return std::stod(s_val);
-      });
+  for (std::size_t i = 0; i < n_pheno; ++i) singular_values(i) = values[i];
 
   Eigen::MatrixXd s_mat = singular_values.asDiagonal();
 
