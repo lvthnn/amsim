@@ -31,12 +31,41 @@
 
 namespace amsim::utils {
 
+template <typename T>
+inline std::string vector_to_string(const T& vector) {
+  return std::accumulate(
+      vector.begin() + 1,
+      vector.end(),
+      std::format("{:g}", vector[0]),
+      [](const std::string& a, double b) {
+        return a + "," + std::format("{:g}", b);
+      });
+}
+
 inline std::vector<std::string> split_string(
     const std::string& s, const std::string& delim = ",") {
   std::vector<std::string> split;
   boost::split(split, s, boost::is_any_of(delim));
   std::erase_if(split, [](const std::string& s) { return s.empty(); });
   return split;
+}
+
+inline std::vector<std::string> vector_prefix(
+    const std::vector<std::string>& labels,
+    const std::optional<std::string>& prefix = std::nullopt) {
+  std::vector<std::string> result(labels.size());
+  for (std::size_t i = 0; i < labels.size(); ++i)
+    result[i] = prefix.value_or("") + labels[i];
+  return result;
+}
+
+inline std::vector<std::string> vector_suffix(
+    const std::vector<std::string>& labels,
+    const std::optional<std::string>& suffix = std::nullopt) {
+  std::vector<std::string> result(labels.size());
+  for (std::size_t i = 0; i < labels.size(); ++i)
+    result[i] = labels[i] + suffix.value_or("");
+  return result;
 }
 
 inline void bitmatrix_swap(
@@ -106,24 +135,6 @@ inline Eigen::MatrixXd standardise(
           .sqrt()
           .max(1e-10);
   return ((mat.rowwise() - mean).array().rowwise() / std.array());
-}
-
-inline std::vector<std::string> vector_prefix(
-    const std::vector<std::string>& labels,
-    const std::optional<std::string>& prefix = std::nullopt) {
-  std::vector<std::string> result(labels.size());
-  for (std::size_t i = 0; i < labels.size(); ++i)
-    result[i] = prefix.value_or("") + labels[i];
-  return result;
-}
-
-inline std::vector<std::string> vector_suffix(
-    const std::vector<std::string>& labels,
-    const std::optional<std::string>& suffix = std::nullopt) {
-  std::vector<std::string> result(labels.size());
-  for (std::size_t i = 0; i < labels.size(); ++i)
-    result[i] = labels[i] + suffix.value_or("");
-  return result;
 }
 
 inline std::vector<std::size_t> order(const Eigen::VectorXd& v) {
