@@ -31,6 +31,16 @@
 
 namespace amsim {
 
+inline std::vector<double> parse_doubles(
+    const std::string& s, const std::string& delim = ",") {
+  std::vector<std::string> tokens = utils::split_string(s, delim);
+  std::vector<double> values(tokens.size());
+  std::ranges::transform(tokens, values.begin(), [](const std::string& t) {
+    return std::stod(t);
+  });
+  return values;
+}
+
 inline Eigen::MatrixXd parse_matrix_value(const std::string& s) {
   std::string norm = s;
   std::ranges::replace(norm, ';', '\n');
@@ -39,13 +49,8 @@ inline Eigen::MatrixXd parse_matrix_value(const std::string& s) {
   std::vector<std::string> rows = utils::split_string(norm, "\n");
   std::vector<std::vector<double>> matrix(rows.size());
 
-  for (std::size_t row = 0; row < rows.size(); ++row) {
-    std::vector<std::string> row_vals = utils::split_string(rows[row], " ");
-    std::ranges::transform(
-        row_vals,
-        std::back_inserter(matrix[row]),
-        [](const std::string& s_val) { return std::stod(s_val); });
-  }
+  for (std::size_t row = 0; row < rows.size(); ++row)
+    matrix[row] = parse_doubles(rows[row], " ");
 
   std::size_t n_rows = matrix.size();
   std::size_t n_cols = matrix[0].size();
