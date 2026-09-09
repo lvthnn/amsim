@@ -60,7 +60,7 @@ class UniformDistribution {
   Eigen::VectorXd generate(std::size_t n) const {
     Eigen::VectorXd random(n);
     rng::UniformRange::fill(random.data(), n);
-    random = ((hi_ - lo_) * random).array() - lo_;
+    random = ((hi_ - lo_) * random).array() + lo_;
     return random;
   }
 
