@@ -251,7 +251,7 @@ struct ProbandData<Proband::Family> {
     if (l == "daughterhusband") return Family::DaughterHusband;
     if (l == "all") return Family::All;
     if (l == "parents") return Family::Parents;
-    if (l == "sibling") return Family::Siblings;
+    if (l == "siblings") return Family::Siblings;
     if (l == "males") return Family::Males;
     if (l == "females") return Family::Females;
     throw std::runtime_error("Unknown Family proband member " + l);

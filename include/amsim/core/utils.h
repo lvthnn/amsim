@@ -155,9 +155,9 @@ inline void system_throttled(const std::string& cmd) {
     char buffer[512];
     while (fgets(buffer, sizeof(buffer), pipe)) output += buffer;
   }
-  int rc = pclose(pipe);
+  int rc = pipe ? pclose(pipe) : -1;
   process_semaphore.release();
-  if (WIFEXITED(rc) && WEXITSTATUS(rc) != 0) {
+  if (!WIFEXITED(rc) || WEXITSTATUS(rc) != 0) {
     throw std::runtime_error(output);
   }
 }

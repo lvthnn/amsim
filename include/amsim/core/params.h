@@ -37,24 +37,24 @@ struct GenomeParams {
 };
 
 struct PhenomeParams {
-  std::size_t n_pheno;              ///< Number of phenotypes
-  std::vector<std::string> names;   ///< Vector of phenotype names
-  std::vector<std::size_t> n_locs;  ///< Vector of number of loci per phenotype
-  std::unordered_map<std::string, std::size_t> pheno_ids; ///< Name-ID map
+  std::size_t n_pheno;
+  std::vector<std::string> names;
+  std::vector<std::size_t> n_locs;
+  std::unordered_map<std::string, std::size_t> pheno_ids;
 
-  std::vector<Eigen::VectorXd> pheno_effects;  ///< Matrix of effect vectors
-  std::vector<std::vector<std::size_t>> pheno_loc;  ///< Phenotype causal loci
+  std::vector<Eigen::VectorXd> pheno_effects;
+  std::vector<std::vector<std::size_t>> pheno_loc;
 
-  Eigen::VectorXd h2_gen;  ///< Vector of genetic component variances
-  Eigen::VectorXd h2_env;  ///< Vector of environmental component variances
-  Eigen::VectorXd h2_vert;  ///< Vector of nurture component variances
+  Eigen::VectorXd var_gen;
+  Eigen::VectorXd var_env;
+  Eigen::VectorXd var_vert;
 
-  Eigen::MatrixXd gen_cor;  ///< Genetic component correlation matrix
-  Eigen::MatrixXd env_cor;  ///< Environmental component correlation matrix
+  Eigen::MatrixXd gen_cor;
+  Eigen::MatrixXd env_cor;
 
-  Eigen::VectorXd rnur_pat;  ///< Paternal ratio in nurture effect
-  Eigen::VectorXd rnur_env;  ///< Environmental ratio in nurture effect
-  Eigen::VectorXd vert_pat;  ///< Paternal vertical transmission ratio
+  Eigen::VectorXd rnur_pat;
+  Eigen::VectorXd rnur_env;
+  Eigen::VectorXd vert_pat;
 };
 
 struct MatingParams {

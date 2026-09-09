@@ -145,7 +145,7 @@ class SampleCov : public SampleEstimatorStrategy<P> {
     this->data_ =
         (phenotypes.rowwise() - phenotypes.colwise().mean()).transpose() *
         (phenotypes.rowwise() - phenotypes.colwise().mean()) /
-        (static_cast<double>(n_ind_ - 1));
+        (static_cast<double>(phenotypes.rows() - 1));
   }
 
  private:

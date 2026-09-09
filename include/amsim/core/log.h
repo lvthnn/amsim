@@ -105,8 +105,6 @@ class Log {
   bool done_ = false;
 
   void threadCallback();
-  void setStream(std::ostream& stream);
-  std::string levelToStr(LogLevel level);
   static std::string getTimeStr();
   static std::string formatMsg(const std::string& msg, LogLevel level);
 };

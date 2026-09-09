@@ -28,7 +28,6 @@
 
 namespace amsim {
 
-// macro class to manage all estimators simultaneously in simulation loop
 class ComputePopulationEstimates {
  public:
   explicit ComputePopulationEstimates(

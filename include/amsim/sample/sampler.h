@@ -317,7 +317,7 @@ inline void Sampler::Model<P>::writeFAM(const State& state) const {
   if (!fam_file.is_open())
     throw std::runtime_error(
         "Could not open FAM file output stream " +
-        (sample_dir / "data.bim").string());
+        (sample_dir / "data.fam").string());
 
   for (std::size_t prob = 0; prob < n_probands; ++prob) {
     std::size_t id = selected[prob];
