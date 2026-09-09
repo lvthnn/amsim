@@ -50,7 +50,7 @@ class ExternalEstimator : public SampleEstimatorStrategy<P> {
 
   void compute() override {
     run_command();
-    this->data_ = parse_matrix_file(out_path_);
+    this->data_ = parse_file<Eigen::MatrixXd>(out_path_);
   }
 
  private:

@@ -80,7 +80,7 @@ inline Sample<P> build_sample(const SampleSpec& spec) {
   if (spec.agg.has_value())
     sample.agg = Aggregator_from_string(spec.agg.value());
   if (spec.weight_function.has_value())
-    sample.weighting = parse_weight_function(spec.weight_function.value());
+    sample.weighting = parse<WeightFunction>(spec.weight_function.value());
   return sample;
 }
 

@@ -16,9 +16,9 @@
 #pragma once
 
 #include <amsim/core/distributions.h>
-#include <amsim/sample/weight.h>
-#include <amsim/sample/proband.h>
 #include <amsim/core/utils.h>
+#include <amsim/sample/proband.h>
+#include <amsim/sample/weight.h>
 
 #include <Eigen/Dense>
 #include <algorithm>
@@ -31,113 +31,14 @@
 
 namespace amsim {
 
-inline std::vector<double> parse_doubles(
-    const std::string& s, const std::string& delim = ",") {
-  std::vector<std::string> tokens = utils::split_string(s, delim);
-  std::vector<double> values(tokens.size());
-  std::ranges::transform(tokens, values.begin(), [](const std::string& t) {
-    return std::stod(t);
-  });
-  return values;
+inline std::string parse_exception_str(
+    const std::string& s, const std::optional<std::string>& flag) {
+  return std::format(
+
+      "Failed to parse '{}' {}",
+      s,
+      flag.has_value() ? "(passed to " + flag.value() + ")" : "");
 }
-
-inline Eigen::MatrixXd parse_matrix_value(const std::string& s) {
-  std::string norm = s;
-  std::ranges::replace(norm, ';', '\n');
-  std::ranges::replace(norm, ',', ' ');
-
-  std::vector<std::string> rows = utils::split_string(norm, "\n");
-  std::vector<std::vector<double>> matrix(rows.size());
-
-  for (std::size_t row = 0; row < rows.size(); ++row)
-    matrix[row] = parse_doubles(rows[row], " ");
-
-  std::size_t n_rows = matrix.size();
-  std::size_t n_cols = matrix[0].size();
-
-  if (n_rows == 1) {
-    Eigen::VectorXd result(n_cols);
-    for (std::size_t col = 0; col < n_cols; ++col) result(col) = matrix[0][col];
-    return result;
-  }
-
-  Eigen::MatrixXd result(n_rows, n_cols);
-  for (std::size_t row = 0; row < n_rows; ++row)
-    for (std::size_t col = 0; col < n_cols; ++col)
-      result(row, col) = matrix[row][col];
-
-  return result;
-}
-
-inline Eigen::MatrixXd parse_pheno_file(const std::filesystem::path& path) {
-  std::ifstream file(path);
-  if (!file.is_open())
-    throw std::runtime_error(
-        "Could not open file " + path.string() + " for parsing");
-
-  std::string line;
-  std::getline(file, line);  // skip header
-
-  std::vector<std::vector<double>> matrix;
-  while (std::getline(file, line)) {
-    std::vector<std::string> tokens = utils::split_string(line, "\t");
-    std::vector<double> row;
-    for (std::size_t i = 2; i < tokens.size(); ++i)
-      row.push_back(std::stod(tokens[i]));
-    matrix.push_back(std::move(row));
-  }
-
-  std::size_t n_rows = matrix.size();
-  std::size_t n_cols = matrix[0].size();
-  Eigen::MatrixXd result(n_rows, n_cols);
-  for (std::size_t r = 0; r < n_rows; ++r)
-    for (std::size_t c = 0; c < n_cols; ++c)
-      result(r, c) = matrix[r][c];
-  return result;
-}
-
-inline Eigen::MatrixXd parse_matrix_file(const std::filesystem::path& path) {
-  std::ifstream file(path);
-  if (!file.is_open())
-    throw std::runtime_error(
-        "Could not open file " + path.string() + " for parsing");
-  std::string contents(
-      (std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  return parse_matrix_value(contents);
-}
-
-inline std::vector<std::size_t> parse_indices(const std::string& s) {
-  std::vector<std::string> tokens = utils::split_string(s);
-  std::vector<std::size_t> indices(tokens.size());
-  std::ranges::transform(tokens, indices.begin(), [](const std::string& t) {
-    return static_cast<std::size_t>(std::stoull(t));
-  });
-  return indices;
-}
-
-inline std::vector<std::size_t> parse_indices_file(
-    const std::filesystem::path& path) {
-  std::ifstream file(path);
-  if (!file.is_open())
-    throw std::runtime_error(
-        "Could not open file " + path.string() + " for parsing");
-  std::string contents(
-      (std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  return parse_indices(contents);
-}
-
-template <typename T>
-struct File {
-  std::filesystem::path path;
-  T load() const {
-    if constexpr (std::is_same_v<T, std::vector<std::size_t>>)
-      return parse_indices_file(path);
-    else if constexpr (std::is_same_v<T, Eigen::MatrixXd>)
-      return parse_matrix_file(path);
-    else
-      static_assert(false, "Unsupported File type");
-  }
-};
 
 inline std::pair<std::string, std::vector<std::string>> parse_function(
     const std::string& s) {
@@ -162,34 +63,178 @@ inline std::pair<std::string, std::vector<std::string>> parse_function(
   return {fn_name, params};
 }
 
-inline amsim::Distribution parse_distribution(
-    const std::string& s, bool is_probability = false) {
+template <typename T>
+inline T parse(const std::string& s);
+
+template <typename T>
+inline std::vector<T> parse_each(const std::vector<std::string>& ss) {
+  std::vector<T> result(ss.size());
+  for (std::size_t el = 0; el < ss.size(); ++el) result[el] = parse<T>(ss[el]);
+  return result;
+}
+
+template <typename T>
+inline std::vector<T> parse_vector(const std::string& s) {
+  return parse_each<T>(utils::split_string(s));
+}
+
+template <typename T>
+inline T parse(const std::string& s, const std::optional<std::string>& flag) {
+  try {
+    return parse<T>(s);
+  } catch (const std::exception& e) {
+    throw std::runtime_error(parse_exception_str(s, flag));
+  }
+}
+
+template <>
+inline std::size_t parse(const std::string& s) {
+  return std::stoull(s);
+}
+
+template <>
+inline std::uint64_t parse(const std::string& s) {
+  return std::stoull(s);
+}
+
+template <>
+inline double parse(const std::string& s) {
+  return std::stod(s);
+}
+
+template <>
+inline std::vector<std::size_t> parse(const std::string& s) {
+  return parse_vector<std::size_t>(s);
+}
+
+template <>
+inline std::vector<double> parse(const std::string& s) {
+  return parse_vector<double>(s);
+}
+
+template <>
+inline Eigen::VectorXd parse(const std::string& s) {
+  std::vector<double> v = parse<std::vector<double>>(s);
+  return Eigen::Map<Eigen::VectorXd>(v.data(), v.size());
+}
+
+template <>
+inline Eigen::MatrixXd parse(const std::string& s) {
+  std::string norm = s;
+  std::ranges::replace(norm, ';', '\n');
+  std::ranges::replace(norm, '\t', ' ');
+  std::ranges::replace(norm, ',', ' ');
+
+  std::vector<std::string> row_strs = utils::split_string(norm, "\n");
+  std::vector<Eigen::VectorXd> rows(row_strs.size());
+  for (std::size_t r = 0; r < row_strs.size(); ++r)
+    rows[r] = parse<Eigen::VectorXd>(row_strs[r]);
+
+  std::size_t n_rows = rows.size();
+  std::size_t n_cols = rows[0].size();
+  auto bad = std::ranges::find_if(
+      rows, [n_cols](const auto& r) { return r.size() != n_cols; });
+
+  if (bad != rows.end())
+    throw std::runtime_error(
+        std::format(
+            "Matrix row {} has {} values, expected {}",
+            std::distance(rows.begin(), bad),
+            bad->size(),
+            n_cols));
+
+  Eigen::MatrixXd matrix(n_rows, n_cols);
+
+  for (std::size_t r = 0; r < rows.size(); ++r) {
+    if (static_cast<std::size_t>(rows[r].size()) != n_cols)
+      throw std::runtime_error(
+          std::format(
+              "Matrix row {} has {} values, expected {}",
+              r,
+              rows[r].size(),
+              n_cols));
+    matrix.row(r) = rows[r];
+  }
+
+  return (rows.size() == 1) ? matrix.transpose() : matrix;
+}
+
+template <>
+inline Distribution parse(const std::string& s) {
   auto [dist_name, dist_params_str] = parse_function(s);
   std::vector<double> dist_params(dist_params_str.size());
 
   if (!dist_params_str.empty())
-    std::ranges::transform(
-        dist_params_str, dist_params.begin(), [](const std::string& s) {
-          return std::stod(s);
-        });
+    dist_params = parse_each<double>(dist_params_str);
 
-  return amsim::str_to_distribution(dist_name, dist_params, is_probability);
+  return amsim::str_to_distribution(dist_name, dist_params);
 }
 
-inline amsim::WeightFunction parse_weight_function(const std::string& s) {
-  auto [weight_name, weight_params_str] = parse_function(s);
+template <>
+inline WeightFunction parse(const std::string& s) {
+  auto [weight_name, params_str] = parse_function(s);
 
   if (weight_name == "uniform") return amsim::Uniform();
   if (weight_name == "logistic") {
-    Eigen::VectorXd logistic_weights(weight_params_str.size());
-    std::ranges::transform(
-        weight_params_str, logistic_weights.begin(), [](const std::string& s) {
-          return std::stod(s);
-        });
-    return amsim::Logistic(logistic_weights);
+    auto params = parse_each<double>(params_str);
+    return amsim::Logistic(
+        Eigen::Map<Eigen::VectorXd>(params.data(), params.size()));
   }
 
-  throw std::runtime_error("Unrecognise weight function " + s);
+  throw std::runtime_error("Unrecognised weight function " + s);
+}
+
+template <typename T>
+inline std::vector<T> parse_vector(
+    const std::string& s, const std::optional<std::string>& flag) {
+  try {
+    return parse_vector<T>(s);
+  } catch (const std::exception& e) {
+    throw std::runtime_error(parse_exception_str(s, flag));
+  }
+}
+
+template <typename T>
+inline T parse_file(const std::filesystem::path& path) {
+  std::ifstream file(path);
+  if (!file.is_open())
+    throw std::runtime_error(
+        "Could not open file " + path.string() + " for parsing");
+  std::string contents(
+      (std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  return parse<T>(contents);
+}
+
+template <typename T>
+struct File {
+  std::filesystem::path path;
+  T load() const { return parse_file<T>(path); }
+};
+
+inline Eigen::MatrixXd parse_pheno_file(const std::filesystem::path& path) {
+  std::ifstream file(path);
+  if (!file.is_open())
+    throw std::runtime_error(
+        "Could not open file " + path.string() + " for parsing");
+
+  std::string line;
+  std::getline(file, line);  // skip header
+
+  std::vector<std::vector<double>> matrix;
+  while (std::getline(file, line)) {
+    std::vector<std::string> tokens = utils::split_string(line, "\t");
+    std::vector<double> row;
+    for (std::size_t i = 2; i < tokens.size(); ++i)
+      row.push_back(std::stod(tokens[i]));
+    matrix.push_back(std::move(row));
+  }
+
+  std::size_t n_rows = matrix.size();
+  std::size_t n_cols = matrix[0].size();
+  Eigen::MatrixXd result(n_rows, n_cols);
+  for (std::size_t r = 0; r < n_rows; ++r)
+    for (std::size_t c = 0; c < n_cols; ++c) result(r, c) = matrix[r][c];
+  return result;
 }
 
 }  // namespace amsim

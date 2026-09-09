@@ -26,16 +26,18 @@ namespace amsim {
 
 class WriteGuard {
  public:
-  explicit WriteGuard(toml::table& table)
-      : table_(table), checkpoint_(std::move(table)) {}
+  WriteGuard(toml::table*& target, toml::table& scope)
+      : target_(target), previous_(target) {
+    target_ = &scope;
+  }
 
-  ~WriteGuard() { table_ = std::move(checkpoint_); }
+  ~WriteGuard() { target_ = previous_; }
   WriteGuard(const WriteGuard&) = delete;
   WriteGuard& operator=(const WriteGuard&) = delete;
 
  private:
-  toml::table& table_;
-  toml::table checkpoint_;
+  toml::table*& target_;
+  toml::table* previous_;
 };
 
 class ConfigWriter {
@@ -50,7 +52,7 @@ class ConfigWriter {
                 {"estimators", toml::table{}},
                 {"samples", toml::table{}}}),
         spec_(spec),
-        write_to_(*config_["global"].as_table()) {
+        write_to_(config_["global"].as_table()) {
     std::filesystem::path config_path =
         spec.output_name.has_value()
             ? spec.output_dir / ("config_" + spec.output_name.value() + ".toml")
@@ -61,7 +63,7 @@ class ConfigWriter {
 
  private:
   toml::table config_;
-  toml::table write_to_;
+  toml::table* write_to_;
   const SimulationSpec& spec_;
 
   void writeToSection(const std::string& name);
@@ -103,7 +105,7 @@ class ConfigWriter {
 };
 
 inline void ConfigWriter::writeToSection(const std::string& name) {
-  write_to_ = *config_[name].as_table();
+  write_to_ = config_[name].as_table();
 }
 
 template <typename T>
@@ -173,8 +175,9 @@ inline auto ConfigWriter::toTOML(const Phenotype& val) {
   toml::table phenotype;
 
   {
-    WriteGuard write(phenotype);
-    writeParam(val.n_causal_loci, "name");
+    WriteGuard write(write_to_, phenotype);
+    writeParam(val.n_causal_loci, "n_loci");
+    writeParam(val.effects, "effects");
     writeParam(val.causal_loci, "causal_loci");
     writeParam(val.var_genetic, "var_genetic");
     writeParam(val.var_environmental, "var_environmental");
@@ -189,7 +192,7 @@ inline auto ConfigWriter::toTOML(const SampleSpec& val) {
   toml::table sample;
 
   {
-    WriteGuard write(sample);
+    WriteGuard write(write_to_, sample);
     writeParam(val.proband_type, "proband_type");
     writeParam(val.n_probands, "n_probands");
     writeParam(val.on, "on");
@@ -207,7 +210,8 @@ inline auto ConfigWriter::toTOML(const SampleEstimatorSpec& val) {
   toml::table sample_estimator;
 
   {
-    WriteGuard write(sample_estimator);
+    WriteGuard write(write_to_, sample_estimator);
+    writeParam(val.type, "type");
     writeParam(val.params, "params");
     writeParam(val.exec, "exec");
     writeParam(val.n_rows, "n_rows");
@@ -236,7 +240,7 @@ inline toml::table ConfigWriter::toTableTOML(const std::vector<T>& val) {
 
 template <typename T>
 inline void ConfigWriter::writeParam(const T& val, const std::string& name) {
-  write_to_.insert(name, toTOML(val));
+  write_to_->insert(name, toTOML(val));
 }
 
 template <typename T>
@@ -250,9 +254,9 @@ inline void ConfigWriter::writeParam(
     const std::vector<T>& val, const std::string& name) {
   if constexpr (std::
                     is_same_v<decltype(toTOML(std::declval<T>())), toml::table>)
-    write_to_.insert(name, toTableTOML(val));
+    write_to_->insert(name, toTableTOML(val));
   else
-    write_to_.insert(name, toArrayTOML(val));
+    write_to_->insert(name, toArrayTOML(val));
 }
 
 template <typename... Ts>
@@ -273,6 +277,8 @@ inline void ConfigWriter::writeGlobalConfig() {
   writeParam(spec_.log_level, "log_level");
   writeParam(spec_.log_to_file, "log_to_file");
   writeParam(spec_.share_init_state, "share_init_state");
+  writeParam(spec_.pedigree_max_depth, "pedigree_max_depth");
+  writeParam(spec_.pedigree_warmup, "pedigree_warmup");
 }
 
 inline void ConfigWriter::writeGenomeConfig() {
@@ -313,9 +319,7 @@ inline void ConfigWriter::writeEstimatorConfig() {
 inline void ConfigWriter::writeSampleConfig() {
   writeToSection("samples");
   writeParam(spec_.sample_spec, "sample");
-
-  writeToSection("sample_estimators");
-  writeParam(spec_.sample_estimator_spec, "sample_estimator");
+  writeParam(spec_.sample_estimator_spec, "sample_estimators");
 }
 
 inline void ConfigWriter::writeConfig(const std::filesystem::path& path) {
@@ -411,7 +415,7 @@ inline void ConfigReader::readParam(
       read_to = matrix;
     } else if (const auto& val = node.value<std::string>()) {
       auto [file_tag, file_params] = parse_function(*val);
-      read_to = parse_matrix_file(file_params[0]);
+      read_to = parse<Eigen::MatrixXd>(file_params[0]);
     }
   } else if constexpr (std::is_same_v<T, std::vector<std::size_t>>) {
     if (auto* arr = node.as_array()) {
@@ -424,7 +428,7 @@ inline void ConfigReader::readParam(
       read_to = vector;
     } else if (const auto& val = node.value<std::string>()) {
       auto [file_tag, file_params] = parse_function(*val);
-      read_to = parse_indices_file(file_params[0]);
+      read_to = parse_file<std::vector<std::size_t>>(file_params[0]);
     }
   } else {
     throw std::invalid_argument(
@@ -447,7 +451,7 @@ inline void ConfigReader::readParam(
     if (fn_name == "file")
       read_to = File<Eigen::MatrixXd>{params[0]};
     else
-      read_to = parse_distribution(*val);
+      read_to = parse<Distribution>(*val);
   } else {
     throw std::runtime_error(
         "Unrecognised type; expecting functional or double");
