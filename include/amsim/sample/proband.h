@@ -57,7 +57,7 @@ enum class Family : uint8_t {
   Daughter = 0b001000,
   SonWife = 0b010000,
   DaughterHusband = 0b100000,
-  All = 0b1111,
+  All = 0b111111,
   Parents = Father | Mother,
   Siblings = Son | Daughter,
   Males = Father | Son,
