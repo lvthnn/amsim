@@ -185,8 +185,11 @@ inline Distribution make_distribution(Params&&... params) {
         }};
   } else {
     if (sizeof...(params) != Dist::NParams) {
-      throw std::runtime_error(std::format(
-          "Distribution {} requires {} parameters", Dist::Name, Dist::NParams));
+      throw std::runtime_error(
+          std::format(
+              "Distribution {} requires {} parameters",
+              Dist::Name,
+              Dist::NParams));
     }
     Dist dist = Dist(std::forward<Params>(params)...);
     return Distribution{
@@ -197,22 +200,7 @@ inline Distribution make_distribution(Params&&... params) {
 }
 
 inline Distribution str_to_distribution(
-    const std::string& name,
-    const std::vector<double>& params,
-    bool is_probability = false) {
-  // does the random variable assume values in the unit interval?
-  if (is_probability) {
-    std::vector<std::string> valid = {"uniform", "beta"};
-    if (std::ranges::find(valid, name) == valid.end())
-      throw std::runtime_error(
-          "Distributions for [0,1]-supported random variables must be one of "
-          "'uniform(0,1)' or 'beta(a,b)'");
-    if (name == "uniform" &&
-        (params[0] < 0 || params[1] > 1 || params[0] >= params[1]))
-      throw std::runtime_error(
-          "[0,1]-supported random variable with uniform distribution must have "
-          "0 <= lo < hi <= 1");
-  }
+    const std::string& name, const std::vector<double>& params) {
   if (name == "uniform")
     return make_distribution<UniformDistribution>(params[0], params[1]);
   if (name == "beta")
