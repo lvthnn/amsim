@@ -152,13 +152,17 @@ inline std::string Log::getTimeStr() {
 inline std::string Log::formatMsg(
     const std::string& msg, const LogLevel level) {
   std::string time_str = getTimeStr();
-  std::ostringstream msg_format;
+  std::ostringstream prefix_stream;
 
-  msg_format << "[" << LogLevel_to_string(level) << "] "
-             << "[" << time_str << "] " << "[thread "
-             << std::this_thread::get_id() << "] " << msg;
+  prefix_stream << "[" << LogLevel_to_string(level) << "] "
+                << "[" << time_str << "] " << "[thread "
+                << std::this_thread::get_id() << "] ";
+  std::string prefix = prefix_stream.str();
 
-  return msg_format.str();
+  std::string body = msg;
+  boost::replace_all(body, "\n", "\n" + prefix);
+
+  return prefix + body;
 }
 
 inline void Log::log(const std::string& msg, const LogLevel level) {
