@@ -69,7 +69,7 @@ inline PopulationEstimator build_population_estimator(
            [](const std::vector<std::string>& s) {
              Component component = Component::Total;
              if (!s.empty()) component = Component_from_string(s[0]);
-             return PopulationComponentMean(component);
+             return PopulationComponentVar(component);
            }},
           {"pheno-cor",
            [](const std::vector<std::string>& s) {
