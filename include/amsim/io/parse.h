@@ -27,6 +27,7 @@
 #include <boost/algorithm/string/split.hpp>
 #include <filesystem>
 #include <fstream>
+#include <utility>
 #include <vector>
 
 namespace amsim {
@@ -56,7 +57,7 @@ inline std::pair<std::string, std::vector<std::string>> parse_function(
   std::string fn_name = s.substr(0, paren_begin);
   std::string params_str =
       s.substr(paren_begin + 1, paren_end - paren_begin - 1);
-  std::vector<std::string> params = utils::split_string(params_str, ",");
+  std::vector<std::string> params = utils::split_string(params_str, ',');
 
   boost::to_lower(fn_name);
 
@@ -125,7 +126,7 @@ inline Eigen::MatrixXd parse(const std::string& s) {
   std::ranges::replace(norm, '\t', ' ');
   std::ranges::replace(norm, ',', ' ');
 
-  std::vector<std::string> row_strs = utils::split_string(norm, "\n");
+  std::vector<std::string> row_strs = utils::split_string(norm, '\n');
   std::vector<Eigen::VectorXd> rows(row_strs.size());
   for (std::size_t r = 0; r < row_strs.size(); ++r)
     rows[r] = parse<Eigen::VectorXd>(row_strs[r]);
@@ -222,7 +223,7 @@ inline Eigen::MatrixXd parse_pheno_file(const std::filesystem::path& path) {
 
   std::vector<std::vector<double>> matrix;
   while (std::getline(file, line)) {
-    std::vector<std::string> tokens = utils::split_string(line, "\t");
+    std::vector<std::string> tokens = utils::split_string(line, '\t');
     std::vector<double> row;
     for (std::size_t i = 2; i < tokens.size(); ++i)
       row.push_back(std::stod(tokens[i]));

@@ -43,10 +43,11 @@ inline std::string vector_to_string(const T& vector) {
 }
 
 inline std::vector<std::string> split_string(
-    const std::string& s, const std::string& delim = ",") {
+    const std::string& s, const char& delim = ',', bool remove_empty = true) {
   std::vector<std::string> split;
-  boost::split(split, s, boost::is_any_of(delim));
-  std::erase_if(split, [](const std::string& s) { return s.empty(); });
+  boost::split(split, s, boost::is_any_of(std::string(1, delim)));
+  if (remove_empty)
+    std::erase_if(split, [](const std::string& s) { return s.empty(); });
   return split;
 }
 

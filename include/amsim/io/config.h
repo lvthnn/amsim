@@ -16,7 +16,7 @@
 #pragma once
 
 #include <amsim/core/log.h>
-#include <amsim/estimate/registry.h>
+#include <amsim/estimate/population_factory.h>
 #include <amsim/init/setup.h>
 #include <toml++/toml.h>
 
@@ -377,7 +377,7 @@ class ConfigReader {
 
 inline toml::node_view<toml::node> ConfigReader::visit(
     const std::string& path) {
-  std::vector<std::string> tokens = utils::split_string(path, "/");
+  std::vector<std::string> tokens = utils::split_string(path, '/');
   toml::node_view<toml::node> node{config_};
   for (const auto& token : tokens) node = node[token];
   return node;
