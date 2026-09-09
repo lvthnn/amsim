@@ -51,7 +51,6 @@ class UpdateGenome {
   void updateNurture(State& state);
 };
 
-// BUG: forgets parity across word boundaries. needs to be fixed
 inline std::uint64_t UpdateGenome::gamWord(
     std::uint64_t ind_h0, std::uint64_t ind_h1, bool& par0, std::size_t valid) {
   // set recombination probabilities for loci in word
