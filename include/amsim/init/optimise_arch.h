@@ -33,7 +33,7 @@ class OptimisePhenotypeArchitecture {
         n_loc_(params.geno.n_loc),
         n_locs_(params.pheno.n_locs),
         gen_cor_(params.pheno.gen_cor),
-        h2_gen_(params.pheno.h2_gen),
+        h2_gen_(params.pheno.var_gen),
         pheno_effects_vec_(params.pheno.pheno_effects),
         pheno_loc_(params.pheno.pheno_loc),
         pheno_loc_complement_(n_pheno_),
@@ -219,8 +219,8 @@ inline void OptimisePhenotypeArchitecture::operator()() {
       break;
     }
   }
-
-  n_itr_ = max_itr_;
+  
+  // consider adding some tol_inf argument, decided against it for now
 }
 
 }  // namespace amsim

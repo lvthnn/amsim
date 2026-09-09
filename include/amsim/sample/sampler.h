@@ -18,7 +18,7 @@
 #include <amsim/core/params.h>
 #include <amsim/core/state.h>
 #include <amsim/estimate/sample.h>
-#include <amsim/estimate/factory.h>
+#include <amsim/estimate/sample_factory.h>
 #include <amsim/io/parse.h>
 #include <amsim/sample/member.h>
 #include <amsim/sample/proband.h>

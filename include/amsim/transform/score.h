@@ -32,8 +32,8 @@ class ScorePhenotypes {
         n_pheno_(params.pheno.n_pheno),
         pheno_effects_(params.pheno.pheno_effects),
         pheno_loc_(params.pheno.pheno_loc),
-        h2_env_(params.pheno.h2_env),
-        h2_vert_(params.pheno.h2_vert),
+        h2_env_(params.pheno.var_env),
+        h2_vert_(params.pheno.var_vert),
         rnur_pat_(params.pheno.rnur_pat),
         rnur_env_(params.pheno.rnur_env),
         vert_pat_(params.pheno.vert_pat),
@@ -133,8 +133,8 @@ inline void ScorePhenotypes::scoreVertical(State& state) {
         std::sqrt((vert_pat * vert_pat) + ((1 - vert_pat) * (1 - vert_pat)));
 
     for (std::size_t pair = 0; pair < n_sex_; ++pair) {
-      pheno_off(pair) = vert_pat * pheno_father(pair) +
-                        (1 - vert_pat) * pheno_mother(match[pair]);
+      pheno_off(pair) = (vert_pat * pheno_father(pair)) +
+                        ((1 - vert_pat) * pheno_mother(match[pair]));
       pheno_off(n_sex_ + pair) = pheno_off(pair);
     }
 

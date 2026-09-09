@@ -209,9 +209,9 @@ inline void Writer::write_params(const Params& params) {
   file_.createDataSet("params/phenome/effects", effect_matrix);
   file_.createDataSet("params/phenome/gen_cor", params.pheno.gen_cor);
   file_.createDataSet("params/phenome/env_cor", params.pheno.env_cor);
-  file_.createDataSet("params/phenome/h2_gen", params.pheno.h2_gen);
-  file_.createDataSet("params/phenome/h2_env", params.pheno.h2_env);
-  file_.createDataSet("params/phenome/h2_vert", params.pheno.h2_vert);
+  file_.createDataSet("params/phenome/h2_gen", params.pheno.var_gen);
+  file_.createDataSet("params/phenome/h2_env", params.pheno.var_env);
+  file_.createDataSet("params/phenome/h2_vert", params.pheno.var_vert);
 
   file_.createGroup("params/mating");
   file_.createDataSet("params/mating/mate_cor", params.mate.mate_cor);

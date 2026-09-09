@@ -17,7 +17,6 @@
 
 #include <amsim/estimate/estimator.h>
 #include <amsim/estimate/external.h>
-#include <amsim/estimate/factory.h>
 #include <amsim/estimate/genome_estimators.h>
 #include <amsim/estimate/greml.h>
 #include <amsim/estimate/gwas.h>
@@ -26,7 +25,8 @@
 #include <amsim/estimate/pedigree_estimators.h>
 #include <amsim/estimate/phenome_estimators.h>
 #include <amsim/estimate/population.h>
-#include <amsim/estimate/registry.h>
+#include <amsim/estimate/population_factory.h>
 #include <amsim/estimate/sample.h>
 #include <amsim/estimate/sample_estimator.h>
+#include <amsim/estimate/sample_factory.h>
 #include <amsim/estimate/strategy.h>

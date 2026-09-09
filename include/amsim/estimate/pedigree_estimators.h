@@ -161,7 +161,7 @@ inline void EstimatorAncestorCov::syncPhenotypes(const State& state) {
 }  // namespace details
 
 inline PopulationEstimator PopulationCousinCov(
-    std::size_t degree = 1, Component type = Component::Genetic) {
+    std::size_t degree = 1, Component type = Component::Total) {
   return PopulationEstimator{
       .name = "cousin-" + std::to_string(degree) + "-cov-" + to_string(type),
       .fn = [degree, type](const Params& params) {
@@ -171,7 +171,7 @@ inline PopulationEstimator PopulationCousinCov(
 }
 
 inline PopulationEstimator PopulationAncestorCov(
-    std::size_t degree = 1, Component type = Component::Genetic) {
+    std::size_t degree = 1, Component type = Component::Total) {
   return PopulationEstimator{
       .name = "ancestor-" + std::to_string(degree) + "-cov-" + to_string(type),
       .fn = [degree, type](const Params& params) {
