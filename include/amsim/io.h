@@ -16,5 +16,6 @@
 #pragma once
 
 #include <amsim/io/config.h>
+#include <amsim/io/h5_writer.h>
 #include <amsim/io/parse.h>
-#include <amsim/io/writer.h>
+#include <amsim/io/table.h>
