@@ -16,6 +16,7 @@
 #pragma once
 
 #include <amsim/core/utils.h>
+#include <amsim/estimate/process.h>
 #include <amsim/estimate/sample.h>
 #include <amsim/io/parse.h>
 #include <amsim/sample/proband.h>
@@ -31,7 +32,8 @@ class ExternalEstimator : public SampleEstimatorStrategy<P> {
       std::string_view sample_name,
       const std::filesystem::path& sample_dir,
       std::string_view name,
-      std::string_view exec,
+      std::string exec,
+      std::vector<std::string> args,
       std::size_t n_rows,
       std::size_t n_cols = 1,
       std::optional<std::vector<std::string>> row_labels = std::nullopt,
@@ -44,34 +46,36 @@ class ExternalEstimator : public SampleEstimatorStrategy<P> {
             std::move(col_labels.value_or(std::vector<std::string>{})),
             n_rows,
             n_cols),
-        exec_(exec),
+        cmd_(std::move(exec)),
+        args_(std::move(args)),
         bfile_(sample_dir / "data"),
-        out_path_(sample_dir / std::format("results_{}", name)) {}
+        out_path_(sample_dir / std::format("results_{}", name)) {
+    process::checkProcessAvailable(exec);
+    args_.push_back("--bfile");
+    args_.push_back(bfile_.string());
+    args_.push_back("--out");
+    args_.push_back(out_path_.string());
+  }
 
   void compute() override {
-    run_command();
-    this->data_ = parse_file<Eigen::MatrixXd>(out_path_);
+    runCommand();
+    this->data_ = parseFile<Eigen::MatrixXd>(out_path_);
   }
 
  private:
-  std::string exec_;
+  std::string cmd_;
+  std::vector<std::string> args_;
   std::filesystem::path bfile_;
   std::filesystem::path out_path_;
 
-  void run_command() {
-    utils::system_throttled(
-        std::format(
-            "{} --bfile {} --out {}",
-            exec_,
-            bfile_.string(),
-            out_path_.string()));
-  }
+  void runCommand() { process::runProcess(cmd_, args_); }
 };
 
 template <Proband P>
 inline SampleEstimator<P> SampleExternalEstimator(
     std::string name,
-    std::string exec,
+    std::string cmd,
+    std::vector<std::string> args,
     std::size_t n_rows,
     std::size_t n_cols = 1,
     std::optional<std::vector<std::string>> row_labels = std::nullopt,
@@ -79,7 +83,8 @@ inline SampleEstimator<P> SampleExternalEstimator(
   return SampleEstimator<P>{
       .name = name,
       .fn = [name = std::move(name),
-             exec = std::move(exec),
+             cmd = std::move(cmd),
+             args = std::move(args),
              n_rows,
              n_cols,
              row_labels = std::move(row_labels),
@@ -91,7 +96,8 @@ inline SampleEstimator<P> SampleExternalEstimator(
             sample_dir.filename().string(),
             sample_dir,
             name,
-            exec,
+            cmd,
+            args,
             n_rows,
             n_cols,
             row_labels,

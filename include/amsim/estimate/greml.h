@@ -15,17 +15,18 @@
 
 #pragma once
 
+#include <amsim/core/log.h>
 #include <amsim/core/params.h>
 #include <amsim/core/utils.h>
+#include <amsim/estimate/process.h>
 #include <amsim/estimate/sample.h>
-#include <amsim/io/writer.h>
+#include <amsim/io/h5_writer.h>
+#include <amsim/io/table.h>
 #include <amsim/sample/proband.h>
 
 #include <Eigen/Dense>
 #include <filesystem>
-#include <fstream>
 #include <limits>
-#include <sstream>
 #include <utility>
 
 namespace amsim {
@@ -48,29 +49,40 @@ class GREMLEstimator : public SampleEstimatorStrategy<P> {
             3),
         n_pheno_(params.pheno.n_pheno),
         pheno_names_(params.pheno.names) {
-    utils::check_gcta64();
+    process::checkProcessAvailable("gcta64");
   }
 
   void compute() override {
     if (!std::filesystem::exists(this->sample_dir_ / "grm.grm.bin")) {
-      utils::system_throttled(std::format(
-          "gcta64 --bfile {} --make-grm --out {} "
-          "--thread-num 1",
-          (this->sample_dir_ / "data").string(),
-          (this->sample_dir_ / "grm").string()));
+      process::runProcess(
+          "gcta64",
+          {"--bfile",
+           (this->sample_dir_ / "data").string(),
+           "--make-grm",
+           "--out",
+           (this->sample_dir_ / "grm").string(),
+           "--thread-num",
+           "1"});
     }
 
     for (std::size_t p = 0; p < n_pheno_; ++p) {
       auto pfix = this->sample_dir_ / std::format("greml_{}", p);
-      utils::system_throttled(std::format(
-          "gcta64 --grm {} --pheno {} --mpheno {} --reml "
-          "--out {} --thread-num 1",
-          (this->sample_dir_ / "grm").string(),
-          (this->sample_dir_ / "data.pheno").string(),
-          p + 1,
-          pfix.string()));
 
-      this->data_.row(p) = parseHsq(pfix.string() + ".hsq");
+      process::runProcess(
+          "gcta64",
+          {"--grm",
+           (this->sample_dir_ / "grm").string(),
+           "--pheno",
+           (this->sample_dir_ / "data.pheno").string(),
+           "--mpheno",
+           std::format("{}", p + 1),
+           "--reml",
+           "--out",
+           pfix.string(),
+           "--thread-num",
+           "1"});
+
+      this->data_.row(p) = parseHsq(pfix.string() + ".hsq", p);
     }
   }
 
@@ -78,27 +90,46 @@ class GREMLEstimator : public SampleEstimatorStrategy<P> {
   std::size_t n_pheno_;
   std::vector<std::string> pheno_names_;
 
-  Eigen::RowVector3d parseHsq(const std::string& path) {
+  Eigen::RowVector3d parseHsq(const std::string& path, std::size_t p) {
     constexpr double NaN = std::numeric_limits<double>::quiet_NaN();
     Eigen::RowVector3d result{NaN, NaN, NaN};
 
-    std::ifstream f(path);
-    if (!f) return result;
-
-    std::string line;
-    std::getline(f, line);  // header
-    while (std::getline(f, line)) {
-      std::istringstream ss(line);
-      std::string key;
-      double val;
-      ss >> key >> val;
-      if (key == "V(G)")
-        result(0) = val;
-      else if (key == "V(e)")
-        result(1) = val;
-      else if (key == "V(G)/Vp")
-        result(2) = val;
+    if (!std::filesystem::exists(path)) {
+      Log::error(
+          std::format(
+              "{}: gcta64 --reml exited successfully but {} was never "
+              "written, for phenotype '{}'",
+              this->name_,
+              path,
+              pheno_names_[p]));
+      return result;
     }
+
+    Table<Column<"Source", std::string>, Column<"Variance", double>> hsq;
+    hsq.readFile(path, '\t');
+
+    bool any_matched = false;
+    for (std::size_t r = 0; r < hsq.numRows(); ++r) {
+      auto [source, variance] = hsq.row(r);
+      if (source == "V(G)") {
+        result(0) = variance;
+        any_matched = true;
+      } else if (source == "V(e)") {
+        result(1) = variance;
+        any_matched = true;
+      } else if (source == "V(G)/Vp") {
+        result(2) = variance;
+        any_matched = true;
+      }
+    }
+    if (!any_matched)
+      Log::error(
+          std::format(
+              "{}: {} parsed but none of V(G)/V(e)/V(G)/Vp were found for "
+              "phenotype '{}' — check gcta64's .hsq format hasn't changed",
+              this->name_,
+              path,
+              pheno_names_[p]));
     return result;
   }
 };

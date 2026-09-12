@@ -15,17 +15,18 @@
 
 #pragma once
 
+#include <amsim/core/log.h>
 #include <amsim/core/params.h>
 #include <amsim/core/utils.h>
+#include <amsim/estimate/process.h>
 #include <amsim/estimate/sample.h>
-#include <amsim/io/writer.h>
+#include <amsim/io/h5_writer.h>
+#include <amsim/io/table.h>
 #include <amsim/sample/proband.h>
 
 #include <Eigen/Dense>
 #include <filesystem>
-#include <fstream>
 #include <limits>
-#include <sstream>
 #include <utility>
 
 namespace amsim {
@@ -53,9 +54,10 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
         pval_threshold_(pval_threshold),
         n_pcs_(n_pcs),
         pheno_names_(params.pheno.names),
+        random_seed_(params.global.rng_seed),
         beta_true_(n_pheno_, Eigen::VectorXd::Zero(n_loc_)),
         causal_mask_(n_pheno_, Eigen::VectorXd::Zero(n_loc_)) {
-    utils::check_plink2();
+    process::checkProcessAvailable("plink2");
     for (std::size_t p = 0; p < n_pheno_; ++p)
       for (std::size_t i = 0; i < params.pheno.pheno_loc[p].size(); ++i) {
         std::size_t loc = params.pheno.pheno_loc[p][i];
@@ -91,34 +93,66 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
   double pval_threshold_;
   std::size_t n_pcs_;
   std::vector<std::string> pheno_names_;
+  std::uint64_t random_seed_;
+
+  Table<
+      Column<"ID", std::string>,
+      Column<"TEST", std::string>,
+      Column<"A1", std::string>,
+      Column<"BETA", double>,
+      Column<"P", double>>
+      table_;
 
   std::vector<Eigen::VectorXd> beta_true_;
   std::vector<Eigen::VectorXd> causal_mask_;
 
   void runGWAS() {
     if (n_pcs_ > 0) {
-      utils::system_throttled(std::format(
-          "plink2 --bfile {} --pca approx {} --out {}",
-          (this->sample_dir_ / "data").string(),
-          n_pcs_,
-          (this->sample_dir_ / (this->name_ + "_pca")).string()));
+      process::runProcess(
+          "plink2",
+          {"--bfile",
+           (this->sample_dir_ / "data").string(),
+           "--pca",
+           "approx",
+           std::format("{}", n_pcs_),
+           "--seed",
+           std::format("{}", random_seed_),
+           "--threads",
+           "1",
+           "--out",
+           (this->sample_dir_ / (this->name_ + "_pca")).string()});
 
-      utils::system_throttled(std::format(
-          "plink2 --bfile {} --pheno {} --covar {} "
-          "--glm --variance-standardize --no-psam-pheno "
-          "--threads 1 --out {}",
-          (this->sample_dir_ / "data").string(),
-          (this->sample_dir_ / "data.pheno").string(),
-          (this->sample_dir_ / (this->name_ + "_pca.eigenvec")).string(),
-          (this->sample_dir_ / this->name_).string()));
+      process::runProcess(
+          "plink2",
+          {"--bfile",
+           (this->sample_dir_ / "data").string(),
+           "--pheno",
+           (this->sample_dir_ / "data.pheno").string(),
+           "--covar",
+           (this->sample_dir_ / (this->name_ + "_pca.eigenvec")).string(),
+           "--glm",
+           "--variance-standardize",
+           "--no-psam-pheno",
+           "--threads",
+           "1",
+           "--out",
+           (this->sample_dir_ / this->name_).string()});
+
     } else {
-      utils::system_throttled(std::format(
-          "plink2 --bfile {} --pheno {} --glm allow-no-covars "
-          "--variance-standardize --no-psam-pheno "
-          "--threads 1 --out {}",
-          (this->sample_dir_ / "data").string(),
-          (this->sample_dir_ / "data.pheno").string(),
-          (this->sample_dir_ / this->name_).string()));
+      process::runProcess(
+          "plink2",
+          {"--bfile",
+           (this->sample_dir_ / "data").string(),
+           "--pheno",
+           (this->sample_dir_ / "data.pheno").string(),
+           "--glm",
+           "allow-no-covars",
+           "--variance-standardize",
+           "--no-psam-pheno",
+           "--threads",
+           "1",
+           "--out",
+           (this->sample_dir_ / this->name_).string()});
     }
   }
 
@@ -126,133 +160,135 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
     Eigen::VectorXd betas = Eigen::VectorXd::Zero(n_loc_);
     Eigen::VectorXd pvals = Eigen::VectorXd::Ones(n_loc_);
 
-    std::ifstream f(
-        this->sample_dir_ / std::format("{}.{}.glm.linear", this->name_, pheno_names_[p]));
+    table_.readFile(
+        this->sample_dir_ /
+            std::format("{}.{}.glm.linear", this->name_, pheno_names_[p]),
+        '\t');
 
-    if (!f) return {betas, pvals};
+    auto hits = table_.filter([&](const auto& row) {
+      auto [id, test, a1, beta, pval] = row;
+      return test == "ADD";
+    });
 
-    std::string line;
-    std::getline(f, line);  // header
-    while (std::getline(f, line)) {
-      std::istringstream ss(line);
-      std::string chrom;
-      std::string pos;
-      std::string id;
-      std::string ref;
-      std::string alt;
-      std::string prov_ref;
-      std::string a1;
-      std::string omitted;
-      double a1_freq;
-      std::string test;
-      std::size_t obs;
-      double beta;
-      double se;
-      double t;
-      double pval;
-
-      ss >> chrom >> pos >> id >> ref >> alt >> prov_ref >> a1 >> omitted >>
-          a1_freq >> test >> obs >> beta >> se >> t >> pval;
-
-      if (test != "ADD") continue;
-
-      std::size_t loc = std::stoul(id.substr(3));
+    for (std::size_t r = 0; r < hits.numRows(); ++r) {
+      auto [id, test, a1, beta, pval] = hits.row(r);
+      std::size_t loc = parse<std::size_t>(id.substr(3));
       betas(loc) = beta;
       pvals(loc) = pval;
     }
+
     return {betas, pvals};
   }
 
   std::pair<double, double> pgsMetrics(std::size_t p) {
-    constexpr auto NaN = std::numeric_limits<double>::quiet_NaN();
-    auto glm = this->sample_dir_ /
-               std::format("{}.{}.glm.linear", this->name_, pheno_names_[p]);
+    constexpr double NaN = std::numeric_limits<double>::quiet_NaN();
     auto score_file =
         this->sample_dir_ / std::format("{}_score_{}.txt", this->name_, p);
     auto pfix = this->sample_dir_ / std::format("{}_pgs_{}", this->name_, p);
 
-    {
-      std::ifstream glm_in(glm);
-      std::ofstream score_out(score_file);
-      if (!glm_in) return {NaN, NaN};
+    auto hits = table_.filter([&](const auto& row) {
+      auto [id, test, a1, beta, pval] = row;
+      return test == "ADD" && pval < pval_threshold_;
+    });
 
-      std::string line;
-      std::getline(glm_in, line);
-      score_out << line << "\n";
-
-      bool any_hits = false;
-      while (std::getline(glm_in, line)) {
-        std::istringstream ss(line);
-        std::string chrom;
-        std::string pos;
-        std::string id;
-        std::string ref;
-        std::string alt;
-        std::string prov_ref;
-        std::string a1;
-        std::string omitted;
-        std::string test;
-        double a1_freq;
-        double beta;
-        double se;
-        double t;
-        double pval;
-        std::size_t obs;
-        ss >> chrom >> pos >> id >> ref >> alt >> prov_ref >> a1 >> omitted >>
-            a1_freq >> test >> obs >> beta >> se >> t >> pval;
-        if (test == "ADD" && pval < pval_threshold_) {
-          score_out << line << "\n";
-          any_hits = true;
-        }
-      }
-      if (!any_hits) return {0.0, NaN};
+    if (hits.empty()) {
+      Log::warning(
+          std::format(
+              "{}: no genome-wide-significant hits for phenotype '{}' "
+              "(pval < {}) — pgs_r2/pgs_rmse will be 0.0/NaN",
+              this->name_,
+              pheno_names_[p],
+              pval_threshold_));
+      return {0.0, NaN};
     }
 
-    utils::system_throttled(std::format(
-        "plink2 --bfile {} --score {} 3 7 12 header "
-        "--threads 1 --out {}",
-        (this->sample_dir_ / "data").string(),
-        score_file.string(),
-        pfix.string()));
+    writeTable<"ID", "A1", "BETA">(hits, score_file, '\t', '\n');
 
-    std::ifstream pgs_file(pfix.string() + ".sscore");
-    std::ifstream gen_file(this->sample_dir_ / "data.genetic.pheno");
-    if (!pgs_file || !gen_file) return {NaN, NaN};
+    // based on GWAS hits, construct a polygenic score
+    process::runProcess(
+        "plink2",
+        {"--bfile",
+         (this->sample_dir_ / "data").string(),
+         "--score",
+         score_file.string(),
+         "1",
+         "2",
+         "3",
+         "header",
+         "--threads",
+         "1",
+         "--out",
+         pfix.string()});
 
-    std::string pgs_line;
-    std::string gen_line;
-    std::getline(pgs_file, pgs_line);  // header
-    std::getline(gen_file, gen_line);  // header
+    auto sscore_path = pfix.string() + ".sscore";
+    auto gen_path = this->sample_dir_ / "data.genetic.pheno";
 
-    std::vector<double> pgs_vals;
-    std::vector<double> gen_vals;
-    while (std::getline(pgs_file, pgs_line) &&
-           std::getline(gen_file, gen_line)) {
-      std::istringstream pgs_ss(pgs_line);
-      std::string fid;
-      std::string iid;
-      double allele_ct;
-      double dosage_sum;
-      double score;
-      pgs_ss >> fid >> iid >> allele_ct >> dosage_sum >> score;
-      pgs_vals.push_back(score);
-
-      std::istringstream gen_ss(gen_line);
-      std::string gen_fid;
-      std::string gen_iid;
-      gen_ss >> gen_fid >> gen_iid;
-      double gen_val = 0.0;
-      for (std::size_t col = 0; col <= p; ++col) gen_ss >> gen_val;
-      gen_vals.push_back(gen_val);
-    }
-
-    if (pgs_vals.empty() || pgs_vals.size() != gen_vals.size())
+    if (!std::filesystem::exists(sscore_path)) {
+      Log::error(
+          std::format(
+              "{}: expected plink2 --score output not found: {}",
+              this->name_,
+              sscore_path));
       return {NaN, NaN};
+    }
+
+    if (!std::filesystem::exists(gen_path)) {
+      Log::error(
+          std::format(
+              "{}: expected genetic-value file not found: {}",
+              this->name_,
+              gen_path.string()));
+      return {NaN, NaN};
+    }
+
+    // read in computed pgs .sscore file
+    Table<Column<"IID", std::string>, Column<"SCORE1_AVG", double>> pgs_table;
+    pgs_table.readFile(sscore_path, '\t');
+    if (pgs_table.empty()) {
+      Log::error(
+          std::format(
+              "{}: {} exists but contains no scored individuals for "
+              "phenotype '{}'",
+              this->name_,
+              sscore_path,
+              pheno_names_[p]));
+      return {0.0, NaN};
+    }
+
+    // read in genetic component of phenotype written out by sampler.h
+    TableXd<Column<"FID", std::string>, Column<"IID", std::string>> gen_table;
+    gen_table.readFile(gen_path, '\t');
+    if (gen_table.known().empty() ||
+        gen_table.matrix().cols() <= static_cast<Eigen::Index>(p)) {
+      Log::error(
+          std::format(
+              "{}: {} has no data for phenotype '{}' (index {})",
+              this->name_,
+              gen_path.string(),
+              pheno_names_[p],
+              p));
+      return {NaN, NaN};
+    }
+
+    std::vector<double> pgs_vals = getColumn<"SCORE1_AVG">(pgs_table);
+    Eigen::VectorXd gen = gen_table.matrix().col(p);
+    if (pgs_vals.empty() ||
+        pgs_vals.size() != static_cast<std::size_t>(gen.size())) {
+      Log::error(
+          std::format(
+              "{}: individual count mismatch between {} ({} rows) and {} "
+              "({} rows) for phenotype '{}'",
+              this->name_,
+              sscore_path,
+              pgs_vals.size(),
+              gen_path.string(),
+              gen.size(),
+              pheno_names_[p]));
+      return {NaN, NaN};
+    }
 
     Eigen::VectorXd pgs =
         Eigen::Map<Eigen::VectorXd>(pgs_vals.data(), pgs_vals.size());
-    Eigen::VectorXd gen =
-        Eigen::Map<Eigen::VectorXd>(gen_vals.data(), gen_vals.size());
 
     auto pc = pgs.array() - pgs.mean();
     auto gc = gen.array() - gen.mean();

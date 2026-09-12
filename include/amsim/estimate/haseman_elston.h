@@ -15,16 +15,18 @@
 
 #pragma once
 
+#include <amsim/core/log.h>
 #include <amsim/core/params.h>
 #include <amsim/core/utils.h>
+#include <amsim/estimate/process.h>
 #include <amsim/estimate/sample.h>
+#include <amsim/io/table.h>
 #include <amsim/sample/proband.h>
 
 #include <Eigen/Dense>
 #include <filesystem>
 #include <fstream>
 #include <limits>
-#include <sstream>
 #include <utility>
 
 namespace amsim {
@@ -46,49 +48,99 @@ class HasemanElstonEstimator : public SampleEstimatorStrategy<P> {
             params.pheno.n_pheno,
             1),
         n_pheno_(params.pheno.n_pheno) {
-    utils::check_gcta64();
+    process::checkProcessAvailable("gcta64");
   }
 
   void compute() override {
     if (!std::filesystem::exists(this->sample_dir_ / "grm.grm.bin")) {
-      utils::system_throttled(std::format(
-          "gcta64 --bfile {} --make-grm --out {} "
-          "--thread-num 1",
-          (this->sample_dir_ / "data").string(),
-          (this->sample_dir_ / "grm").string()));
+      process::runProcess(
+          "gcta64",
+          {"--bfile",
+           (this->sample_dir_ / "data").string(),
+           "--make-grm",
+           "--out",
+           (this->sample_dir_ / "grm").string(),
+           "--thread-num",
+           "1"});
     }
 
     for (std::size_t p = 0; p < n_pheno_; ++p) {
       auto pfix = this->sample_dir_ / std::format("he_{}", p);
-      utils::system_throttled(std::format(
-          "gcta64 --grm {} --pheno {} --mpheno {} --HEreg "
-          "--out {} --thread-num 1",
-          (this->sample_dir_ / "grm").string(),
-          (this->sample_dir_ / "data.pheno").string(),
-          p + 1,
-          pfix.string()));
+      process::runProcess(
+          "gcta64",
+          {"--grm",
+           (this->sample_dir_ / "grm"),
+           "--pheno",
+           (this->sample_dir_ / "data.pheno"),
+           "--mpheno",
+           std::format("{}", p + 1),
+           "--HEreg",
+           "--out",
+           pfix.string(),
+           "--thread-num",
+           "1"});
 
-      this->data_(p, 0) = parseHEreg(pfix.string() + ".HEreg");
+      this->data_(p, 0) = parseHEreg(pfix.string() + ".HEreg", p);
     }
   }
 
  private:
   std::size_t n_pheno_;
 
-  double parseHEreg(const std::string& path) {
-    std::ifstream f(path);
-    if (!f) return std::numeric_limits<double>::quiet_NaN();
-
-    std::string line;
-    std::getline(f, line);  // header
-    while (std::getline(f, line)) {
-      std::istringstream ss(line);
-      std::string key;
-      double val;
-      ss >> key >> val;
-      if (key == "V(G)/Vp") return val;
+  double parseHEreg(const std::string& path, std::size_t p) {
+    constexpr double NaN = std::numeric_limits<double>::quiet_NaN();
+    if (!std::filesystem::exists(path)) {
+      Log::error(
+          std::format(
+              "{}: gcta64 --HEreg exited successfully but {} was never "
+              "written, for phenotype index {}",
+              this->name_,
+              path,
+              p));
+      return NaN;
     }
-    return std::numeric_limits<double>::quiet_NaN();
+
+    // .HEreg stacks two method blocks (HE-CP, HE-SD), each its own label
+    // line + header + rows, separated by a blank line — we only want
+    // HE-CP (the cross-product method, analogous to GREML heritability).
+    std::ifstream file(path);
+    std::string contents(
+        (std::istreambuf_iterator<char>(file)),
+        std::istreambuf_iterator<char>());
+
+    std::size_t block_end = contents.find("\n\n");
+    std::string he_cp_block = contents.substr(0, block_end);
+
+    Log::debug("Found HE-CP block:");
+    Log::debug(he_cp_block);
+
+    std::size_t header_start = he_cp_block.find('\n') + 1;
+
+    std::string he_cp_table = he_cp_block.substr(header_start);
+    Log::debug("Parsed HE-CP block:");
+    Log::debug(he_cp_table);
+
+    std::filesystem::path tmp_path = path + ".he-cp";
+    std::ofstream tmp(tmp_path);
+    tmp << he_cp_table;
+    tmp.close();
+
+    Table<Column<"Coefficient", std::string>, Column<"Estimate", double>> hereg;
+    hereg.readFile(tmp_path, ' ');
+    std::filesystem::remove(tmp_path);
+
+    for (std::size_t r = 0; r < hereg.numRows(); ++r) {
+      auto [source, variance] = hereg.row(r);
+      if (source == "V(G)/Vp") return variance;
+    }
+    Log::error(
+        std::format(
+            "{}: {} parsed but 'V(G)/Vp' was not found in HE-CP for "
+            "phenotype index {}",
+            this->name_,
+            path,
+            p));
+    return NaN;
   }
 };
 
