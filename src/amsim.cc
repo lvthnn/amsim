@@ -1007,8 +1007,9 @@ int main(int argc, char* argv[]) {
       // Mating configuration
       switch (opt) {
         case Option::MatingSpec:
-          if (std::string_view(optarg) == "random") spec.mating.type = "random";
-          if (std::string_view(optarg) == "assortative") {
+          if (std::string_view(optarg) == "random") {
+            spec.mating.type = "random";
+          } else if (std::string_view(optarg) == "assortative") {
             context = Context::Mating;
             spec.mating.type = "assortative";
           } else
