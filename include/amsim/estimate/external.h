@@ -50,7 +50,7 @@ class ExternalEstimator : public SampleEstimatorStrategy<P> {
         args_(std::move(args)),
         bfile_(sample_dir / "data"),
         out_path_(sample_dir / std::format("results_{}", name)) {
-    process::checkProcessAvailable(exec);
+    process::checkProcessAvailable(cmd_);
     args_.push_back("--bfile");
     args_.push_back(bfile_.string());
     args_.push_back("--out");
@@ -59,7 +59,18 @@ class ExternalEstimator : public SampleEstimatorStrategy<P> {
 
   void compute() override {
     runCommand();
-    this->data_ = parseFile<Eigen::MatrixXd>(out_path_);
+    Eigen::MatrixXd result = parseFile<Eigen::MatrixXd>(out_path_);
+    if (static_cast<std::size_t>(result.rows()) != this->numRows() ||
+        static_cast<std::size_t>(result.cols()) != this->numCols())
+      throw std::runtime_error(
+          std::format(
+              "{}: expected {}x{}, got {}x{}",
+              cmd_,
+              this->numRows(),
+              this->numCols(),
+              result.rows(),
+              result.cols()));
+    this->data_ = std::move(result);
   }
 
  private:
@@ -68,7 +79,13 @@ class ExternalEstimator : public SampleEstimatorStrategy<P> {
   std::filesystem::path bfile_;
   std::filesystem::path out_path_;
 
-  void runCommand() { process::runProcess(cmd_, args_); }
+  void runCommand() {
+    process::ProcessResult result = process::runProcess(cmd_, args_);
+    if (result.exit_code != 0)
+      throw std::runtime_error(
+          std::format(
+              "{} exited {}: {}", cmd_, result.exit_code, result.output));
+  }
 };
 
 template <Proband P>
