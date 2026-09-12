@@ -69,8 +69,8 @@ inline void checkProcessAvailable(const std::string& s) {
   bp::filesystem::path exec(s);
 
   if (exec.has_parent_path()) {
-    bp::filesystem::path exec_abs = bp::filesystem::absolute(exec_abs);
-    if (bp::filesystem::exists(exec_abs)) {
+    bp::filesystem::path exec_abs = bp::filesystem::absolute(exec);
+    if (!bp::filesystem::exists(exec_abs)) {
       throw std::runtime_error(
           std::format("Executable {} not found", exec_abs.string()));
     }
