@@ -20,19 +20,17 @@
 
 #include <Eigen/Dense>
 #include <cstddef>
-#include <cstdint>
 #include <cstdio>
 #include <numeric>
-#include <semaphore>
-#include <stdexcept>
 #include <string>
-#include <thread>
 #include <vector>
+
+#include <boost/process.hpp>
 
 namespace amsim::utils {
 
 template <typename T>
-inline std::string vector_to_string(const T& vector) {
+inline std::string vectorToString(const T& vector) {
   return std::accumulate(
       vector.begin() + 1,
       vector.end(),
@@ -42,7 +40,7 @@ inline std::string vector_to_string(const T& vector) {
       });
 }
 
-inline std::vector<std::string> split_string(
+inline std::vector<std::string> splitString(
     const std::string& s, const char& delim = ',', bool remove_empty = true) {
   std::vector<std::string> split;
   boost::split(split, s, boost::is_any_of(std::string(1, delim)));
@@ -51,7 +49,7 @@ inline std::vector<std::string> split_string(
   return split;
 }
 
-inline std::vector<std::string> vector_prefix(
+inline std::vector<std::string> vectorPrefix(
     const std::vector<std::string>& labels,
     const std::optional<std::string>& prefix = std::nullopt) {
   std::vector<std::string> result(labels.size());
@@ -60,7 +58,7 @@ inline std::vector<std::string> vector_prefix(
   return result;
 }
 
-inline std::vector<std::string> vector_suffix(
+inline std::vector<std::string> vectorSuffix(
     const std::vector<std::string>& labels,
     const std::optional<std::string>& suffix = std::nullopt) {
   std::vector<std::string> result(labels.size());
@@ -69,38 +67,13 @@ inline std::vector<std::string> vector_suffix(
   return result;
 }
 
-inline void bitmatrix_swap(
-    std::uint64_t matrix[], std::size_t width, std::uint64_t mask) {
-  std::size_t inner;
-  std::size_t outer;
-  for (outer = 0; outer < 64 / (width * 2); ++outer) {
-    for (inner = 0; inner < width; ++inner) {
-      std::uint64_t* x = &matrix[(inner) + (outer * width * 2)];
-      std::uint64_t* y = &matrix[(inner + width) + (outer * width * 2)];
-      *x = ((*y << width) & mask) ^ *x;
-      *y = ((*x & mask) >> width) ^ *y;
-      *x = ((*y << width) & mask) ^ *x;
-    }
-  }
-}
-
-inline void bitmatrix_transpose(std::uint64_t* matrix) {
-  std::size_t swap_width = 64;
-  auto swap_mask = static_cast<std::uint64_t>(-1);
-  while (swap_width != 1) {
-    swap_width >>= 1;
-    swap_mask = swap_mask ^ (swap_mask >> swap_width);
-    bitmatrix_swap(matrix, swap_width, swap_mask);
-  }
-}
-
-inline Eigen::MatrixXd random_orthogonal(std::size_t dim) {
+inline Eigen::MatrixXd randomOrthogonal(std::size_t dim) {
   Eigen::MatrixXd random = Eigen::MatrixXd::Random(dim, dim);
   Eigen::HouseholderQR<Eigen::MatrixXd> qr(random);
   return qr.householderQ();
 }
 
-inline Eigen::MatrixXd matrix_from_singular_values(
+inline Eigen::MatrixXd matrixFromSingularValues(
     const std::vector<double>& values, bool symmetric = false) {
   std::size_t n_pheno = values.size();
   Eigen::MatrixXd u_mat;
@@ -111,8 +84,8 @@ inline Eigen::MatrixXd matrix_from_singular_values(
 
   Eigen::MatrixXd s_mat = singular_values.asDiagonal();
 
-  u_mat = random_orthogonal(n_pheno);
-  if (!symmetric) v_mat = random_orthogonal(n_pheno);
+  u_mat = randomOrthogonal(n_pheno);
+  if (!symmetric) v_mat = randomOrthogonal(n_pheno);
 
   return (symmetric) ? u_mat * s_mat * u_mat.transpose()
                      : u_mat * s_mat * v_mat.transpose();
@@ -140,39 +113,6 @@ inline std::vector<std::size_t> order(const Eigen::VectorXd& v) {
   std::ranges::stable_sort(
       idx, [&v](std::size_t i0, std::size_t i1) { return v(i0) < v(i1); });
   return idx;
-}
-
-inline std::counting_semaphore<64> process_semaphore{
-    static_cast<std::ptrdiff_t>(
-        std::thread::hardware_concurrency() > 0
-            ? std::thread::hardware_concurrency()
-            : 4)};
-
-inline void system_throttled(const std::string& cmd) {
-  process_semaphore.acquire();
-  FILE* pipe = popen((cmd + " 2>&1").c_str(), "r");
-  std::string output;
-  if (pipe) {
-    char buffer[512];
-    while (fgets(buffer, sizeof(buffer), pipe)) output += buffer;
-  }
-  int rc = pipe ? pclose(pipe) : -1;
-  process_semaphore.release();
-  if (!WIFEXITED(rc) || WEXITSTATUS(rc) != 0) {
-    throw std::runtime_error(output);
-  }
-}
-
-inline void check_plink2() {
-  int rc = std::system("command -v plink2 >/dev/null 2>&1");
-  if (!WIFEXITED(rc) || WEXITSTATUS(rc) != 0)
-    throw std::runtime_error("Executable 'plink2' not found in PATH");
-}
-
-inline void check_gcta64() {
-  int rc = std::system("command -v gcta64 >/dev/null 2>&1");
-  if (!WIFEXITED(rc) || WEXITSTATUS(rc) != 0)
-    throw std::runtime_error("Executable 'gcta64' not found in PATH");
 }
 
 }  // namespace amsim::utils

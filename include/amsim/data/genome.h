@@ -27,21 +27,46 @@
 
 namespace amsim {
 
+inline void bitmatrixSwap(
+    std::uint64_t matrix[], std::size_t width, std::uint64_t mask) {
+  std::size_t inner;
+  std::size_t outer;
+  for (outer = 0; outer < 64 / (width * 2); ++outer) {
+    for (inner = 0; inner < width; ++inner) {
+      std::uint64_t* x = &matrix[(inner) + (outer * width * 2)];
+      std::uint64_t* y = &matrix[(inner + width) + (outer * width * 2)];
+      *x = ((*y << width) & mask) ^ *x;
+      *y = ((*x & mask) >> width) ^ *y;
+      *x = ((*y << width) & mask) ^ *x;
+    }
+  }
+}
+
+inline void bitmatrixTranspose(std::uint64_t* matrix) {
+  std::size_t swap_width = 64;
+  auto swap_mask = static_cast<std::uint64_t>(-1);
+  while (swap_width != 1) {
+    swap_width >>= 1;
+    swap_mask = swap_mask ^ (swap_mask >> swap_width);
+    bitmatrixSwap(matrix, swap_width, swap_mask);
+  }
+}
+
 enum class HaploView : bool { LocusMajor, IndividualMajor };
 
 class HaploBuf {
  public:
-  HaploBuf(std::size_t n_ind, std::size_t n_loc)
-      : n_ind_(n_ind),
+  HaploBuf(std::size_t n_individuals, std::size_t n_loc)
+      : n_ind_(n_individuals),
         n_loc_(n_loc),
         n_rows_((n_loc_ + 63) & ~static_cast<std::size_t>(63)),
         n_words_((n_ind_ + 63) / 64),
         buf_(n_rows_ * n_words_) {}
 
-  std::size_t n_ind() const noexcept { return n_ind_; }
-  std::size_t n_loc() const noexcept { return n_loc_; }
-  std::size_t n_rows() const noexcept { return n_rows_; }
-  std::size_t n_words() const noexcept { return n_words_; }
+  std::size_t numIndividuals() const noexcept { return n_ind_; }
+  std::size_t numLoci() const noexcept { return n_loc_; }
+  std::size_t numRows() const noexcept { return n_rows_; }
+  std::size_t numWords() const noexcept { return n_words_; }
 
   HaploView view() const noexcept { return view_; }
 
@@ -98,7 +123,7 @@ inline void HaploBuf::transpose() noexcept {
     for (std::size_t cb = 0; cb < src_n_cols; ++cb) {
       for (std::size_t r = 0; r < 64; ++r) tile[r] = (*this)((ct * 64) + r, cb);
 
-      utils::bitmatrix_transpose(tile);
+      bitmatrixTranspose(tile);
 
       for (std::size_t r = 0; r < 64; ++r) {
         const std::size_t dst_row = (cb * 64) + r;
@@ -128,22 +153,22 @@ class GenoBuf {
         h0_(params.global.n_ind, params.geno.n_loc),
         h1_(params.global.n_ind, params.geno.n_loc) {};
 
-  Eigen::VectorXd& v_lmean() noexcept { return v_lmean_; }
-  Eigen::VectorXd& v_lvar() noexcept { return v_lvar_; }
-  Eigen::VectorXd& v_lmaf() noexcept { return v_lmaf_; }
+  Eigen::VectorXd& locusMean() noexcept { return v_lmean_; }
+  Eigen::VectorXd& locusVar() noexcept { return v_lvar_; }
+  Eigen::VectorXd& locusFreq() noexcept { return v_lmaf_; }
 
-  const Eigen::VectorXd& v_lmean() const noexcept { return v_lmean_; }
-  const Eigen::VectorXd& v_lvar() const noexcept { return v_lvar_; }
-  const Eigen::VectorXd& v_lmaf() const noexcept { return v_lmaf_; }
+  const Eigen::VectorXd& locusMean() const noexcept { return v_lmean_; }
+  const Eigen::VectorXd& locusVar() const noexcept { return v_lvar_; }
+  const Eigen::VectorXd& locusFreq() const noexcept { return v_lmaf_; }
 
-  double v_lmean(std::size_t loc) const noexcept { return v_lmean_(loc); }
-  double v_lvar(std::size_t loc) const noexcept { return v_lvar_(loc); }
-  double v_lmaf(std::size_t loc) const noexcept { return v_lmaf_(loc); }
+  double locusMean(std::size_t loc) const noexcept { return v_lmean_(loc); }
+  double locusVar(std::size_t loc) const noexcept { return v_lvar_(loc); }
+  double locusFreq(std::size_t loc) const noexcept { return v_lmaf_(loc); }
 
-  std::size_t n_ind() const noexcept { return h0_.n_ind(); }
-  std::size_t n_loc() const noexcept { return h0_.n_loc(); }
-  std::size_t n_rows() const noexcept { return h0_.n_rows(); }
-  std::size_t n_words() const noexcept { return h0_.n_words(); }
+  std::size_t numIndividuals() const noexcept { return h0_.numIndividuals(); }
+  std::size_t numLoci() const noexcept { return h0_.numLoci(); }
+  std::size_t numRows() const noexcept { return h0_.numRows(); }
+  std::size_t numWords() const noexcept { return h0_.numWords(); }
 
   HaploBuf& h0() noexcept { return h0_; }
   HaploBuf& h1() noexcept { return h1_; }
@@ -152,8 +177,8 @@ class GenoBuf {
   HaploView view() const noexcept { return h0_.view(); }
 
   void transpose() noexcept;
-  void compute_mafs();
-  void compute_stats();
+  void computeLocusFreqs();
+  void computeLocusStats();
 
   void decompress(
       std::size_t ind_start,
@@ -180,13 +205,13 @@ inline void GenoBuf::transpose() noexcept {
   h1_.transpose();
 }
 
-inline void GenoBuf::compute_mafs() {
+inline void GenoBuf::computeLocusFreqs() {
   if (h0_.view() != HaploView::LocusMajor)
     throw std::runtime_error(
         "GenoBuf::compute_mafs: compute MAFs in locus-major view.");
 
-  std::size_t n_ind = h0_.n_ind();
-  std::size_t n_loc = h0_.n_loc();
+  std::size_t n_ind = h0_.numIndividuals();
+  std::size_t n_loc = h0_.numLoci();
 
   const std::size_t n_bloc_ind = (n_ind + 63) / 64;
 
@@ -213,13 +238,13 @@ inline void GenoBuf::compute_mafs() {
   }
 }
 
-inline void GenoBuf::compute_stats() {
+inline void GenoBuf::computeLocusStats() {
   if (h0_.view() != HaploView::LocusMajor)
     throw std::runtime_error(
         "GenoBuf::compute_stats: compute stats in loc-major view.");
 
-  std::size_t n_ind = h0_.n_ind();
-  std::size_t n_loc = h0_.n_loc();
+  std::size_t n_ind = h0_.numIndividuals();
+  std::size_t n_loc = h0_.numLoci();
 
   const std::size_t n_bloc_ind = (n_ind + 63) / 64;
 
@@ -254,7 +279,7 @@ inline void GenoBuf::decompress(
     bool scale) {
   if (view() != HaploView::LocusMajor)
     throw std::runtime_error("GenoBuf::decompress: require loc-major view");
-  if (ind_end > n_ind())
+  if (ind_end > numIndividuals())
     throw std::runtime_error(
         "GenBuf::decompress: argument ind_end exceeds number of individuals");
 
