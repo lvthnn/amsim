@@ -214,6 +214,7 @@ inline auto ConfigWriter::toTOML(const SampleEstimatorSpec& val) {
     writeParam(val.type, "type");
     writeParam(val.params, "params");
     writeParam(val.exec, "exec");
+    writeParam(val.exec_args, "exec_args");
     writeParam(val.n_rows, "n_rows");
     writeParam(val.n_cols, "n_cols");
     writeParam(val.row_names, "row_names");
@@ -563,7 +564,7 @@ inline void ConfigReader::readEstimatorConfig() {
   for (auto&& estimator : *estimators) {
     std::string raw = *estimator.value<std::string>();
     auto [name, params] = parseFunction(raw);
-    PopulationEstimator est = build_population_estimator(name, params);
+    PopulationEstimator est = buildPopulationEstimator(name, params);
     est.name = raw;
     spec_.estimators.push_back(std::move(est));
   }
@@ -581,6 +582,7 @@ inline void ConfigReader::readSampleConfig() {
       readParam(est_spec.type, est_path + "/type");
       readParam(est_spec.params, est_path + "/params");
       readParam(est_spec.exec, est_path + "/exec");
+      readParam(est_spec.exec_args, est_path + "/exec_args");
       readParam(est_spec.n_rows, est_path + "/n_rows");
       readParam(est_spec.n_cols, est_path + "/n_cols");
       readParam(est_spec.row_names, est_path + "/row_names");
