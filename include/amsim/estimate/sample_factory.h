@@ -25,12 +25,13 @@
 namespace amsim {
 
 template <Proband P>
-inline SampleEstimator<P> build_sample_estimator(
+inline SampleEstimator<P> buildSampleEstimator(
     const SampleEstimatorSpec& spec) {
   if (spec.type == "external") {
     return SampleExternalEstimator<P>(
         spec.name,
         spec.exec.value(),
+        spec.params,
         spec.n_rows.value(),
         spec.n_cols.value(),
         spec.row_names,

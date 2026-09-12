@@ -25,7 +25,7 @@
 namespace amsim {
 
 template <typename D>
-Eigen::VectorXd generate_dist(const D& dist, std::size_t n) {
+Eigen::VectorXd generateDist(const D& dist, std::size_t n) {
   Eigen::VectorXd random(n);
   rng::UniformRange::fill(random.data(), n);
   std::ranges::transform(random, random.begin(), [dist](double u) {
@@ -99,7 +99,7 @@ class BetaDistribution {
   static constexpr std::size_t NParams = 2;
 
   Eigen::VectorXd generate(std::size_t n) const {
-    return generate_dist(dist_, n);
+    return generateDist(dist_, n);
   }
 
  private:
@@ -114,7 +114,7 @@ class ExponentialDistribution {
   static constexpr std::size_t NParams = 1;
 
   Eigen::VectorXd generate(std::size_t n) const {
-    return generate_dist(dist_, n);
+    return generateDist(dist_, n);
   }
 
  private:
@@ -130,7 +130,7 @@ class GammaDistribution {
   static constexpr std::size_t NParams = 2;
 
   Eigen::VectorXd generate(std::size_t n) const {
-    return generate_dist(dist_, n);
+    return generateDist(dist_, n);
   }
 
  private:
@@ -146,7 +146,7 @@ class LaplaceDistribution {
   static constexpr std::size_t NParams = 2;
 
   Eigen::VectorXd generate(std::size_t n) const {
-    return generate_dist(dist_, n);
+    return generateDist(dist_, n);
   }
 
  private:
@@ -161,7 +161,7 @@ class StudentsTDistribution {
   static constexpr std::size_t NParams = 1;
 
   Eigen::VectorXd generate(std::size_t n) const {
-    return generate_dist(dist_, n);
+    return generateDist(dist_, n);
   }
 
  private:
@@ -177,7 +177,7 @@ struct Distribution {
 };
 
 template <typename Dist, typename... Params>
-inline Distribution make_distribution(Params&&... params) {
+inline Distribution makeDistribution(Params&&... params) {
   if constexpr (std::is_same_v<Dist, RademacherDistribution>) {
     return Distribution{
         .name = Dist::Name, .params = {}, .fn = [](std::size_t n) {
@@ -199,22 +199,22 @@ inline Distribution make_distribution(Params&&... params) {
   }
 }
 
-inline Distribution str_to_distribution(
+inline Distribution strToDistribution(
     const std::string& name, const std::vector<double>& params) {
   if (name == "uniform")
-    return make_distribution<UniformDistribution>(params[0], params[1]);
+    return makeDistribution<UniformDistribution>(params[0], params[1]);
   if (name == "beta")
-    return make_distribution<BetaDistribution>(params[0], params[1]);
+    return makeDistribution<BetaDistribution>(params[0], params[1]);
   if (name == "exponential")
-    return make_distribution<ExponentialDistribution>(params[0]);
+    return makeDistribution<ExponentialDistribution>(params[0]);
   if (name == "gamma")
-    return make_distribution<GammaDistribution>(params[0], params[1]);
+    return makeDistribution<GammaDistribution>(params[0], params[1]);
   if (name == "normal")
-    return make_distribution<NormalDistribution>(params[0], params[1]);
+    return makeDistribution<NormalDistribution>(params[0], params[1]);
   if (name == "laplace")
-    return make_distribution<LaplaceDistribution>(params[0], params[1]);
+    return makeDistribution<LaplaceDistribution>(params[0], params[1]);
   if (name == "students_t")
-    return make_distribution<StudentsTDistribution>(params[0]);
+    return makeDistribution<StudentsTDistribution>(params[0]);
   throw std::runtime_error(std::format("Unknown distribution {}", name));
 }
 

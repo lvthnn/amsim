@@ -16,7 +16,7 @@
 #pragma once
 
 #include <amsim/core/state.h>
-#include <amsim/io/writer.h>
+#include <amsim/io/h5_writer.h>
 
 #include <Eigen/Dense>
 #include <string>
@@ -38,21 +38,21 @@ class PopulationEstimatorStrategy {
         n_rows_(n_rows),
         n_cols_(n_cols),
         data_(n_rows_, n_cols_) {
-    Writer::create(data_, name_, row_labels_, col_labels_);
+    H5Writer::create(data_, name_, row_labels_, col_labels_);
   }
 
   virtual ~PopulationEstimatorStrategy() = default;
   virtual void compute(const State& state) = 0;
 
   std::string name() const { return name_; }
-  std::vector<std::string> row_labels() const { return row_labels_; }
-  std::vector<std::string> col_labels() const { return col_labels_; }
-  std::size_t n_rows() const { return n_rows_; }
-  std::size_t n_cols() const { return n_cols_; }
+  std::vector<std::string> rowLabels() const { return row_labels_; }
+  std::vector<std::string> colLabels() const { return col_labels_; }
+  std::size_t numRows() const { return n_rows_; }
+  std::size_t numCols() const { return n_cols_; }
 
   void operator()(const State& state) {
     compute(state);
-    Writer::write(data_, name(), state.rep, state.gen);
+    H5Writer::write(data_, name(), state.rep, state.gen);
   }
 
  protected:

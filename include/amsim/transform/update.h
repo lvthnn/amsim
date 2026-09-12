@@ -54,7 +54,7 @@ class UpdateGenome {
 inline std::uint64_t UpdateGenome::gamWord(
     std::uint64_t ind_h0, std::uint64_t ind_h1, bool& par0, std::size_t valid) {
   // set recombination probabilities for loci in word
-  bw_.set_probs(ptr_rec_, valid);
+  bw_.setProbs(ptr_rec_, valid);
 
   // sample a 0-1 recombination mask
   std::uint64_t par = bw_.sample();
@@ -69,7 +69,7 @@ inline std::uint64_t UpdateGenome::gamWord(
   if (par0) par = ~par;
 
   // set mutation probabilities for the loci
-  bw_.set_probs(ptr_mut_, valid);
+  bw_.setProbs(ptr_mut_, valid);
   std::uint64_t mut = bw_.sample();
 
   // update parity as the parity of the last locus of the word
@@ -83,7 +83,7 @@ inline void UpdateGenome::operator()(State& state) {
     throw std::runtime_error("update genome requires ind-major view");
 
   constexpr std::size_t IncWord = 64;
-  const std::size_t n_words = state.geno().n_words();
+  const std::size_t n_words = state.geno().numWords();
 
   HaploBuf& h0 = state.geno().h0();
   HaploBuf& h1 = state.geno().h1();

@@ -27,7 +27,7 @@
 
 namespace amsim::rng {
 
-inline uint64_t auto_seed(std::optional<uint64_t> seed) {
+inline uint64_t seedOrRandom(std::optional<uint64_t> seed) {
   if (seed.has_value()) return seed.value();
   return static_cast<uint64_t>(
       std::chrono::high_resolution_clock::now().time_since_epoch().count());
@@ -38,12 +38,12 @@ class Xoshiro256ss {
   Xoshiro256ss(const Xoshiro256ss&) = delete;
   Xoshiro256ss& operator=(const Xoshiro256ss&) = delete;
 
-  static Xoshiro256ss& get_instance() {
+  static Xoshiro256ss& getInstance() {
     thread_local static Xoshiro256ss rng;
     return rng;
   }
 
-  void set_seed(std::uint64_t seed) noexcept {
+  void setSeed(std::uint64_t seed) noexcept {
     std::uint64_t x = seed ? seed : 0x9e3779b97f4a7c15ULL;
     s_[0] = splitMix64Step(x);
     s_[1] = splitMix64Step(x);
@@ -91,14 +91,14 @@ using ThrT = std::conditional_t<
     std::uint8_t,
     std::conditional_t<BITS == 16, std::uint16_t, std::uint64_t>>;
 
-inline std::uint64_t lowbits_mask(unsigned k) noexcept {
+inline std::uint64_t lowbitsMask(unsigned k) noexcept {
   if (k == 0) return 0ULL;
   if (k >= 64) return ~0ULL;
   return (1ULL << k) - 1ULL;
 }
 
 template <int BITS>
-inline ThrT<BITS> prob_to_thr(double p) noexcept {
+inline ThrT<BITS> probToThreshold(double p) noexcept {
   static_assert(
       BITS == 8 || BITS == 16 || BITS == 64, "BITS must be 8, 16, 64");
   if (p <= 0.0) return ThrT<BITS>(0);
@@ -119,33 +119,33 @@ struct BernoulliWord {
 
   BernoulliWord() = default;
 
-  void set_prob(double p) noexcept {
+  void setProb(double p) noexcept {
     p = std::max(0.0, p);
     p = std::min(p, 1.0);
-    T thresh = prob_to_thr<BITS>(p);
+    T thresh = probToThreshold<BITS>(p);
     for (std::size_t j = 0; j < 64; ++j) tj_[j] = thresh;
   }
 
-  void set_probs(const double* ptr, std::size_t valid = 64) noexcept {
+  void setProbs(const double* ptr, std::size_t valid = 64) noexcept {
     double p;
     for (std::size_t j = 0; j < 64; ++j) {
       p = (j < valid) ? *(ptr + j) : 0;
       p = std::max(0.0, p);
       p = std::min(p, 1.0);
-      T thresh = prob_to_thr<BITS>(p);
+      T thresh = probToThreshold<BITS>(p);
       tj_[j] = thresh;
     }
   }
 
   bool coinflip() noexcept {
-    return (Xoshiro256ss::get_instance().next() & 1ULL) != 0U;
+    return (Xoshiro256ss::getInstance().next() & 1ULL) != 0U;
   }
 
   std::uint64_t sample(unsigned valid_bits = 64) noexcept {
     std::uint64_t w = 0;
     if constexpr (BITS == 8) {
       for (int j = 0; j < 64;) {
-        std::uint64_t r = Xoshiro256ss::get_instance().next();
+        std::uint64_t r = Xoshiro256ss::getInstance().next();
         for (int k = 0; k < 8 && j < 64; ++k, ++j) {
           auto rv = static_cast<std::uint8_t>(r >> 56);
           r <<= 8;
@@ -154,7 +154,7 @@ struct BernoulliWord {
       }
     } else if constexpr (BITS == 16) {
       for (int j = 0; j < 64;) {
-        std::uint64_t r = Xoshiro256ss::get_instance().next();
+        std::uint64_t r = Xoshiro256ss::getInstance().next();
         for (int k = 0; k < 4 && j < 64; ++k, ++j) {
           auto rv = static_cast<std::uint16_t>(r >> 48);
           r <<= 16;
@@ -163,11 +163,11 @@ struct BernoulliWord {
       }
     } else {
       for (int j = 0; j < 64; ++j) {
-        std::uint64_t rv = Xoshiro256ss::get_instance().next();
+        std::uint64_t rv = Xoshiro256ss::getInstance().next();
         w |= static_cast<std::uint64_t>(-(rv < tj_[j])) & (1ULL << j);
       }
     }
-    if (valid_bits < 64) w &= lowbits_mask(valid_bits);
+    if (valid_bits < 64) w &= lowbitsMask(valid_bits);
     return w;
   }
 
@@ -189,8 +189,8 @@ struct NormalPolar {
     double v;
     double s;
     do {
-      u = (2.0 * u01_53(Xoshiro256ss::get_instance().next())) - 1.0;
-      v = (2.0 * u01_53(Xoshiro256ss::get_instance().next())) - 1.0;
+      u = (2.0 * u01_53(Xoshiro256ss::getInstance().next())) - 1.0;
+      v = (2.0 * u01_53(Xoshiro256ss::getInstance().next())) - 1.0;
       s = (u * u) + (v * v);
     } while (s >= 1.0 || s == 0.0);
     const double m = std::sqrt(-2.0 * std::log(s) / s);
@@ -220,12 +220,12 @@ struct UniformRange {
   UniformRange() = default;
 
   static double sample(double a = 1.0) noexcept {
-    return a * u01_53(Xoshiro256ss::get_instance().next());
+    return a * u01_53(Xoshiro256ss::getInstance().next());
   }
 
   static void fill(double* out, std::size_t n, double a = 1.0) noexcept {
     for (std::size_t i = 0; i < n; ++i)
-      out[i] = a * u01_53(Xoshiro256ss::get_instance().next());
+      out[i] = a * u01_53(Xoshiro256ss::getInstance().next());
   }
 };
 
@@ -239,7 +239,7 @@ struct UniformIntRange {
     std::size_t x;
 
     do {
-      x = Xoshiro256ss::get_instance().next();
+      x = Xoshiro256ss::getInstance().next();
     } while (x >= thresh);
 
     return (x % hi);
@@ -253,15 +253,15 @@ struct UniformIntRange {
     std::size_t x;
 
     do {
-      x = Xoshiro256ss::get_instance().next();
+      x = Xoshiro256ss::getInstance().next();
     } while (x >= thresh);
 
     return (x % (hi - lo)) + lo;
   }
 };
 
-inline void set_seed(std::uint64_t seed) {
-  Xoshiro256ss::get_instance().set_seed(seed);
+inline void setSeed(std::uint64_t seed) {
+  Xoshiro256ss::getInstance().setSeed(seed);
 }
 
 }  // namespace amsim::rng

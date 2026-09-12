@@ -46,7 +46,7 @@ class OptimisePhenotypeArchitecture {
       pheno_fixed_[pheno] = (n_locs_[pheno] == n_loc_);
   }
 
-  double err_frob() const { return err_frob_opt_; }
+  double errFrobenius() const { return err_frob_opt_; }
 
   Eigen::MatrixXd expected() const { return expected_; }
 
@@ -167,7 +167,7 @@ inline void OptimisePhenotypeArchitecture::proposeState() {
                (4 * d_cur_ * u_cur_(pheno_cur_)) +
                (2 * u_cur_(pheno_cur_) * u_cur_(pheno_cur_)) +
                4 * diff_cur_.col(pheno_cur_).transpose() * u_cur_ +
-               2 * d_cur_ * diff_cur_(pheno_cur_, pheno_cur_);
+               (2 * d_cur_ * diff_cur_(pheno_cur_, pheno_cur_));
 }
 
 inline void OptimisePhenotypeArchitecture::updateState() {
@@ -219,8 +219,12 @@ inline void OptimisePhenotypeArchitecture::operator()() {
       break;
     }
   }
-  
+
   // consider adding some tol_inf argument, decided against it for now
+  Log::debug(
+      std::format(
+          "OptimisePhenotypeArchitecture::operator(): finished with error {}",
+          errFrobenius()));
 }
 
 }  // namespace amsim

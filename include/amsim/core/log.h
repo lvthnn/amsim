@@ -30,7 +30,7 @@ namespace amsim {
 
 enum LogLevel { Debug, Info, Warning, Error, None };
 
-inline std::string LogLevel_to_string(LogLevel level) {
+inline std::string logLevelToString(LogLevel level) {
   switch (level) {
     case LogLevel::Debug:
       return "DEBUG";
@@ -46,7 +46,7 @@ inline std::string LogLevel_to_string(LogLevel level) {
   __builtin_unreachable();
 }
 
-inline LogLevel LogLevel_from_string(const std::string& level) {
+inline LogLevel logLevelFromString(const std::string& level) {
   std::string upper = boost::to_upper_copy(level);
   if (upper == "DEBUG") return LogLevel::Debug;
   if (upper == "INFO") return LogLevel::Info;
@@ -57,7 +57,7 @@ inline LogLevel LogLevel_from_string(const std::string& level) {
 }
 
 inline std::ostream& operator<<(std::ostream& os, LogLevel level) {
-  return os << LogLevel_to_string(level);
+  return os << logLevelToString(level);
 }
 
 class Log {
@@ -65,12 +65,12 @@ class Log {
   Log(const Log&) = delete;
   Log& operator=(const Log&) = delete;
 
-  static Log& get_instance(std::ostream& out, const LogLevel level) {
+  static Log& getInstance(std::ostream& out, const LogLevel level) {
     static Log instance(out, level);
     return instance;
   }
 
-  static Log& get_instance() { return get_instance(std::cout, LogLevel::Info); }
+  static Log& getInstance() { return getInstance(std::cout, LogLevel::Info); }
 
   ~Log() {
     {
@@ -152,7 +152,7 @@ inline std::string Log::formatMsg(
   std::string time_str = getTimeStr();
   std::ostringstream prefix_stream;
 
-  prefix_stream << "[" << LogLevel_to_string(level) << "] "
+  prefix_stream << "[" << logLevelToString(level) << "] "
                 << "[" << time_str << "] " << "[thread "
                 << std::this_thread::get_id() << "] ";
   std::string prefix = prefix_stream.str();
@@ -175,27 +175,27 @@ inline void Log::log(const std::string& msg, const LogLevel level) {
 
 inline void Log::file(const std::filesystem::path& path, LogLevel log_level) {
   static std::fstream log_file(path, std::ios::out);
-  Log::get_instance(log_file, log_level);
+  Log::getInstance(log_file, log_level);
 }
 
 inline void Log::stream(std::ostream& stream, LogLevel log_level) {
-  Log::get_instance(stream, log_level);
+  Log::getInstance(stream, log_level);
 }
 
 inline void Log::debug(const std::string& msg) {
-  Log::get_instance().log(msg, LogLevel::Debug);
+  Log::getInstance().log(msg, LogLevel::Debug);
 }
 
 inline void Log::info(const std::string& msg) {
-  Log::get_instance().log(msg, LogLevel::Info);
+  Log::getInstance().log(msg, LogLevel::Info);
 }
 
 inline void Log::warning(const std::string& msg) {
-  Log::get_instance().log(msg, LogLevel::Warning);
+  Log::getInstance().log(msg, LogLevel::Warning);
 }
 
 inline void Log::error(const std::string& msg) {
-  Log::get_instance().log(msg, LogLevel::Error);
+  Log::getInstance().log(msg, LogLevel::Error);
 }
 
 }  // namespace amsim

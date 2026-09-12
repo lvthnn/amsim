@@ -44,8 +44,8 @@ auto get_prefix = [](auto member_enum) -> std::string_view {
 }  // namespace details
 
 template <Proband P>
-inline void Sample<P>::attach_estimator(const SampleEstimatorSpec& spec) {
-  estimators.push_back(build_sample_estimator<P>(spec));
+inline void Sample<P>::attachEstimator(const SampleEstimatorSpec& spec) {
+  estimators.push_back(buildSampleEstimator<P>(spec));
 }
 
 class Sampler {
@@ -198,7 +198,7 @@ inline void Sampler::Model<P>::fillAggregates(const State& state) {
         const auto& member = ProbandData<P>::ProbandMembers[m];
         if (of & member.self)
           members(row + member_idx++, on) =
-              member_pheno(state, member, prob, pheno_id, comp);
+              memberPheno(state, member, prob, pheno_id, comp);
       }
     }
   }
@@ -231,7 +231,7 @@ inline void Sampler::Model<P>::extractProbands(const State& state) {
       for (std::size_t m = 0; m < ProbandData<P>::ProbandSize; ++m) {
         const auto& member_data = ProbandData<P>::ProbandMembers[m];
         phenotypes(row + m, pheno_id) =
-            member_pheno(state, member_data, prob_id, pheno_id);
+            memberPheno(state, member_data, prob_id, pheno_id);
       }
     }
   }
@@ -246,7 +246,7 @@ inline void Sampler::Model<P>::addGenotype(
     std::uint8_t& byte,
     std::size_t& bit_pos,
     std::fstream& bed) const {
-  byte |= (member_geno_plink(state, member, proband_id, locus) << bit_pos);
+  byte |= (memberGenoPLINK(state, member, proband_id, locus) << bit_pos);
   bit_pos += 2;
   if (bit_pos == 8) {
     bed.put(byte);
@@ -257,15 +257,19 @@ inline void Sampler::Model<P>::addGenotype(
 
 template <Proband P>
 inline void Sampler::Model<P>::writeBIM() const {
-  std::fstream bim_file(sample_dir / "data.bim", std::ios::out);
-
-  if (!bim_file.is_open())
-    throw std::runtime_error(
-        "Could not open BIM file output stream " +
-        (sample_dir / "data.bim").string());
+  Table<
+      Column<"chrom", std::size_t>,
+      Column<"variant_id", std::string>,
+      Column<"pos_cm", std::size_t>,
+      Column<"bp_coordinate", std::size_t>,
+      Column<"alt", std::string>,
+      Column<"ref", std::string>>
+      bim;
 
   for (std::size_t loc = 0; loc < n_loc; ++loc)
-    bim_file << std::format("1\tSNP{}\t0\t{}\tA\tG\n", loc, loc + 1);
+    bim.insertRow({1, std::format("SNP{}", loc), 0, loc + 1, "A", "G"});
+
+  writeTable(bim, sample_dir / "data.bim", '\t', '\n', false);
 }
 
 template <Proband P>
@@ -312,12 +316,14 @@ inline void Sampler::Model<P>::writeBED(const State& state) const {
 
 template <Proband P>
 inline void Sampler::Model<P>::writeFAM(const State& state) const {
-  std::fstream fam_file(sample_dir / "data.fam", std::ios::out);
-
-  if (!fam_file.is_open())
-    throw std::runtime_error(
-        "Could not open FAM file output stream " +
-        (sample_dir / "data.fam").string());
+  Table<
+      Column<"FID", std::string>,
+      Column<"IID", std::string>,
+      Column<"PID", std::string>,
+      Column<"MID", std::string>,
+      Column<"SEX", int>,
+      Column<"PHENO", double>>
+      table_fam;
 
   for (std::size_t prob = 0; prob < n_probands; ++prob) {
     std::size_t id = selected[prob];
@@ -325,21 +331,21 @@ inline void Sampler::Model<P>::writeFAM(const State& state) const {
     for (std::size_t m = 0; m < ProbandData<P>::ProbandSize; ++m) {
       auto member = ProbandData<P>::ProbandMembers[m];
 
-      std::size_t fid = prob;
-      std::size_t iid = member_index(state, member, id);
+      std::string fam_id = std::format("FAM{}", prob);
+      std::string self_id = memberID<P>(state, member.self, id);
+      std::string father_id = memberID<P>(state, member.father, id);
+      std::string mother_id = memberID<P>(state, member.mother, id);
 
-      int sex = (member.sex == Sex::Unknown)
-                    ? (static_cast<int>(iid >= n_sex) + 1)
-                    : static_cast<int>(member.sex);
+      int sex =
+          (member.sex == Sex::Unknown)
+              ? (static_cast<int>(memberIndex(state, member, id) >= n_sex) + 1)
+              : static_cast<int>(member.sex);
 
-      std::string istr = member_id<P>(state, member.self, id);
-      std::string pstr = member_id<P>(state, member.father, id);
-      std::string mstr = member_id<P>(state, member.mother, id);
-
-      fam_file << std::format(
-          "FAM{}\t{}\t{}\t{}\t{}\t-9\n", fid, istr, pstr, mstr, sex);
+      table_fam.insertRow({fam_id, self_id, father_id, mother_id, sex, -9});
     }
   }
+
+  writeTable(table_fam, sample_dir / "data.fam", '\t', '\n', false);
 }
 
 template <Proband P>
@@ -347,7 +353,7 @@ inline void Sampler::Model<P>::writePHENO(
     const State& state, Component type) const {
   auto path = (type == Component::Total)
                   ? sample_dir / "data.pheno"
-                  : sample_dir / std::format("data.{}.pheno", to_string(type));
+                  : sample_dir / std::format("data.{}.pheno", componentToString(type));
 
   std::fstream pheno_file(path, std::ios::out);
 
@@ -368,13 +374,13 @@ inline void Sampler::Model<P>::writePHENO(
       auto member = ProbandData<P>::ProbandMembers[m];
 
       std::size_t fid = prob;
-      std::string istr = member_id<P>(state, member.self, id);
+      std::string istr = memberID<P>(state, member.self, id);
 
       pheno_file << std::format("FAM{}\t{}", fid, istr);
 
       for (std::size_t pheno = 0; pheno < n_pheno; ++pheno)
         pheno_file << std::format(
-            "\t{}", member_pheno(state, member, id, pheno, type));
+            "\t{}", memberPheno(state, member, id, pheno, type));
 
       pheno_file << "\n";
     }
@@ -409,8 +415,7 @@ inline void Sampler::Model<P>::draw(const State& state) {
 
 template <Proband P>
 inline void Sampler::Model<P>::estimate(const State& state) {
-  for (const auto& estimator : estimators)
-    (*estimator)(state.gen, state.rep);
+  for (const auto& estimator : estimators) (*estimator)(state.gen, state.rep);
 }
 
 template <Proband P>
@@ -429,8 +434,7 @@ template struct Sampler::Model<Proband::Family>;
 
 class ComputeSampleEstimates {
  public:
-  explicit ComputeSampleEstimates(
-      const Params& params) {
+  explicit ComputeSampleEstimates(const Params& params) {
     for (const auto& sample : params.estimate.samples)
       estimators_.emplace_back(
           std::visit(

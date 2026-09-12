@@ -141,11 +141,11 @@ class PhenoBuf {
     return comp_var_(static_cast<int>(type), pheno_id);
   }
 
-  Eigen::Ref<const Eigen::VectorXd> comp_mean(Component type) const {
+  Eigen::Ref<const Eigen::VectorXd> componentMean(Component type) const {
     return comp_mean_.row(static_cast<int>(type));
   }
 
-  Eigen::Ref<const Eigen::VectorXd> comp_var(Component type) const {
+  Eigen::Ref<const Eigen::VectorXd> componentVar(Component type) const {
     return comp_var_.row(static_cast<int>(type));
   }
 

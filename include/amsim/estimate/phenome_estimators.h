@@ -50,7 +50,7 @@ class EstimatorComponentMean : public PopulationEstimatorStrategy {
  public:
   explicit EstimatorComponentMean(const Params& params, Component type)
       : PopulationEstimatorStrategy(
-            "pheno_" + to_string(type) + "_mean",
+            "pheno_" + componentToString(type) + "_mean",
             {},
             params.pheno.names,
             params.pheno.n_pheno),
@@ -71,7 +71,7 @@ class EstimatorComponentVar : public PopulationEstimatorStrategy {
  public:
   explicit EstimatorComponentVar(const Params& params, Component type)
       : PopulationEstimatorStrategy(
-            "pheno_" + to_string(type) + "_var",
+            "pheno_" + componentToString(type) + "_var",
             {},
             params.pheno.names,
             params.pheno.n_pheno),
@@ -93,11 +93,11 @@ class EstimatorComponentCor : public PopulationEstimatorStrategy {
   explicit EstimatorComponentCor(
       const Params& params, Component type_l, std::optional<Component> type_r)
       : PopulationEstimatorStrategy(
-            "pheno_" + to_string(type_l) + "_" +
-                to_string(type_r.value_or(type_l)) + "_cor",
-            utils::vector_suffix(params.pheno.names, "_" + to_string(type_l)),
-            utils::vector_suffix(
-                params.pheno.names, "_" + to_string(type_r.value_or(type_l))),
+            "pheno_" + componentToString(type_l) + "_" +
+                componentToString(type_r.value_or(type_l)) + "_cor",
+            utils::vectorSuffix(params.pheno.names, "_" + componentToString(type_l)),
+            utils::vectorSuffix(
+                params.pheno.names, "_" + componentToString(type_r.value_or(type_l))),
             params.pheno.n_pheno,
             params.pheno.n_pheno),
         n_ind_(params.global.n_ind),
@@ -127,11 +127,11 @@ class EstimatorComponentCov : public PopulationEstimatorStrategy {
   explicit EstimatorComponentCov(
       const Params& params, Component type_l, std::optional<Component> type_r)
       : PopulationEstimatorStrategy(
-            "pheno_" + to_string(type_l) + "_" +
-                to_string(type_r.value_or(type_l)) + "_cov",
-            utils::vector_suffix(params.pheno.names, "_" + to_string(type_l)),
-            utils::vector_suffix(
-                params.pheno.names, "_" + to_string(type_r.value_or(type_l))),
+            "pheno_" + componentToString(type_l) + "_" +
+                componentToString(type_r.value_or(type_l)) + "_cov",
+            utils::vectorSuffix(params.pheno.names, "_" + componentToString(type_l)),
+            utils::vectorSuffix(
+                params.pheno.names, "_" + componentToString(type_r.value_or(type_l))),
             params.pheno.n_pheno,
             params.pheno.n_pheno),
         n_ind_(params.global.n_ind),
@@ -169,7 +169,7 @@ inline PopulationEstimator PopulationHeritability() {
 inline PopulationEstimator PopulationComponentMean(
     Component type = Component::Total) {
   return PopulationEstimator{
-      .name = "pheno-mean-" + to_string(type),
+      .name = "pheno-mean-" + componentToString(type),
       .fn = [type](const Params& params) {
         return std::make_unique<details::EstimatorComponentMean>(params, type);
       }};
@@ -178,7 +178,7 @@ inline PopulationEstimator PopulationComponentMean(
 inline PopulationEstimator PopulationComponentVar(
     Component type = Component::Total) {
   return PopulationEstimator{
-      .name = "pheno-var-" + to_string(type),
+      .name = "pheno-var-" + componentToString(type),
       .fn = [type](const Params& params) {
         return std::make_unique<details::EstimatorComponentVar>(params, type);
       }};
@@ -188,8 +188,8 @@ inline PopulationEstimator PopulationComponentCor(
     Component type_l = Component::Total,
     std::optional<Component> type_r = std::nullopt) {
   return PopulationEstimator{
-      .name = "pheno-cor-" + to_string(type_l) + "-" +
-              to_string(type_r.value_or(type_l)),
+      .name = "pheno-cor-" + componentToString(type_l) + "-" +
+              componentToString(type_r.value_or(type_l)),
       .fn = [type_l, type_r](const Params& params) {
         return std::make_unique<details::EstimatorComponentCor>(
             params, type_l, type_r);
@@ -200,8 +200,8 @@ inline PopulationEstimator PopulationComponentCov(
     Component type_l = Component::Total,
     std::optional<Component> type_r = std::nullopt) {
   return PopulationEstimator{
-      .name = "pheno-cov-" + to_string(type_l) + "-" +
-              to_string(type_r.value_or(type_l)),
+      .name = "pheno-cov-" + componentToString(type_l) + "-" +
+              componentToString(type_r.value_or(type_l)),
       .fn = [type_l, type_r](const Params& params) {
         return std::make_unique<details::EstimatorComponentCov>(
             params, type_l, type_r);

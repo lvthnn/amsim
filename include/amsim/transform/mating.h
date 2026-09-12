@@ -28,8 +28,7 @@ namespace amsim {
 class RandomMating {
  public:
   explicit RandomMating(const Params& params)
-    : n_sex_(params.global.n_ind / 2),
-      match_cur_(n_sex_) {}
+      : n_sex_(params.global.n_ind / 2), match_cur_(n_sex_) {}
 
   void operator()(State& state);
 
@@ -52,7 +51,7 @@ inline void RandomMating::operator()(State& state) {
   randomiseMatching();
   state.matching() = match_cur_;
   for (std::size_t ind = 0; ind < n_sex_; ++ind)
-    state.inv_matching()[state.matching()[ind]] = ind;
+    state.invMatching()[state.matching()[ind]] = ind;
 }
 
 class AssortativeMating {
@@ -75,6 +74,13 @@ class AssortativeMating {
     Eigen::JacobiSVD<Eigen::MatrixXd> svd(
         mate_cor_, Eigen::ComputeThinU | Eigen::ComputeThinV);
 
+    // feasibility constraint from theoretical manuscript
+    for (const double& sval : svd.singularValues())
+      if (sval > 1)
+        throw std::invalid_argument(
+            "AssortativeMating: invalid spouse correlation matrix specified; "
+            "singular value(s) exceed one");
+
     mate_cor_S1_ = svd.singularValues()(0);
     mate_cor_U1_ = svd.matrixU().col(0);
     mate_cor_V1_ = svd.matrixV().col(0);
@@ -86,16 +92,16 @@ class AssortativeMating {
   Matching matching() const { return match_opt_; };
 
   // best l2 error achieved by solver
-  double l2() const { return err_l2_opt_; }
+  double l2Error() const { return err_l2_opt_; }
 
   // best linfty error achieved by solver
-  double linfty() const { return err_linfty_opt_; }
+  double linftyError() const { return err_linfty_opt_; }
 
   // best correlation structure achieved by solver
-  Eigen::MatrixXd cor() const { return cor_; };
+  Eigen::MatrixXd realisedCor() const { return cor_; };
 
   // number of iterations performed by solver
-  std::size_t n_itr() const { return n_itr_; };
+  std::size_t numIterations() const { return n_itr_; };
 
  private:
   std::size_t n_sex_;
@@ -116,6 +122,7 @@ class AssortativeMating {
   Eigen::MatrixXd ell_cur_;
   Eigen::MatrixXd ell_opt_;
   double alpha_cur_;
+  double err_l2_cur_;
   double err_l2_opt_;
   double err_linfty_opt_;
 
@@ -127,6 +134,9 @@ class AssortativeMating {
   double temp_decay_;
   double temp_cur_;
   double tol_inf_;
+
+  // hard-wire this for now
+  std::size_t log_interval_ = 200000;
 
   // shuffle the internal matching using Fisher-Yates
   void randomiseMatching();
@@ -206,10 +216,10 @@ inline void AssortativeMating::updateState() {
     std::swap(match_cur_[i0_], match_cur_[i1_]);
     ell_cur_ += delta_cur_;
 
-    double err_l2_cur = ell_cur_.norm();
-    if (err_l2_cur < err_l2_opt_) {
+    err_l2_cur_ = ell_cur_.norm();
+    if (err_l2_cur_ < err_l2_opt_) {
       ell_opt_ = ell_cur_;
-      err_l2_opt_ = err_l2_cur;
+      err_l2_opt_ = err_l2_cur_;
       err_linfty_opt_ = ell_cur_.array().abs().maxCoeff();
       match_opt_ = match_cur_;
     }
@@ -228,8 +238,6 @@ inline void AssortativeMating::operator()(State& state) {
     n_itr_ = 0;
     return;
   }
-
-  n_itr_ = max_itr_;
 
   // standardise the supplied matrices
   std_male_ = utils::standardise(pheno_male);
@@ -252,18 +260,48 @@ inline void AssortativeMating::operator()(State& state) {
     updateState();
     temp_cur_ *= temp_decay_;
 
+    if (itr % log_interval_ == 0) {
+      Log::debug(
+          std::format(
+              "AssortativeMating: iteration {}\n"
+              "         error l2: {:3g}\n"
+              "       optimal l2: {:3g}\n"
+              "     error linfty: {:3g}\n"
+              "   optimal linfty: {:3g}\n"
+              "      temperature: {:3g}",
+              itr,
+              err_l2_cur_,
+              err_l2_opt_,
+              ell_cur_.array().abs().maxCoeff(),
+              err_linfty_opt_,
+              temp_cur_));
+    }
+
     if (err_linfty_opt_ < tol_inf_) {
       n_itr_ = itr + 1;
       break;
     }
   }
 
-  n_itr_ = max_itr_;
+  if (linftyError() > tol_inf_) {
+    n_itr_ = max_itr_;
+    Log::warning(
+        std::format(
+            "AssortativeMating: mate correlation error exceeds tolerance "
+            "after {} iterations (max abs error: {:.3g}, l2 error: {:.3g}, "
+            "tolerance: {:.3g}). Consider raising --max-itr, loosening "
+            "--tol-inf, or checking whether the target matrix is achievable.",
+            n_itr_,
+            linftyError(),
+            l2Error(),
+            tol_inf_));
+  }
+
   cor_ = ell_opt_ + mate_cor_;
   state.matching() = match_opt_;
 
   for (std::size_t ind = 0; ind < n_sex_; ++ind)
-    state.inv_matching()[state.matching()[ind]] = ind;
+    state.invMatching()[state.matching()[ind]] = ind;
 }
 
-} // namespace amsim
+}  // namespace amsim

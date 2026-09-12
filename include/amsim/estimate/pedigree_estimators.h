@@ -43,9 +43,9 @@ class EstimatorCousinCov : public PopulationEstimatorStrategy {
         cousin_(
             params.global.n_ind * (1ULL << (2 * degree)), params.pheno.n_pheno),
         PopulationEstimatorStrategy(
-            "cousin_" + std::to_string(degree) + "_" + to_string(type) + "_cov",
-            utils::vector_prefix(params.pheno.names, "self_"),
-            utils::vector_prefix(params.pheno.names, "cousin_"),
+            "cousin_" + std::to_string(degree) + "_" + componentToString(type) + "_cov",
+            utils::vectorPrefix(params.pheno.names, "self_"),
+            utils::vectorPrefix(params.pheno.names, "cousin_"),
             params.pheno.n_pheno,
             params.pheno.n_pheno) {
     if (params.global.pedigree_max_depth < degree_ + 2)
@@ -62,7 +62,7 @@ class EstimatorCousinCov : public PopulationEstimatorStrategy {
     }
 
     std::vector<std::vector<PedigreeNode>> paths =
-        state.pedigree.find_cousins(degree_);
+        state.pedigree.findCousins(degree_);
 
     auto buf = state.pheno()(type_);
     for (std::size_t ind = 0; ind < paths.size(); ++ind) {
@@ -101,10 +101,10 @@ class EstimatorAncestorCov : public PopulationEstimatorStrategy {
         self_(params.global.n_ind * (1ULL << degree), params.pheno.n_pheno),
         ancestor_(params.global.n_ind * (1ULL << degree), params.pheno.n_pheno),
         PopulationEstimatorStrategy(
-            "ancestor_" + std::to_string(degree) + "_" + to_string(type) +
+            "ancestor_" + std::to_string(degree) + "_" + componentToString(type) +
                 "_cov",
-            utils::vector_prefix(params.pheno.names, "self_"),
-            utils::vector_prefix(params.pheno.names, "ancestor_"),
+            utils::vectorPrefix(params.pheno.names, "self_"),
+            utils::vectorPrefix(params.pheno.names, "ancestor_"),
             params.pheno.n_pheno,
             params.pheno.n_pheno) {}
 
@@ -117,7 +117,7 @@ class EstimatorAncestorCov : public PopulationEstimatorStrategy {
     }
 
     std::vector<std::vector<PedigreeNode>> paths =
-        state.pedigree.find_ancestors(degree_);
+        state.pedigree.findAncestors(degree_);
 
     auto self_buf = state.pheno()(type_);
     auto ancestor_buf = history_[degree_](type_);
@@ -163,7 +163,7 @@ inline void EstimatorAncestorCov::syncPhenotypes(const State& state) {
 inline PopulationEstimator PopulationCousinCov(
     std::size_t degree = 1, Component type = Component::Total) {
   return PopulationEstimator{
-      .name = "cousin-" + std::to_string(degree) + "-cov-" + to_string(type),
+      .name = "cousin-" + std::to_string(degree) + "-cov-" + componentToString(type),
       .fn = [degree, type](const Params& params) {
         return std::make_unique<details::EstimatorCousinCov>(
             params, degree, type);
@@ -173,7 +173,7 @@ inline PopulationEstimator PopulationCousinCov(
 inline PopulationEstimator PopulationAncestorCov(
     std::size_t degree = 1, Component type = Component::Total) {
   return PopulationEstimator{
-      .name = "ancestor-" + std::to_string(degree) + "-cov-" + to_string(type),
+      .name = "ancestor-" + std::to_string(degree) + "-cov-" + componentToString(type),
       .fn = [degree, type](const Params& params) {
         return std::make_unique<details::EstimatorAncestorCov>(
             params, degree, type);

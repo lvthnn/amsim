@@ -50,16 +50,16 @@ class Pedigree {
 
   std::size_t max_depth() const;
 
-  std::vector<std::vector<PedigreeNode>> find_cousins(
+  std::vector<std::vector<PedigreeNode>> findCousins(
       const PedigreeNode& self, std::size_t degree = 1) const;
 
-  std::vector<std::vector<PedigreeNode>> find_cousins(
+  std::vector<std::vector<PedigreeNode>> findCousins(
       std::size_t degree = 1) const;
 
-  std::vector<std::vector<PedigreeNode>> find_ancestors(
+  std::vector<std::vector<PedigreeNode>> findAncestors(
       const PedigreeNode& self, std::size_t degree = 1) const;
 
-  std::vector<std::vector<PedigreeNode>> find_ancestors(
+  std::vector<std::vector<PedigreeNode>> findAncestors(
       std::size_t degree = 1) const;
 
  private:
@@ -97,7 +97,7 @@ inline std::size_t Pedigree::max_depth() const {
   return max_depth_;
 }
 
-inline std::vector<std::vector<PedigreeNode>> Pedigree::find_cousins(
+inline std::vector<std::vector<PedigreeNode>> Pedigree::findCousins(
     const PedigreeNode& self, std::size_t degree) const {
   if (degree == 0)
     throw std::invalid_argument(
@@ -115,7 +115,7 @@ inline std::vector<std::vector<PedigreeNode>> Pedigree::find_cousins(
   return cousins;
 }
 
-inline std::vector<std::vector<PedigreeNode>> Pedigree::find_cousins(
+inline std::vector<std::vector<PedigreeNode>> Pedigree::findCousins(
     std::size_t degree) const {
   if (degree == 0)
     throw std::invalid_argument(
@@ -125,14 +125,14 @@ inline std::vector<std::vector<PedigreeNode>> Pedigree::find_cousins(
   std::vector<std::vector<PedigreeNode>> cousins(n_ind_ * cousins_per_ind);
 
   for (std::size_t ind = 0; ind < n_ind_; ++ind) {
-    auto ind_cousins = find_cousins(node(ind, 0), degree);
+    auto ind_cousins = findCousins(node(ind, 0), degree);
     std::ranges::move(ind_cousins, (cousins.begin() + (ind * cousins_per_ind)));
   }
 
   return cousins;
 }
 
-inline std::vector<std::vector<PedigreeNode>> Pedigree::find_ancestors(
+inline std::vector<std::vector<PedigreeNode>> Pedigree::findAncestors(
     const PedigreeNode& self, std::size_t degree) const {
   if (degree == 0)
     throw std::invalid_argument(
@@ -149,7 +149,7 @@ inline std::vector<std::vector<PedigreeNode>> Pedigree::find_ancestors(
   return ancestors;
 }
 
-inline std::vector<std::vector<PedigreeNode>> Pedigree::find_ancestors(
+inline std::vector<std::vector<PedigreeNode>> Pedigree::findAncestors(
     std::size_t degree) const {
   if (degree == 0)
     throw std::invalid_argument(
@@ -159,7 +159,7 @@ inline std::vector<std::vector<PedigreeNode>> Pedigree::find_ancestors(
   std::vector<std::vector<PedigreeNode>> ancestors(n_ind_ * ancestors_per_ind);
 
   for (std::size_t ind = 0; ind < n_ind_; ++ind) {
-    auto ind_ancestors = find_ancestors(node(ind, 0), degree);
+    auto ind_ancestors = findAncestors(node(ind, 0), degree);
     std::ranges::move(
         ind_ancestors, ancestors.begin() + (ancestors_per_ind * ind));
   }
@@ -263,7 +263,7 @@ inline std::vector<PedigreeNode> Pedigree::traversal(
   result[0] = init;
 
   for (std::size_t l = 0; l < path.seq_len; ++l) {
-    Sex sex = bit_to_sex((path.seq >> l) & 1ULL);
+    Sex sex = bitToSex((path.seq >> l) & 1ULL);
     bool up = l < path.pivot.value_or(path.seq_len);
 
     // If a path is pivoted — that is, can be decomposed into an ascent sequence

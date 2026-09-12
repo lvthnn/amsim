@@ -38,7 +38,7 @@ class H5Writer {
   H5Writer(const H5Writer&) = delete;
   H5Writer& operator=(const H5Writer&) = delete;
 
-  static H5Writer& get_instance(
+  static H5Writer& getInstance(
       const std::filesystem::path& results_path,
       std::size_t n_gens,
       std::size_t n_reps) {
@@ -47,13 +47,13 @@ class H5Writer {
     return *instance_;
   }
 
-  static H5Writer& get_instance() {
+  static H5Writer& getInstance() {
     if (instance_ == nullptr)
       throw std::runtime_error("Must initialise Writer before calling");
     return *instance_;
   }
 
-  void write_params(const Params& params);
+  void writeParams(const Params& params);
 
   template <typename T>
   static void create(
@@ -182,7 +182,7 @@ inline void H5Writer::writeEstimator(
   cv_.notify_one();
 }
 
-inline void H5Writer::write_params(const Params& params) {
+inline void H5Writer::writeParams(const Params& params) {
   auto params_group = file_.getGroup("params");
 
   // assemble effect matrix
@@ -232,13 +232,13 @@ inline void H5Writer::create(
     const std::string& name,
     const std::vector<std::string>& row_labels,
     const std::vector<std::string>& col_labels) {
-  H5Writer::get_instance().createEstimator(data, name, row_labels, col_labels);
+  H5Writer::getInstance().createEstimator(data, name, row_labels, col_labels);
 }
 
 template <typename T>
 inline void H5Writer::write(
     T&& data, const std::string& name, std::size_t rep, std::size_t gen) {
-  H5Writer::get_instance().writeEstimator(data, name, rep, gen);
+  H5Writer::getInstance().writeEstimator(data, name, rep, gen);
 }
 
 inline void H5Writer::summarise() {

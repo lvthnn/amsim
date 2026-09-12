@@ -275,14 +275,14 @@ inline Params build_params(const SimulationSpec& spec) {
 
   EstimatorParams estimate = EstimatorParams{
       .population_estimators = spec.estimators,
-      .samples = build_samples(spec.sample_spec, spec.sample_estimator_spec)};
+      .samples = buildSamples(spec.sample_spec, spec.sample_estimator_spec)};
 
   GlobalParams sim = GlobalParams{
       .n_ind = spec.n_individuals,
       .n_gens = spec.n_generations,
       .pedigree_warmup = spec.pedigree_warmup,
       .pedigree_max_depth = spec.pedigree_max_depth,
-      .rng_seed = rng::auto_seed(spec.random_seed),
+      .rng_seed = rng::seedOrRandom(spec.random_seed),
       .out_dir = spec.output_dir,
       .log_level = spec.log_level,
       .log_to_file = spec.log_to_file};

@@ -93,7 +93,7 @@ constexpr Family operator|(Family a, Family b) {
 // that can enter into a sampling probability transformer
 enum class Aggregator { Max, Min, Mean, Identity };
 
-inline Aggregator Aggregator_from_string(const std::string& s) {
+inline Aggregator aggregatorFromString(const std::string& s) {
   std::string l = boost::to_lower_copy(s);
   if (l == "max") return Aggregator::Max;
   if (l == "min") return Aggregator::Min;
@@ -128,7 +128,7 @@ struct ProbandData<Proband::Individual> {
        .generation = Generation::Current,
        .sex = Sex::Unknown}};
   static constexpr Aggregator AggDefault = Aggregator::Identity;
-  static ProbandEnum from_string(const std::string& s) {
+  static ProbandEnum fromString(const std::string& s) {
     std::string l = boost::to_lower_copy(s);
     if (l == "self") return Individual::Self;
     throw std::runtime_error("Unknown Individual proband member " + s);
@@ -177,7 +177,7 @@ struct ProbandData<Proband::Mate> {
        .generation = Generation::Parents,
        .sex = Sex::Female}};
   static constexpr Aggregator AggDefault = Aggregator::Mean;
-  static ProbandEnum from_string(const std::string& s) {
+  static ProbandEnum fromString(const std::string& s) {
     std::string l = boost::to_lower_copy(s);
     if (l == "husband") return Mate::Husband;
     if (l == "wife") return Mate::Wife;
@@ -241,7 +241,7 @@ struct ProbandData<Proband::Family> {
        .sex = Sex::Female},
   };
   static constexpr Aggregator AggDefault = Aggregator::Mean;
-  static ProbandEnum from_string(const std::string& s) {
+  static ProbandEnum fromString(const std::string& s) {
     std::string l = boost::to_lower_copy(s);
     if (l == "father") return Family::Father;
     if (l == "mother") return Family::Mother;
@@ -259,7 +259,7 @@ struct ProbandData<Proband::Family> {
 };
 
 template <Proband P>
-typename ProbandData<P>::ProbandEnum parse_proband(
+typename ProbandData<P>::ProbandEnum parseProband(
     const std::vector<std::string>& probands_str) {
   using ProbandEnum = typename ProbandData<P>::ProbandEnum;
   std::vector<ProbandEnum> probands(probands_str.size());
@@ -269,7 +269,7 @@ typename ProbandData<P>::ProbandEnum parse_proband(
 
   std::ranges::transform(
       probands_str, probands.begin(), [](const std::string& s) {
-        return ProbandData<P>::from_string(s);
+        return ProbandData<P>::fromString(s);
       });
 
   return std::accumulate(

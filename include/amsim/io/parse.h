@@ -32,7 +32,7 @@
 
 namespace amsim {
 
-inline std::string parse_exception_str(
+inline std::string parseExceptionStr(
     const std::string& s, const std::optional<std::string>& flag) {
   return std::format(
 
@@ -41,7 +41,7 @@ inline std::string parse_exception_str(
       flag.has_value() ? "(passed to " + flag.value() + ")" : "");
 }
 
-inline std::pair<std::string, std::vector<std::string>> parse_function(
+inline std::pair<std::string, std::vector<std::string>> parseFunction(
     const std::string& s) {
   int paren_begin = s.find('(');
   int paren_end = s.find(')');
@@ -57,7 +57,7 @@ inline std::pair<std::string, std::vector<std::string>> parse_function(
   std::string fn_name = s.substr(0, paren_begin);
   std::string params_str =
       s.substr(paren_begin + 1, paren_end - paren_begin - 1);
-  std::vector<std::string> params = utils::split_string(params_str, ',');
+  std::vector<std::string> params = utils::splitString(params_str, ',');
 
   boost::to_lower(fn_name);
 
@@ -68,15 +68,15 @@ template <typename T>
 inline T parse(const std::string& s);
 
 template <typename T>
-inline std::vector<T> parse_each(const std::vector<std::string>& ss) {
+inline std::vector<T> parseEach(const std::vector<std::string>& ss) {
   std::vector<T> result(ss.size());
   for (std::size_t el = 0; el < ss.size(); ++el) result[el] = parse<T>(ss[el]);
   return result;
 }
 
 template <typename T>
-inline std::vector<T> parse_vector(const std::string& s) {
-  return parse_each<T>(utils::split_string(s));
+inline std::vector<T> parseVector(const std::string& s) {
+  return parseEach<T>(utils::splitString(s));
 }
 
 template <typename T>
@@ -84,8 +84,13 @@ inline T parse(const std::string& s, const std::optional<std::string>& flag) {
   try {
     return parse<T>(s);
   } catch (const std::exception& e) {
-    throw std::runtime_error(parse_exception_str(s, flag));
+    throw std::runtime_error(parseExceptionStr(s, flag));
   }
+}
+
+template <>
+inline std::string parse(const std::string& s) {
+  return s;
 }
 
 template <>
@@ -105,12 +110,12 @@ inline double parse(const std::string& s) {
 
 template <>
 inline std::vector<std::size_t> parse(const std::string& s) {
-  return parse_vector<std::size_t>(s);
+  return parseVector<std::size_t>(s);
 }
 
 template <>
 inline std::vector<double> parse(const std::string& s) {
-  return parse_vector<double>(s);
+  return parseVector<double>(s);
 }
 
 template <>
@@ -126,7 +131,7 @@ inline Eigen::MatrixXd parse(const std::string& s) {
   std::ranges::replace(norm, '\t', ' ');
   std::ranges::replace(norm, ',', ' ');
 
-  std::vector<std::string> row_strs = utils::split_string(norm, '\n');
+  std::vector<std::string> row_strs = utils::splitString(norm, '\n');
   std::vector<Eigen::VectorXd> rows(row_strs.size());
   for (std::size_t r = 0; r < row_strs.size(); ++r)
     rows[r] = parse<Eigen::VectorXd>(row_strs[r]);
@@ -162,23 +167,23 @@ inline Eigen::MatrixXd parse(const std::string& s) {
 
 template <>
 inline Distribution parse(const std::string& s) {
-  auto [dist_name, dist_params_str] = parse_function(s);
+  auto [dist_name, dist_params_str] = parseFunction(s);
   std::vector<double> dist_params(dist_params_str.size());
 
   if (!dist_params_str.empty())
-    dist_params = parse_each<double>(dist_params_str);
+    dist_params = parseEach<double>(dist_params_str);
 
-  return amsim::str_to_distribution(dist_name, dist_params);
+  return amsim::strToDistribution(dist_name, dist_params);
 }
 
 template <>
 inline WeightFunction parse(const std::string& s) {
-  auto [weight_name, params_str] = parse_function(s);
+  auto [weight_name, params_str] = parseFunction(s);
 
-  if (weight_name == "uniform") return amsim::Uniform();
+  if (weight_name == "uniform") return amsim::uniform();
   if (weight_name == "logistic") {
-    auto params = parse_each<double>(params_str);
-    return amsim::Logistic(
+    auto params = parseEach<double>(params_str);
+    return amsim::logistic(
         Eigen::Map<Eigen::VectorXd>(params.data(), params.size()));
   }
 
@@ -186,17 +191,17 @@ inline WeightFunction parse(const std::string& s) {
 }
 
 template <typename T>
-inline std::vector<T> parse_vector(
+inline std::vector<T> parseVector(
     const std::string& s, const std::optional<std::string>& flag) {
   try {
-    return parse_vector<T>(s);
+    return parseVector<T>(s);
   } catch (const std::exception& e) {
-    throw std::runtime_error(parse_exception_str(s, flag));
+    throw std::runtime_error(parseExceptionStr(s, flag));
   }
 }
 
 template <typename T>
-inline T parse_file(const std::filesystem::path& path) {
+inline T parseFile(const std::filesystem::path& path) {
   std::ifstream file(path);
   if (!file.is_open())
     throw std::runtime_error(
@@ -209,10 +214,10 @@ inline T parse_file(const std::filesystem::path& path) {
 template <typename T>
 struct File {
   std::filesystem::path path;
-  T load() const { return parse_file<T>(path); }
+  T load() const { return parseFile<T>(path); }
 };
 
-inline Eigen::MatrixXd parse_pheno_file(const std::filesystem::path& path) {
+inline Eigen::MatrixXd parsePhenoFile(const std::filesystem::path& path) {
   std::ifstream file(path);
   if (!file.is_open())
     throw std::runtime_error(
@@ -223,7 +228,7 @@ inline Eigen::MatrixXd parse_pheno_file(const std::filesystem::path& path) {
 
   std::vector<std::vector<double>> matrix;
   while (std::getline(file, line)) {
-    std::vector<std::string> tokens = utils::split_string(line, '\t');
+    std::vector<std::string> tokens = utils::splitString(line, '\t');
     std::vector<double> row;
     for (std::size_t i = 2; i < tokens.size(); ++i)
       row.push_back(std::stod(tokens[i]));

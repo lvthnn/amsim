@@ -62,38 +62,38 @@ inline PopulationEstimator build_population_estimator(
           {"pheno-mean",
            [](const std::vector<std::string>& s) {
              Component component = Component::Total;
-             if (!s.empty()) component = Component_from_string(s[0]);
+             if (!s.empty()) component = componentFromString(s[0]);
              return PopulationComponentMean(component);
            }},
           {"pheno-var",
            [](const std::vector<std::string>& s) {
              Component component = Component::Total;
-             if (!s.empty()) component = Component_from_string(s[0]);
+             if (!s.empty()) component = componentFromString(s[0]);
              return PopulationComponentVar(component);
            }},
           {"pheno-cor",
            [](const std::vector<std::string>& s) {
              Component component = Component::Total;
-             if (!s.empty()) component = Component_from_string(s[0]);
+             if (!s.empty()) component = componentFromString(s[0]);
              return PopulationComponentCor(component);
            }},
           {"pheno-cov",
            [](const std::vector<std::string>& s) {
              Component component = Component::Total;
-             if (!s.empty()) component = Component_from_string(s[0]);
+             if (!s.empty()) component = componentFromString(s[0]);
              return PopulationComponentCov(component);
            }},
           {"mate-cor",
            [](const std::vector<std::string>& s) {
              Component component = Component::Total;
-             if (!s.empty()) component = Component_from_string(s[0]);
+             if (!s.empty()) component = componentFromString(s[0]);
              return PopulationMateCor(component);
            }},
           {"cousin-cov",
            [](const std::vector<std::string>& s) {
              std::size_t degree = 1;
              Component component = Component::Total;
-             if (!s.empty()) component = Component_from_string(s[0]);
+             if (!s.empty()) component = componentFromString(s[0]);
              if (s.size() > 1) degree = std::stoull(s[1]);
 
              return PopulationCousinCov(degree, component);
@@ -101,7 +101,7 @@ inline PopulationEstimator build_population_estimator(
           {"ancestor-cov", [](const std::vector<std::string>& s) {
              std::size_t degree = 1;
              Component component = Component::Total;
-             if (!s.empty()) component = Component_from_string(s[0]);
+             if (!s.empty()) component = componentFromString(s[0]);
              if (s.size() > 1) degree = std::stoull(s[1]);
 
              return PopulationAncestorCov(degree, component);

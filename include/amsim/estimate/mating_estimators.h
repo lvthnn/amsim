@@ -31,9 +31,9 @@ class EstimatorMateCor : public PopulationEstimatorStrategy {
  public:
   explicit EstimatorMateCor(const Params& params, Component type)
       : PopulationEstimatorStrategy(
-            "mate_" + to_string(type) + "_cor",
-            utils::vector_suffix(params.pheno.names, "_male"),
-            utils::vector_suffix(params.pheno.names, "_female"),
+            "mate_" + componentToString(type) + "_cor",
+            utils::vectorSuffix(params.pheno.names, "_male"),
+            utils::vectorSuffix(params.pheno.names, "_female"),
             params.pheno.n_pheno,
             params.pheno.n_pheno),
         type_(type),
@@ -66,7 +66,7 @@ class EstimatorMateCor : public PopulationEstimatorStrategy {
 inline PopulationEstimator PopulationMateCor(
     Component type = Component::Total) {
   return PopulationEstimator{
-      .name = "mate-cor-" + to_string(type),
+      .name = "mate-cor-" + componentToString(type),
       .fn = [type](const Params& params) {
         return std::make_unique<details::EstimatorMateCor>(params, type);
       }};

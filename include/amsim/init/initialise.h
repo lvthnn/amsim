@@ -47,13 +47,13 @@ inline void HaplotypeGeneratorIID::generateHaplotypes(GenoBuf& buf) {
 
   HaploBuf& h0 = buf.h0();
   HaploBuf& h1 = buf.h1();
-  std::size_t n_ind = h0.n_ind();
-  std::size_t n_loc = buf.n_loc();
-  std::size_t n_words = buf.n_words();
+  std::size_t n_ind = h0.numIndividuals();
+  std::size_t n_loc = buf.numLoci();
+  std::size_t n_words = buf.numWords();
 
   for (std::size_t loc = 0; loc < n_loc; ++loc) {
     // set probability of bernoulli generator
-    bw_.set_prob(v_maf_(loc));
+    bw_.setProb(v_maf_(loc));
 
     // row pointers for easy access
     std::uint64_t* word0 = h0.rowptr(loc);

@@ -23,7 +23,7 @@
 namespace amsim {
 
 template <typename ProbandEnum>
-inline std::size_t member_index(
+inline std::size_t memberIndex(
     const State& state, ProbandEnum member, std::size_t proband_id) {
   if constexpr (std::is_same_v<ProbandEnum, Individual>) {
     return proband_id;
@@ -41,7 +41,7 @@ inline std::size_t member_index(
         return state.n_sex + state.matching()[proband_id];
       case Family::DaughterHusband:
         return state
-            .inv_matching()[state.matching(Generation::Parents)[proband_id]];
+            .invMatching()[state.matching(Generation::Parents)[proband_id]];
       case Family::Daughter:
         return state.n_sex + state.matching(Generation::Parents)[proband_id];
       default:
@@ -60,10 +60,10 @@ inline std::size_t member_index(
       case Mate::HusbandMother:
         return state.matching(Generation::Parents)[proband_id];
       case Mate::WifeFather:
-        return state.inv_matching(
+        return state.invMatching(
             Generation::Parents)[state.matching()[proband_id]];
       case Mate::WifeMother:
-        return state.matching(Generation::Parents)[state.inv_matching(
+        return state.matching(Generation::Parents)[state.invMatching(
             Generation::Parents)[proband_id]];
       default:
         throw std::invalid_argument("Invalid or compound Mate member type");
@@ -72,15 +72,15 @@ inline std::size_t member_index(
 }
 
 template <typename ProbandEnum>
-inline std::size_t member_index(
+inline std::size_t memberIndex(
     const State& state,
     const ProbandMember<ProbandEnum>& member,
     std::size_t proband_id) {
-  return member_index(state, member.self, proband_id);
+  return memberIndex(state, member.self, proband_id);
 }
 
 template <typename ProbandEnum>
-inline Generation member_generation(ProbandEnum member) {
+inline Generation memberGeneration(ProbandEnum member) {
   if constexpr (std::is_same_v<ProbandEnum, Individual>) {
     return Generation::Current;
   } else if constexpr (std::is_same_v<ProbandEnum, Family>) {
@@ -103,18 +103,18 @@ inline Generation member_generation(ProbandEnum member) {
 }
 
 template <typename ProbandEnum>
-inline Generation member_generation(const ProbandMember<ProbandEnum>& member) {
+inline Generation memberGeneration(const ProbandMember<ProbandEnum>& member) {
   return member.generation;
 }
 
 template <typename ProbandEnum>
-inline std::uint8_t member_geno_plink(
+inline std::uint8_t memberGenoPLINK(
     const State& state,
     ProbandEnum member,
     std::size_t proband_id,
     std::size_t locus) {
-  Generation generation = member_generation(member);
-  std::size_t index = member_index(state, member, proband_id);
+  Generation generation = memberGeneration(member);
+  std::size_t index = memberIndex(state, member, proband_id);
 
   std::size_t word = index / 64;
   std::size_t bit = index % 64;
@@ -125,12 +125,12 @@ inline std::uint8_t member_geno_plink(
 }
 
 template <typename ProbandEnum>
-inline std::uint8_t member_geno_plink(
+inline std::uint8_t memberGenoPLINK(
     const State& state,
     const ProbandMember<ProbandEnum>& member,
     std::size_t proband_id,
     std::size_t locus) {
-  std::size_t index = member_index(state, member, proband_id);
+  std::size_t index = memberIndex(state, member, proband_id);
 
   std::size_t word = index / 64;
   std::size_t bit = index % 64;
@@ -143,34 +143,34 @@ inline std::uint8_t member_geno_plink(
 }
 
 template <typename ProbandEnum>
-inline double member_pheno(
+inline double memberPheno(
     const State& state,
     ProbandEnum member,
     std::size_t proband_id,
     std::size_t pheno_id,
     Component component = Component::Total) {
-  Generation generation = member_generation(member);
-  std::size_t index = member_index(state, member, proband_id);
+  Generation generation = memberGeneration(member);
+  std::size_t index = memberIndex(state, member, proband_id);
   return state.pheno(generation)(pheno_id, component)(index);
 }
 
 template <typename ProbandEnum>
-inline double member_pheno(
+inline double memberPheno(
     const State& state,
     const ProbandMember<ProbandEnum>& member,
     std::size_t proband_id,
     std::size_t pheno_id,
     Component component = Component::Total) {
-  std::size_t index = member_index(state, member, proband_id);
+  std::size_t index = memberIndex(state, member, proband_id);
   return state.pheno(member.generation)(pheno_id, component)(index);
 }
 
 template <Proband P>
-constexpr std::string_view prefix_of(
+constexpr std::string_view prefixOf(
     typename ProbandData<P>::ProbandEnum member);
 
 template <>
-constexpr std::string_view prefix_of<Proband::Individual>(Individual member) {
+constexpr std::string_view prefixOf<Proband::Individual>(Individual member) {
   switch (member) {
     case Individual::Self:
       return "IND";
@@ -180,7 +180,7 @@ constexpr std::string_view prefix_of<Proband::Individual>(Individual member) {
 }
 
 template <>
-constexpr std::string_view prefix_of<Proband::Mate>(Mate member) {
+constexpr std::string_view prefixOf<Proband::Mate>(Mate member) {
   switch (member) {
     case Mate::Husband:
       return "HUS";
@@ -200,7 +200,7 @@ constexpr std::string_view prefix_of<Proband::Mate>(Mate member) {
 }
 
 template <>
-constexpr std::string_view prefix_of<Proband::Family>(Family member) {
+constexpr std::string_view prefixOf<Proband::Family>(Family member) {
   switch (member) {
     case Family::Father:
       return "FAT";
@@ -220,13 +220,13 @@ constexpr std::string_view prefix_of<Proband::Family>(Family member) {
 }
 
 template <Proband P>
-inline std::string member_id(
+inline std::string memberID(
     const State& state,
     typename ProbandData<P>::ProbandEnum member,
     std::size_t proband_id) {
   if (member == ProbandData<P>::ProbandEnum::Unknown) return "0";
   return std::format(
-      "{}{}", prefix_of<P>(member), member_index(state, member, proband_id));
+      "{}{}", prefixOf<P>(member), memberIndex(state, member, proband_id));
 }
 
 }  // namespace amsim

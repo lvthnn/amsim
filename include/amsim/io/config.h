@@ -143,12 +143,12 @@ inline auto ConfigWriter::toTOML(const std::filesystem::path& val) {
 
 template <>
 inline auto ConfigWriter::toTOML(const LogLevel& val) {
-  return LogLevel_to_string(val);
+  return logLevelToString(val);
 }
 
 template <>
 inline auto ConfigWriter::toTOML(const Distribution& val) {
-  return val.name + "(" + utils::vector_to_string(val.params) + ")";
+  return val.name + "(" + utils::vectorToString(val.params) + ")";
 }
 
 template <>
@@ -377,7 +377,7 @@ class ConfigReader {
 
 inline toml::node_view<toml::node> ConfigReader::visit(
     const std::string& path) {
-  std::vector<std::string> tokens = utils::split_string(path, '/');
+  std::vector<std::string> tokens = utils::splitString(path, '/');
   toml::node_view<toml::node> node{config_};
   for (const auto& token : tokens) node = node[token];
   return node;
@@ -414,7 +414,7 @@ inline void ConfigReader::readParam(
       }
       read_to = matrix;
     } else if (const auto& val = node.value<std::string>()) {
-      auto [file_tag, file_params] = parse_function(*val);
+      auto [file_tag, file_params] = parseFunction(*val);
       read_to = parse<Eigen::MatrixXd>(file_params[0]);
     }
   } else if constexpr (std::is_same_v<T, std::vector<std::size_t>>) {
@@ -427,8 +427,8 @@ inline void ConfigReader::readParam(
 
       read_to = vector;
     } else if (const auto& val = node.value<std::string>()) {
-      auto [file_tag, file_params] = parse_function(*val);
-      read_to = parse_file<std::vector<std::size_t>>(file_params[0]);
+      auto [file_tag, file_params] = parseFunction(*val);
+      read_to = parseFile<std::vector<std::size_t>>(file_params[0]);
     }
   } else {
     throw std::invalid_argument(
@@ -446,7 +446,7 @@ inline void ConfigReader::readParam(
   if (auto val = node.value<double>()) {
     read_to = *val;
   } else if (const auto& val = node.value<std::string>()) {
-    auto [fn_name, params] = parse_function(*val);
+    auto [fn_name, params] = parseFunction(*val);
 
     if (fn_name == "file")
       read_to = File<Eigen::MatrixXd>{params[0]};
@@ -471,7 +471,7 @@ inline void ConfigReader::readParam(
     LogLevel& read_to, const std::string& read_from) {
   std::string string_log_level;
   readParam<std::string>(string_log_level, read_from);
-  read_to = LogLevel_from_string(string_log_level);
+  read_to = logLevelFromString(string_log_level);
 }
 
 template <>
@@ -562,7 +562,7 @@ inline void ConfigReader::readEstimatorConfig() {
 
   for (auto&& estimator : *estimators) {
     std::string raw = *estimator.value<std::string>();
-    auto [name, params] = parse_function(raw);
+    auto [name, params] = parseFunction(raw);
     PopulationEstimator est = build_population_estimator(name, params);
     est.name = raw;
     spec_.estimators.push_back(std::move(est));

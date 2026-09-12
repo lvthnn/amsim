@@ -38,7 +38,7 @@ inline Component& operator++(Component& type) {
   return type;
 }
 
-inline Component Component_from_string(const std::string& s) {
+inline Component componentFromString(const std::string& s) {
   std::string l = boost::to_lower_copy(s);
   if (l == "genetic") return Component::Genetic;
   if (l == "environmental") return Component::Environmental;
@@ -47,7 +47,7 @@ inline Component Component_from_string(const std::string& s) {
   throw std::runtime_error(std::format("Unknown component type {}", l));
 }
 
-inline std::string to_string(Component type) {
+inline std::string componentToString(Component type) {
   switch (type) {
     case Component::Genetic:
       return "genetic";
@@ -62,7 +62,7 @@ inline std::string to_string(Component type) {
 }
 
 inline std::ostream& operator<<(std::ostream& os, Component type) {
-  return os << to_string(type);
+  return os << componentToString(type);
 }
 
 }  // namespace amsim

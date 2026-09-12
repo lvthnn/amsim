@@ -17,8 +17,8 @@
 
 #include <amsim/core.h>
 #include <amsim/estimate/sample_estimator.h>
+#include <amsim/io/h5_writer.h>
 #include <amsim/io/parse.h>
-#include <amsim/io/writer.h>
 #include <amsim/sample/proband.h>
 
 #include <Eigen/Dense>
@@ -48,21 +48,21 @@ class SampleEstimatorStrategy {
         n_rows_(n_rows),
         n_cols_(n_cols),
         data_(n_rows_, n_cols_) {
-    Writer::create(data_, name_h5_, row_labels_, col_labels_);
+    H5Writer::create(data_, name_h5_, row_labels_, col_labels_);
   }
 
   virtual ~SampleEstimatorStrategy() = default;
   virtual void compute() = 0;
 
   std::string name() const { return name_; }
-  std::vector<std::string> row_labels() const { return row_labels_; }
-  std::vector<std::string> col_labels() const { return col_labels_; }
-  std::size_t n_rows() const { return n_rows_; }
-  std::size_t n_cols() const { return n_cols_; }
+  std::vector<std::string> rowLabels() const { return row_labels_; }
+  std::vector<std::string> colLabels() const { return col_labels_; }
+  std::size_t numRows() const { return n_rows_; }
+  std::size_t numCols() const { return n_cols_; }
 
   void operator()(std::size_t gen, std::size_t rep) {
     compute();
-    Writer::write(data_, name_h5_, rep, gen);
+    H5Writer::write(data_, name_h5_, rep, gen);
   }
 
  protected:
@@ -92,7 +92,8 @@ class SampleMean : public SampleEstimatorStrategy<P> {
             params.pheno.n_pheno) {}
 
   void compute() override {
-    Eigen::MatrixXd phenotypes = parse_pheno_file(this->sample_dir_ / "data.pheno");
+    Eigen::MatrixXd phenotypes =
+        parsePhenoFile(this->sample_dir_ / "data.pheno");
     this->data_ = phenotypes.colwise().mean();
   }
 };
@@ -113,7 +114,8 @@ class SampleVar : public SampleEstimatorStrategy<P> {
             params.pheno.n_pheno) {}
 
   void compute() override {
-    Eigen::MatrixXd phenotypes = parse_pheno_file(this->sample_dir_ / "data.pheno");
+    Eigen::MatrixXd phenotypes =
+        parsePhenoFile(this->sample_dir_ / "data.pheno");
     this->data_ = (phenotypes.rowwise() - phenotypes.colwise().mean())
                       .array()
                       .square()
@@ -141,7 +143,8 @@ class SampleCov : public SampleEstimatorStrategy<P> {
         n_ind_(params.global.n_ind) {}
 
   void compute() override {
-    Eigen::MatrixXd phenotypes = parse_pheno_file(this->sample_dir_ / "data.pheno");
+    Eigen::MatrixXd phenotypes =
+        parsePhenoFile(this->sample_dir_ / "data.pheno");
     this->data_ =
         (phenotypes.rowwise() - phenotypes.colwise().mean()).transpose() *
         (phenotypes.rowwise() - phenotypes.colwise().mean()) /
@@ -164,8 +167,8 @@ class SampleMateCor : public SampleEstimatorStrategy<P> {
             "sample_mate_cor",
             sample_name,
             sample_dir,
-            utils::vector_suffix(params.pheno.names, "_male"),
-            utils::vector_suffix(params.pheno.names, "_female"),
+            utils::vectorSuffix(params.pheno.names, "_male"),
+            utils::vectorSuffix(params.pheno.names, "_female"),
             params.pheno.n_pheno,
             params.pheno.n_pheno),
         n_probands_(n_probands),
@@ -181,7 +184,8 @@ class SampleMateCor : public SampleEstimatorStrategy<P> {
 
   // compute centres and standard deviations across columns
   void compute() override {
-    Eigen::MatrixXd phenotypes = parse_pheno_file(this->sample_dir_ / "data.pheno");
+    Eigen::MatrixXd phenotypes =
+        parsePhenoFile(this->sample_dir_ / "data.pheno");
     const std::size_t n_pairs = n_probands_ * 3;
     const std::size_t outer = n_probands_ * ProbandData<P>::ProbandSize;
 

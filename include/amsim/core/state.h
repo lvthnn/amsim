@@ -40,41 +40,41 @@ struct State {
   // for stoing family data
   Pedigree pedigree;
 
-  std::size_t get_parity(Generation generation) const {
+  std::size_t getParity(Generation generation) const {
     return (generation == Generation::Current) ? parity : 1 - parity;
   }
 
   GenoBuf& geno(Generation generation = Generation::Current) {
-    return genos[get_parity(generation)];
+    return genos[getParity(generation)];
   }
 
   PhenoBuf& pheno(Generation generation = Generation::Current) {
-    return phenos[get_parity(generation)];
+    return phenos[getParity(generation)];
   }
 
   Matching& matching(Generation generation = Generation::Current) {
-    return matchings[get_parity(generation)];
+    return matchings[getParity(generation)];
   }
 
-  Matching& inv_matching(Generation generation = Generation::Current) {
-    return inv_matchings[get_parity(generation)];
+  Matching& invMatching(Generation generation = Generation::Current) {
+    return inv_matchings[getParity(generation)];
   }
 
   const GenoBuf& geno(Generation generation = Generation::Current) const {
-    return genos[get_parity(generation)];
+    return genos[getParity(generation)];
   }
 
   const PhenoBuf& pheno(Generation generation = Generation::Current) const {
-    return phenos[get_parity(generation)];
+    return phenos[getParity(generation)];
   }
 
   const Matching& matching(Generation generation = Generation::Current) const {
-    return matchings[get_parity(generation)];
+    return matchings[getParity(generation)];
   }
 
-  const Matching& inv_matching(
+  const Matching& invMatching(
       Generation generation = Generation::Current) const {
-    return inv_matchings[get_parity(generation)];
+    return inv_matchings[getParity(generation)];
   }
 
   void transpose() {
@@ -87,10 +87,10 @@ struct State {
     parity = gen % 2;
   }
 
-  void update_pedigree() { pedigree.push(matching(), inv_matching()); }
+  void updatePedigree() { pedigree.push(matching(), invMatching()); }
 };
 
-inline State build_state(const Params& params) {
+inline State buildState(const Params& params) {
   return State{
       .n_sex = params.global.n_ind / 2,
       .rep = params.global.rep_id,

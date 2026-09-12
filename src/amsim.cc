@@ -24,7 +24,7 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 
-constexpr std::string OS_NAME() {
+constexpr std::string getOSName() {
   std::string os = AMSIM_OS;
   if (os == "Darwin") return "macOS";
   return os;
@@ -47,7 +47,7 @@ enum Context : uint32_t {
   CausalLoci = 1 << 9,
   GeneticComponent = 1 << 10,
   EnvironmentalComponent = 1 << 11,
-  EffectAssignment = 1 << 12,
+  EffectSizes = 1 << 12,
   MatrixSpecification = 1 << 13,
 
   // Derived contexts
@@ -56,6 +56,7 @@ enum Context : uint32_t {
   GenomeMutationProbs = Genome | MutationProbs,
   GenomeProbabilities = InitMAFs | RecombinationProbs | MutationProbs,
   PhenotypeCausalLoci = Phenotype | CausalLoci,
+  PhenotypeEffectSizes = Phenotype | EffectSizes,
   PhenotypeGeneticCorrelation =
       Phenotype | GeneticComponent | MatrixSpecification,
   PhenotypeEnvironmentalCorrelation =
@@ -67,7 +68,7 @@ enum Context : uint32_t {
                   SampleEstimator | PopulationEstimator,
 };
 
-Context context_domain(Context context) {
+Context contextDomain(Context context) {
   return static_cast<Context>(context & ContextDomain);
 }
 
@@ -127,7 +128,7 @@ enum Option {
   VirtualSingularValues
 };
 
-std::string phenotype_docs() {
+std::string phenotypeDocs() {
   return R"(
 --phenotype <name> declares a new phenotype and opens its context. Every
 flag below, up to the next --phenotype (or a flag from a different domain),
@@ -191,7 +192,7 @@ run --help on each.
   )";
 }
 
-std::string mating_docs() {
+std::string matingDocs() {
   return R"(
 --mating {random | assortative} selects how mates are paired each generation.
 
@@ -236,7 +237,7 @@ std::string mating_docs() {
   )";
 }
 
-std::string sample_docs() {
+std::string sampleDocs() {
   return R"(
 amsim models ascertainment / participation bias by drawing a sub-sample of
 the population with inclusion probability governed by a weighting function of
@@ -274,11 +275,11 @@ addressable through --of:
                 'daughter', 'sonwife', 'daughterhusband', 'parents', 'siblings',
                 'males', 'females', 'all'}.
 
-For each proband, --on selects which phenotype(s) enter the weighting
-calculation and --of selects whose values are used; --agg then reduces the
-values across the selected members down to one number per phenotype per
-proband (mean/max/min, or identity for a single member). --weight turns
-that aggregated vector into an inclusion probability:
+For each proband, --on selects which phenotype(s) enter the weighting calculation
+and --of selects whose values are used; --agg then reduces the values across the
+selected members down to one number per phenotype per proband (mean/max/min, or
+identity for a single member). --weight turns that aggregated vector into an
+inclusion probability:
 
   uniform()             every proband is equally likely to be sampled -- i.e.,
                          no ascertainment bias, a random sample.
@@ -297,16 +298,28 @@ ascertainment or sampling scheme is being studied.
 --sample-estimator works like --estimator (see --help --estimator) but is declared
 by name so it can be referenced from one or more --sample blocks via --estimators;
 --type additionally supports sample-only estimators (sample-mean, sample-var,
-sample-cov, sample-mate-cor) and an external escape hatch that shells out to
---exec with the sample matrix (--n-rows x --n-cols) written to a temporary file.
+sample-cov, sample-mate-cor) and an external escape hatch (--type external).
+
+For type external, amsim writes the sample's genotypes as a standard PLINK1
+binary fileset (<sample_dir>/data.bed / .bim / .fam) and invokes --exec as:
+
+  <exec> --bfile <sample_dir>/data --out <sample_dir>/results_<name>
+
+exactly the same convention the built-in plink2/gcta64-backed estimators
+(gwas, greml, haseman-elston) use internally -- --exec just needs to be something
+that reads a --bfile-style PLINK prefix. Whatever program you point --exec at
+must write its result to the --out path as plain text in the same matrix format
+--file accepts elsewhere (values comma- or space-separated, rows separated by a
+semicolon or newline), sized --n-rows x --n-cols; amsim reads that file back in
+once --exec returns.
   )";
 }
 
-void display_version() {
+void displayVersion() {
   std::string version_str = std::format(
       "amsim v{} {} {} ({} build, {})",
       AMSIM_VERSION,
-      OS_NAME(),
+      getOSName(),
       AMSIM_ARCH,
       AMSIM_BUILD_TYPE,
       __DATE__);
@@ -314,13 +327,13 @@ void display_version() {
   std::cout << version_str << std::endl;
 }
 
-void display_header() {
+void displayHeader() {
   std::string header_str = std::format(
       "{:<40}{:>40}\n{:<40}{:>40}",
       std::format(
           "amsim v{} {} {} ({} build)",
           AMSIM_VERSION,
-          OS_NAME(),
+          getOSName(),
           AMSIM_ARCH,
           AMSIM_BUILD_TYPE),
       "https://github.com/lvthnn/amsim",
@@ -330,7 +343,7 @@ void display_header() {
   std::cout << header_str << std::endl;
 }
 
-void display_help() {
+void displayHelp() {
   std::string help_str = R"(
 For full documentation and usage examples, see https://github.com/lvthnn/amsim.
 Running amsim --help <flag> prints usage guides on the various command flags
@@ -352,16 +365,16 @@ global options:
   --pedigree-max-depth <max_depth>
   --pedigree-warmup
   --log-level <log_level>
-  --log-to-output
+  --log-to-stdout
   --save-config
   --load-config <config_path>
   --share-init-state
   --no-run
 
 genome options:
-  --locus-maf [--val <value> | --file <path> | --dist <dist>]
-  --locus-rec [--val <value> | --file <path> | --dist <dist>]
-  --locus-mut [--val <value> | --file <path> | --dist <dist>]
+  --locus-maf [--value <val> | --file <path> | --dist <dist>]
+  --locus-rec [--value <val> | --file <path> | --dist <dist>]
+  --locus-mut [--value <val> | --file <path> | --dist <dist>]
 
 phenome options:
   --phenotype <pheno_name>
@@ -386,8 +399,9 @@ sampling and estimation options:
   --estimator {genotype-mean | genotype-var | genotype-maf | genotype-cov |
                genotype-cor | heritability | pheno-mean(<component>) |
                pheno-var(<component>) | pheno-cov(<component>) |
-               mate-cor(<component>) | cousin-cov(<component>) |
-               ancestor-cov(<component>)}
+               pheno-cor(<component>) | mate-cor(<component>) |
+               cousin-cov(<component>,<degree>) |
+               ancestor-cov(<component>,<degree>)}
   --sample-estimator <name>
     --type {gwas(<n_pcs>, <pval_thresh>) | haseman-elston | greml | external |
             sample-mean | sample-var | sample-cov | sample-mate-cor}
@@ -398,7 +412,7 @@ sampling and estimation options:
     --col-names <col_names>
   --sample <sample_name>
     --proband {individual | mate | family}
-    --n_probands <n-prob>
+    --n-probands <n-prob>
     --weight {logistic(<pheno_coefs>) | uniform()}
     --on <weight_on>
     --of <weight_of>
@@ -409,17 +423,18 @@ sampling and estimation options:
   std::cout << help_str << std::endl;
 }
 
-void display_help_short() {
+void displayHelpShort() {
   std::string help_str = R"(
   amsim <option(s)>
   amsim --load-config <config_file> <option(s)>
+  amsim --help <option>
 
 To see all options, run "amsim --help".)";
 
   std::cout << help_str << std::endl;
 }
 
-void display_help_option(Option option, const std::string& option_flag) {
+void displayHelpOption(Option option, const std::string& option_flag) {
   std::unordered_map<Option, std::string> docs;
 
   docs[Option::GlobalNumIndividuals] = R"(
@@ -517,7 +532,7 @@ that position rather than continuing to inherit from the same parental strand. A
 value of 0.5 corresponds to free recombination or independence between adjoining
 loci, whereas a value near 0.0 corresponds to tight linkage.
 
-As with --loc-maf, these can be specified directly through the --value flag
+As with --locus-maf, these can be specified directly through the --value flag
 (<n_loci> values in [0.0, 1.0]), loaded from a file via --file, or drawn from a
 distribution via --dist. Since these are probabilities, --dist is restricted to
 [0,1]-supported distributions (uniform, beta).
@@ -531,7 +546,7 @@ Specify the per-locus mutation probabilities, i.e., the chance that a given alle
 is flipped to its complement when passed from parent to offspring. One value per
 locus, in [0.0, 1.0], with default 0.0 (no mutation).
 
-As with --loc-maf and --loc-rec, these can be specified directly through the
+As with --locus-maf and --locus-rec, these can be specified directly through the
 --value flag, loaded from a file via --file, or drawn from a distribution via
 --dist, restricted to [0,1]-supported distributions (uniform, beta) since these
 are probabilities.
@@ -540,37 +555,37 @@ For more information on virtual flags and their use, run --help on flags --value
 --file, and --dist.
   )";
 
-  docs[Option::PhenotypeSpec] = phenotype_docs();
-  docs[Option::PhenotypeVarGenetic] = phenotype_docs();
-  docs[Option::PhenotypeVarEnvironmental] = phenotype_docs();
-  docs[Option::PhenotypeVarVertical] = phenotype_docs();
-  docs[Option::PhenotypeLocusEffects] = phenotype_docs();
-  docs[Option::PhenotypeLocusIndices] = phenotype_docs();
-  docs[Option::PhenotypeGeneticCor] = phenotype_docs();
-  docs[Option::PhenotypeEnvironmentalCor] = phenotype_docs();
+  docs[Option::PhenotypeSpec] = phenotypeDocs();
+  docs[Option::PhenotypeVarGenetic] = phenotypeDocs();
+  docs[Option::PhenotypeVarEnvironmental] = phenotypeDocs();
+  docs[Option::PhenotypeVarVertical] = phenotypeDocs();
+  docs[Option::PhenotypeLocusEffects] = phenotypeDocs();
+  docs[Option::PhenotypeLocusIndices] = phenotypeDocs();
+  docs[Option::PhenotypeGeneticCor] = phenotypeDocs();
+  docs[Option::PhenotypeEnvironmentalCor] = phenotypeDocs();
 
-  docs[Option::MatingSpec] = mating_docs();
-  docs[Option::MatingCor] = mating_docs();
-  docs[Option::MatingErrorTolerance] = mating_docs();
-  docs[Option::MatingMaxIterations] = mating_docs();
-  docs[Option::MatingAnnealingTempInit] = mating_docs();
-  docs[Option::MatingAnnealingTempDecay] = mating_docs();
+  docs[Option::MatingSpec] = matingDocs();
+  docs[Option::MatingCor] = matingDocs();
+  docs[Option::MatingErrorTolerance] = matingDocs();
+  docs[Option::MatingMaxIterations] = matingDocs();
+  docs[Option::MatingAnnealingTempInit] = matingDocs();
+  docs[Option::MatingAnnealingTempDecay] = matingDocs();
 
-  docs[Option::SampleSpec] = sample_docs();
-  docs[Option::SampleProbandType] = sample_docs();
-  docs[Option::SampleNumProbands] = sample_docs();
-  docs[Option::SampleWeightFunction] = sample_docs();
-  docs[Option::SampleWeightOnPhenotypes] = sample_docs();
-  docs[Option::SampleWeightOfMembers] = sample_docs();
-  docs[Option::SampleWeightAggregation] = sample_docs();
+  docs[Option::SampleSpec] = sampleDocs();
+  docs[Option::SampleProbandType] = sampleDocs();
+  docs[Option::SampleNumProbands] = sampleDocs();
+  docs[Option::SampleWeightFunction] = sampleDocs();
+  docs[Option::SampleWeightOnPhenotypes] = sampleDocs();
+  docs[Option::SampleWeightOfMembers] = sampleDocs();
+  docs[Option::SampleWeightAggregation] = sampleDocs();
 
-  docs[Option::SampleEstimators] = sample_docs();
-  docs[Option::SampleEstimatorSpec] = sample_docs();
-  docs[Option::SampleEstimatorType] = sample_docs();
-  docs[Option::SampleEstimatorNumRows] = sample_docs();
-  docs[Option::SampleEstimatorNumCols] = sample_docs();
-  docs[Option::SampleEstimatorRowNames] = sample_docs();
-  docs[Option::SampleEstimatorColNames] = sample_docs();
+  docs[Option::SampleEstimators] = sampleDocs();
+  docs[Option::SampleEstimatorSpec] = sampleDocs();
+  docs[Option::SampleEstimatorType] = sampleDocs();
+  docs[Option::SampleEstimatorNumRows] = sampleDocs();
+  docs[Option::SampleEstimatorNumCols] = sampleDocs();
+  docs[Option::SampleEstimatorRowNames] = sampleDocs();
+  docs[Option::SampleEstimatorColNames] = sampleDocs();
 
   docs[Option::PopulationEstimatorSpec] = R"(
 --estimator <name(<args>)> declares a population-wide estimator, or a statistic
@@ -610,18 +625,19 @@ argument in quotes.
 --value <val(s)> supplies data inline on the command line. What is expected
 depends on which flag opened the current context:
 
-  --loc-maf / --loc-rec / --loc-mut   a single value (broadcast to every locus)
-                                       or one value per locus
-  --loci                              whitespace- or comma-separated causal
-                                       locus indices
-  --effects                           a single value (broadcast to every causal
-                                       locus) or one value per locus
-  --pheno-gen-cor / --pheno-env-cor   a symmetric P x P matrix, entered as rows
-  / --mate-cor                         separated by ';' or a newline, values
-                                       within a row separated by a comma or
-                                       space; a single row collapses to a vector
+  --locus-maf / --locus-rec / --locus-mut   a single value (broadcast to every
+                                             locus) or one value per locus
+  --loci                                    whitespace- or comma-separated causal
+                                             locus indices
+  --effects                                 a single value (broadcast to every
+                                             causal locus) or one value per locus
+  --pheno-gen-cor / --pheno-env-cor         a symmetric P x P matrix, entered as
+                                             rows separated by ';' or a newline,
+                                             values within a row separated by a
+                                             comma or space; a single row
+                                             collapses to a vector
 
-Example: --loc-maf --value 0.25                       (one MAF for every locus)
+Example: --locus-maf --value 0.25                     (one MAF for every locus)
          --pheno-gen-cor --value "1,0.5;0.5,1"           (an inline 2x2 matrix)
   )";
 
@@ -678,7 +694,7 @@ their transpose.
   std::cout << docs[option] << std::endl;
 }
 
-std::vector<option> get_options() {
+std::vector<option> getOptions() {
   // NOLINTBEGIN(modernize-use-designated-initializers)
   return {
       // other options
@@ -700,7 +716,7 @@ std::vector<option> get_options() {
        nullptr,
        GlobalPedigreeMaxDepth},
       {"pedigree-warmup", no_argument, nullptr, GlobalPedigreeWarmup},
-      {"log-to-output", no_argument, nullptr, GlobalLogNoFile},
+      {"log-to-stdout", no_argument, nullptr, GlobalLogNoFile},
       {"log-level", required_argument, nullptr, GlobalLogLevel},
       {"save-config", no_argument, nullptr, GlobalSaveConfig},
       {"load-config", required_argument, nullptr, GlobalLoadConfig},
@@ -775,13 +791,13 @@ std::vector<option> get_options() {
 
 int main(int argc, char* argv[]) {
   // get options
-  std::vector<option> opts = get_options();
+  std::vector<option> opts = getOptions();
 
   // context helps us resolve what options are legal
   Context context = Context::Global;
 
   auto check_context = [&](Context expected, std::string_view flag) {
-    if (context_domain(context) != expected)
+    if (contextDomain(context) != expected)
       throw std::runtime_error(
           std::format("Unexpected flag '{}' in current context", flag));
   };
@@ -796,8 +812,8 @@ int main(int argc, char* argv[]) {
   try {
     // invocation without arguments — display help and exit
     if (argc == 1) {
-      display_header();
-      display_help_short();
+      displayHeader();
+      displayHelpShort();
       exit(EXIT_SUCCESS);
     }
 
@@ -807,13 +823,13 @@ int main(int argc, char* argv[]) {
       if (std::string_view(argv[i]) == "--help" ||
           std::string_view(argv[i]) == "-h") {
         if (argc == 2) {
-          display_header();
-          display_help();
+          displayHeader();
+          displayHelp();
           exit(EXIT_SUCCESS);
         }
         if (argc > 3) {
-          display_header();
-          display_help_short();
+          displayHeader();
+          displayHelpShort();
           exit(EXIT_FAILURE);
         }
 
@@ -826,16 +842,16 @@ int main(int argc, char* argv[]) {
           if (option.name == nullptr) break;
           if (option.name == opt_name) {
             opt = static_cast<Option>(option.val);
-            display_header();
-            display_help_option(opt, opt_flag);
+            displayHeader();
+            displayHelpOption(opt, opt_flag);
             exit(EXIT_SUCCESS);
           }
         }
 
         // we've not found the option — show a short help message and exit with
         // failure
-        display_header();
-        display_help_short();
+        displayHeader();
+        displayHelpShort();
         exit(EXIT_FAILURE);
       }
     }
@@ -857,7 +873,7 @@ int main(int argc, char* argv[]) {
       // Default options
       switch (opt) {
         case 'v':
-          display_version();
+          displayVersion();
           exit(EXIT_SUCCESS);
         case 'h':
           // no need to do anything here since the help flag is resolved
@@ -871,23 +887,27 @@ int main(int argc, char* argv[]) {
       switch (opt) {
         case Option::GlobalNumIndividuals:
           context = Context::Global;
-          spec.n_individuals = std::stoull(optarg);
+          spec.n_individuals =
+              amsim::parse<std::size_t>(optarg, "--n-individuals");
           continue;
         case Option::GlobalNumGenerations:
           context = Context::Global;
-          spec.n_generations = std::stoull(optarg);
+          spec.n_generations =
+              amsim::parse<std::size_t>(optarg, "--n-generations");
           continue;
         case Option::GlobalNumThreads:
           context = Context::Global;
-          spec.n_threads = std::stoull(optarg);
+          spec.n_threads = amsim::parse<std::size_t>(optarg, "--n-threads");
           continue;
         case Option::GlobalNumReplicates:
           context = Context::Global;
-          spec.n_replicates = std::stoull(optarg);
+          spec.n_replicates =
+              amsim::parse<std::size_t>(optarg, "--n-replicates");
           continue;
         case Option::GlobalRandomSeed:
           context = Context::Global;
-          spec.random_seed = std::stoull(optarg);
+          spec.random_seed =
+              amsim::parse<std::uint64_t>(optarg, "--random-seed");
           continue;
         case Option::GlobalOutputDirectory:
           context = Context::Global;
@@ -899,7 +919,8 @@ int main(int argc, char* argv[]) {
           continue;
         case Option::GlobalPedigreeMaxDepth:
           context = Context::Global;
-          spec.pedigree_max_depth = std::stoull(optarg);
+          spec.pedigree_max_depth =
+              amsim::parse<std::size_t>(optarg, "--pedigree-max-depth");
           continue;
         case Option::GlobalPedigreeWarmup:
           context = Context::Global;
@@ -907,7 +928,7 @@ int main(int argc, char* argv[]) {
           continue;
         case Option::GlobalLogLevel:
           context = Context::Global;
-          spec.log_level = amsim::LogLevel_from_string(optarg);
+          spec.log_level = amsim::logLevelFromString(optarg);
           continue;
         case Option::GlobalLogNoFile:
           context = Context::Global;
@@ -954,15 +975,18 @@ int main(int argc, char* argv[]) {
         }
         case Option::PhenotypeVarGenetic:
           check_context(Context::Phenotype, "--var-genetic");
-          spec.phenotypes.back().var_genetic = std::stod(optarg);
+          spec.phenotypes.back().var_genetic =
+              amsim::parse<double>(optarg, "--var-genetic");
           continue;
         case Option::PhenotypeVarEnvironmental:
           check_context(Context::Phenotype, "--var-environmental");
-          spec.phenotypes.back().var_environmental = std::stod(optarg);
+          spec.phenotypes.back().var_environmental =
+              amsim::parse<double>(optarg, "--var-environmental");
           continue;
         case Option::PhenotypeVarVertical:
           check_context(Context::Phenotype, "--var-vertical");
-          spec.phenotypes.back().var_vertical = std::stod(optarg);
+          spec.phenotypes.back().var_vertical =
+              amsim::parse<double>(optarg, "--var-vertical");
           continue;
         case Option::PhenotypeGeneticCor:
           context = Context::PhenotypeGeneticCorrelation;
@@ -972,7 +996,7 @@ int main(int argc, char* argv[]) {
           continue;
         case Option::PhenotypeLocusEffects:
           check_context(Context::Phenotype, "--effects");
-          context = Context::PhenotypeCausalLoci;
+          context = Context::PhenotypeEffectSizes;
           continue;
         case Option::PhenotypeLocusIndices:
           check_context(Context::Phenotype, "--loci");
@@ -987,7 +1011,9 @@ int main(int argc, char* argv[]) {
           if (std::string_view(optarg) == "assortative") {
             context = Context::Mating;
             spec.mating.type = "assortative";
-          }
+          } else
+            throw std::invalid_argument(
+                "Unsupported mating type " + std::string(optarg));
           continue;
         case Option::MatingCor:
           check_context(Context::Mating, "--mate-cor");
@@ -995,19 +1021,21 @@ int main(int argc, char* argv[]) {
           continue;
         case Option::MatingErrorTolerance:
           check_context(Context::Mating, "--tol-inf");
-          spec.mating.tolerance = std::stod(optarg);
+          spec.mating.tolerance = amsim::parse<double>(optarg);
           continue;
         case Option::MatingMaxIterations:
           check_context(Context::Mating, "--max-itr");
-          spec.mating.max_iterations = std::stoull(optarg);
+          spec.mating.max_iterations = amsim::parse<std::size_t>(optarg);
           continue;
         case Option::MatingAnnealingTempInit:
           check_context(Context::Mating, "--temp-init");
-          spec.mating.initial_temperature = std::stod(optarg);
+          spec.mating.initial_temperature =
+              amsim::parse<double>(optarg, "--temp-init");
           continue;
         case Option::MatingAnnealingTempDecay:
           check_context(Context::Mating, "--temp-decay");
-          spec.mating.temperature_decay = std::stod(optarg);
+          spec.mating.temperature_decay =
+              amsim::parse<double>(optarg, "--temp-decay");
           continue;
       }
 
@@ -1016,7 +1044,7 @@ int main(int argc, char* argv[]) {
         case Option::PopulationEstimatorSpec: {
           context = Context::PopulationEstimator;
 
-          auto [name, params] = amsim::parse_function(optarg);
+          auto [name, params] = amsim::parseFunction(optarg);
           auto estimator = amsim::build_population_estimator(name, params);
           estimator.name = optarg;
           spec.estimators.push_back(estimator);
@@ -1031,7 +1059,7 @@ int main(int argc, char* argv[]) {
         }
         case Option::SampleEstimatorType: {
           check_context(Context::SampleEstimator, "--type");
-          auto [name, params] = amsim::parse_function(optarg);
+          auto [name, params] = amsim::parseFunction(optarg);
           spec.sample_estimator_spec.back().type = name;
           if (!params.empty())
             spec.sample_estimator_spec.back().params = params;
@@ -1043,21 +1071,23 @@ int main(int argc, char* argv[]) {
           continue;
         case Option::SampleEstimatorNumRows:
           check_context(Context::SampleEstimator, "--n-rows");
-          spec.sample_estimator_spec.back().n_rows = std::stoull(optarg);
+          spec.sample_estimator_spec.back().n_rows =
+              amsim::parse<std::size_t>(optarg);
           continue;
         case Option::SampleEstimatorNumCols:
           check_context(Context::SampleEstimator, "--n-cols");
-          spec.sample_estimator_spec.back().n_cols = std::stoull(optarg);
+          spec.sample_estimator_spec.back().n_cols =
+              amsim::parse<std::size_t>(optarg);
           continue;
         case Option::SampleEstimatorRowNames:
           check_context(Context::SampleEstimator, "--row-names");
           spec.sample_estimator_spec.back().row_names =
-              amsim::utils::split_string(optarg);
+              amsim::utils::splitString(optarg);
           continue;
         case Option::SampleEstimatorColNames:
           check_context(Context::SampleEstimator, "--col-names");
           spec.sample_estimator_spec.back().col_names =
-              amsim::utils::split_string(optarg);
+              amsim::utils::splitString(optarg);
           continue;
         case Option::SampleSpec: {
           context = Context::Sample;
@@ -1067,20 +1097,22 @@ int main(int argc, char* argv[]) {
           continue;
         }
         case Option::SampleProbandType:
+          check_context(Context::Sample, "--proband");
           spec.sample_spec.back().proband_type = optarg;
           continue;
         case Option::SampleNumProbands:
           check_context(Context::Sample, "--n-probands");
-          spec.sample_spec.back().n_probands = std::stoull(optarg);
+          spec.sample_spec.back().n_probands =
+              amsim::parse<std::size_t>(optarg);
           continue;
         case Option::SampleWeightOnPhenotypes: {
           check_context(Context::Sample, "--on");
-          spec.sample_spec.back().on = amsim::utils::split_string(optarg);
+          spec.sample_spec.back().on = amsim::utils::splitString(optarg);
           continue;
         }
         case Option::SampleWeightOfMembers:
           check_context(Context::Sample, "--of");
-          spec.sample_spec.back().of = amsim::utils::split_string(optarg);
+          spec.sample_spec.back().of = amsim::utils::splitString(optarg);
           continue;
         case Option::SampleWeightAggregation:
           check_context(Context::Sample, "--agg");
@@ -1093,15 +1125,15 @@ int main(int argc, char* argv[]) {
         case Option::SampleEstimators:
           check_context(Context::Sample, "--estimators");
           spec.sample_spec.back().estimators =
-              amsim::utils::split_string(optarg);
+              amsim::utils::splitString(optarg);
           continue;
       }
 
       // Context-sensitive (virtual) operation flags
-      Context domain = context_domain(context);
+      Context domain = contextDomain(context);
       switch (opt) {
         case Option::VirtualNumLoci: {
-          std::size_t n_loc = std::stoull(optarg);
+          auto n_loc = amsim::parse<std::size_t>(optarg, "--n-loci");
           if (domain == Context::Phenotype)
             spec.phenotypes.back().n_causal_loci = n_loc;
           else
@@ -1110,17 +1142,20 @@ int main(int argc, char* argv[]) {
         }
         case Option::VirtualValue: {
           if (context == PhenotypeCausalLoci) {
-            std::vector<std::size_t> value = amsim::parse_indices(optarg);
+            auto value =
+                amsim::parse<std::vector<std::size_t>>(optarg, "--value");
             spec.phenotypes.back().causal_loci = value;
             continue;
           }
 
-          Eigen::MatrixXd matrix = amsim::parse_matrix_value(optarg);
+          auto matrix = amsim::parse<Eigen::MatrixXd>(optarg, "--value");
           if (context == Context::GenomeInitMAFs) spec.genome.v_maf = matrix(0);
           if (context == Context::GenomeRecombinationProbs)
             spec.genome.v_rec = matrix(0);
           if (context == Context::GenomeMutationProbs)
             spec.genome.v_mut = matrix(0);
+          if (context == Context::PhenotypeEffectSizes)
+            spec.phenotypes.back().effects = matrix(0);
           if (context == Context::PhenotypeGeneticCorrelation)
             spec.genetic_component_cor = matrix;
           if (context == Context::PhenotypeEnvironmentalCorrelation)
@@ -1141,6 +1176,8 @@ int main(int argc, char* argv[]) {
           if (context == Context::GenomeRecombinationProbs)
             spec.genome.v_rec = file;
           if (context == Context::GenomeMutationProbs) spec.genome.v_mut = file;
+          if (context == Context::PhenotypeEffectSizes)
+            spec.phenotypes.back().effects = file;
           if (context == Context::PhenotypeGeneticCorrelation)
             spec.genetic_component_cor = file;
           if (context == Context::PhenotypeEnvironmentalCorrelation)
@@ -1150,41 +1187,42 @@ int main(int argc, char* argv[]) {
           continue;
         }
         case Option::VirtualSingularValues: {
-          std::vector<double> values = amsim::parse_doubles(optarg);
+          auto values =
+              amsim::parse<std::vector<double>>(optarg, "--singular-values");
           if (context == Context::PhenotypeGeneticCorrelation) {
             spec.genetic_component_cor =
-                amsim::utils::matrix_from_singular_values(values, true);
+                amsim::utils::matrixFromSingularValues(values, true);
           }
           if (context == Context::PhenotypeEnvironmentalCorrelation) {
             spec.environmental_component_cor =
-                amsim::utils::matrix_from_singular_values(values, true);
+                amsim::utils::matrixFromSingularValues(values, true);
           }
           if (context == Context::MatingCorrelation) {
             spec.mating.mate_cor =
-                amsim::utils::matrix_from_singular_values(values);
+                amsim::utils::matrixFromSingularValues(values);
           }
           continue;
         }
         case Option::VirtualDistribution: {
-          amsim::Distribution dist = amsim::parse_distribution(
-              optarg, (context & Context::GenomeProbabilities) != 0U);
+          auto dist = amsim::parse<amsim::Distribution>(optarg, "--dist");
 
           if (context == Context::GenomeInitMAFs) spec.genome.v_maf = dist;
           if (context == Context::GenomeRecombinationProbs)
             spec.genome.v_rec = dist;
           if (context == Context::GenomeMutationProbs) spec.genome.v_mut = dist;
-          if (context_domain(context) == Context::Phenotype)
+          if (context == Context::PhenotypeEffectSizes)
             spec.phenotypes.back().effects = dist;
           continue;
         }
       }
     }
     // NOLINTEND(bugprone-switch-missing-default-case)
+
     if (save_config) amsim::ConfigWriter config(spec);
-    if (run) amsim::run_simulation(spec);
+    if (run) amsim::runSimulation(spec);
     exit(EXIT_SUCCESS);
   } catch (const std::exception& e) {
-    amsim::Log::error(e.what());
+    std::cerr << e.what() << std::endl;
     exit(EXIT_FAILURE);
   }
 }
