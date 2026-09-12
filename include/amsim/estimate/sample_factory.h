@@ -31,7 +31,7 @@ inline SampleEstimator<P> buildSampleEstimator(
     return SampleExternalEstimator<P>(
         spec.name,
         spec.exec.value(),
-        spec.params,
+        spec.exec_args,
         spec.n_rows.value(),
         spec.n_cols.value(),
         spec.row_names,
@@ -51,8 +51,8 @@ inline SampleEstimator<P> buildSampleEstimator(
     if (spec.params.size() == 1) n_pcs = std::stoull(spec.params[0]);
 
     if (spec.params.size() == 2) {
-      n_pcs = std::stoull(spec.params[0]);
-      pval_threshold = std::stod(spec.params[1]);
+      n_pcs = parse<std::size_t>(spec.params[0]);
+      pval_threshold = parse<double>(spec.params[1]);
     }
 
     return SampleGWASEstimator<P>(spec.name, n_pcs, pval_threshold);

@@ -39,11 +39,13 @@ class EstimatorCousinCov : public PopulationEstimatorStrategy {
         degree_(degree),
         n_ind_(params.global.n_ind),
         n_pheno_(params.pheno.n_pheno),
-        self_(params.global.n_ind * (1ULL << (2 * degree)), params.pheno.n_pheno),
+        self_(
+            params.global.n_ind * (1ULL << (2 * degree)), params.pheno.n_pheno),
         cousin_(
             params.global.n_ind * (1ULL << (2 * degree)), params.pheno.n_pheno),
         PopulationEstimatorStrategy(
-            "cousin_" + std::to_string(degree) + "_" + componentToString(type) + "_cov",
+            "cousin_" + std::to_string(degree) + "_" + componentToString(type) +
+                "_cov",
             utils::vectorPrefix(params.pheno.names, "self_"),
             utils::vectorPrefix(params.pheno.names, "cousin_"),
             params.pheno.n_pheno,
@@ -91,9 +93,7 @@ class EstimatorCousinCov : public PopulationEstimatorStrategy {
 class EstimatorAncestorCov : public PopulationEstimatorStrategy {
  public:
   explicit EstimatorAncestorCov(
-      const Params& params,
-      std::size_t degree = 1,
-      Component type = Component::Genetic)
+      const Params& params, std::size_t degree, Component type)
       : type_(type),
         degree_(degree),
         n_ind_(params.global.n_ind),
@@ -101,8 +101,8 @@ class EstimatorAncestorCov : public PopulationEstimatorStrategy {
         self_(params.global.n_ind * (1ULL << degree), params.pheno.n_pheno),
         ancestor_(params.global.n_ind * (1ULL << degree), params.pheno.n_pheno),
         PopulationEstimatorStrategy(
-            "ancestor_" + std::to_string(degree) + "_" + componentToString(type) +
-                "_cov",
+            "ancestor_" + std::to_string(degree) + "_" +
+                componentToString(type) + "_cov",
             utils::vectorPrefix(params.pheno.names, "self_"),
             utils::vectorPrefix(params.pheno.names, "ancestor_"),
             params.pheno.n_pheno,
@@ -163,7 +163,8 @@ inline void EstimatorAncestorCov::syncPhenotypes(const State& state) {
 inline PopulationEstimator PopulationCousinCov(
     std::size_t degree = 1, Component type = Component::Total) {
   return PopulationEstimator{
-      .name = "cousin-" + std::to_string(degree) + "-cov-" + componentToString(type),
+      .name = "cousin-" + std::to_string(degree) + "-cov-" +
+              componentToString(type),
       .fn = [degree, type](const Params& params) {
         return std::make_unique<details::EstimatorCousinCov>(
             params, degree, type);
@@ -173,7 +174,8 @@ inline PopulationEstimator PopulationCousinCov(
 inline PopulationEstimator PopulationAncestorCov(
     std::size_t degree = 1, Component type = Component::Total) {
   return PopulationEstimator{
-      .name = "ancestor-" + std::to_string(degree) + "-cov-" + componentToString(type),
+      .name = "ancestor-" + std::to_string(degree) + "-cov-" +
+              componentToString(type),
       .fn = [degree, type](const Params& params) {
         return std::make_unique<details::EstimatorAncestorCov>(
             params, degree, type);

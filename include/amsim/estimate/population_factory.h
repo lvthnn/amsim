@@ -31,7 +31,7 @@ namespace amsim {
 using PopulationEstimatorFactory =
     std::function<PopulationEstimator(const std::vector<std::string>&)>;
 
-inline PopulationEstimator build_population_estimator(
+inline PopulationEstimator buildPopulationEstimator(
     const std::string& name, const std::vector<std::string>& params) {
   static const std::unordered_map<std::string, PopulationEstimatorFactory>
       Registry = {
@@ -94,7 +94,7 @@ inline PopulationEstimator build_population_estimator(
              std::size_t degree = 1;
              Component component = Component::Total;
              if (!s.empty()) component = componentFromString(s[0]);
-             if (s.size() > 1) degree = std::stoull(s[1]);
+             if (s.size() > 1) degree = parse<std::size_t>(s[1]);
 
              return PopulationCousinCov(degree, component);
            }},
@@ -102,7 +102,7 @@ inline PopulationEstimator build_population_estimator(
              std::size_t degree = 1;
              Component component = Component::Total;
              if (!s.empty()) component = componentFromString(s[0]);
-             if (s.size() > 1) degree = std::stoull(s[1]);
+             if (s.size() > 1) degree = parse<std::size_t>(s[1]);
 
              return PopulationAncestorCov(degree, component);
            }}};

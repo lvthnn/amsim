@@ -35,6 +35,7 @@ struct SampleEstimatorSpec {
   std::string name;
   std::string type;
   std::optional<std::string> exec;
+  std::vector<std::string> exec_args;
   std::optional<std::size_t> n_rows;
   std::optional<std::size_t> n_cols;
   std::optional<std::vector<std::string>> row_names;
