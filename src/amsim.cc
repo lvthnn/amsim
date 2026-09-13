@@ -19,6 +19,7 @@
 #include <amsim/io.h>
 #include <amsim/simulation.h>
 #include <getopt.h>
+#include <wordexp.h>
 
 #include <Eigen/Dense>
 #include <boost/algorithm/string/classification.hpp>
@@ -41,7 +42,7 @@ enum Context : uint32_t {
   PopulationEstimator = 1 << 5,
 
   // Subcomponent
-  InitMAFs = 1 << 6,
+  InitAlleleFreqs = 1 << 6,
   RecombinationProbs = 1 << 7,
   MutationProbs = 1 << 8,
   CausalLoci = 1 << 9,
@@ -51,10 +52,10 @@ enum Context : uint32_t {
   MatrixSpecification = 1 << 13,
 
   // Derived contexts
-  GenomeInitMAFs = Genome | InitMAFs,
+  GenomeInitAlleleFreqs = Genome | InitAlleleFreqs,
   GenomeRecombinationProbs = Genome | RecombinationProbs,
   GenomeMutationProbs = Genome | MutationProbs,
-  GenomeProbabilities = InitMAFs | RecombinationProbs | MutationProbs,
+  GenomeProbabilities = InitAlleleFreqs | RecombinationProbs | MutationProbs,
   PhenotypeCausalLoci = Phenotype | CausalLoci,
   PhenotypeEffectSizes = Phenotype | EffectSizes,
   PhenotypeGeneticCorrelation =
@@ -70,6 +71,12 @@ enum Context : uint32_t {
 
 Context contextDomain(Context context) {
   return static_cast<Context>(context & ContextDomain);
+}
+
+void checkContext(Context context, Context expected, const std::string& flag) {
+  if (contextDomain(context) != expected)
+    throw std::runtime_error(
+        std::format("Unexpected flag '{}' in current context", flag));
 }
 
 enum Option {
@@ -90,7 +97,7 @@ enum Option {
   GlobalLoadConfig,
   GlobalShareInitState,
   GlobalNoRun,
-  GenomeLocusInitMAFs,
+  GenomeLocusInitFreqs,
   GenomeLocusRecombinationProbs,
   GenomeLocusMutationProbs,
   PhenotypeSpec,
@@ -252,7 +259,7 @@ declarations make this up:
     --on <phenotype(s)>
     --of <member(s)>
     --agg {mean | max | min | identity}
-    --weight {uniform() | logistic(<coef>, ...)}
+    --weight {uniform() | logistic(<coef>, ...) | case-control(<thresh>, {<|>}, <coef>, ...)}
     --estimators <est_name(s)>
 
   --sample-estimator <name>
@@ -290,6 +297,9 @@ inclusion probability:
                          values; one coefficient per value selected via
                          --on, so ascertainment can depend on, and bias
                          estimates with respect to, one or more phenotypes.
+  case-control(t, <|>, b1, b2, ...)
+                         hard case/control cutoff: probands are included
+                         iff (agg * b) is above t (>) or below t (<).
 
 amsim then draws --n-probands individuals under that probability and attaches
 every sample estimator named in --estimators (each declared separately via its
@@ -374,7 +384,7 @@ global options:
   --no-run
 
 genome options:
-  --locus-maf [--value <val> | --file <path> | --dist <dist>]
+  --locus-freq [--value <val> | --file <path> | --dist <dist>]
   --locus-rec [--value <val> | --file <path> | --dist <dist>]
   --locus-mut [--value <val> | --file <path> | --dist <dist>]
 
@@ -398,7 +408,7 @@ mating options:
     --temp-decay <tmp_decay>
 
 sampling and estimation options:
-  --estimator {genotype-mean | genotype-var | genotype-maf | genotype-cov |
+  --estimator {genotype-mean | genotype-var | genotype-freq | genotype-cov |
                genotype-cor | heritability | pheno-mean(<component>) |
                pheno-var(<component>) | pheno-cov(<component>) |
                pheno-cor(<component>) | mate-cor(<component>) |
@@ -415,7 +425,7 @@ sampling and estimation options:
   --sample <sample_name>
     --proband {individual | mate | family}
     --n-probands <n-prob>
-    --weight {logistic(<pheno_coefs>) | uniform()}
+    --weight {logistic(<pheno_coefs>) | uniform() | case-control(<thresh>, {<|>}, <pheno_coefs>)}
     --on <weight_on>
     --of <weight_of>
     --agg <agg_fn>
@@ -429,7 +439,7 @@ void displayHelpShort() {
   std::string help_str = R"(
   amsim <option(s)>
   amsim --load-config <config_file> <option(s)>
-  amsim --help <option>
+  amsim --help <option(s)>
 
 To see all options, run "amsim --help".)";
 
@@ -520,16 +530,18 @@ If enabled, the software exits without performing simulation. This is useful whe
 specifying configurations to be saved to file via --save-config.
   )";
 
-  docs[Option::GenomeLocusInitMAFs] = R"(
-Specify the minor allele frequencies (MAFs) of the genetic loci in the simulation.
-In a population numbering n individuals, the MAF of a locus is the total dosage of
-the minor allele divided by the total number of alleles for the locus.
+  docs[Option::GenomeLocusInitFreqs] = R"(
+Specify the allele frequencies (AFs) of the genetic loci in the simulation.
+In a population numbering <n_ind> individuals, the AF of a locus is the total
+dosage of the alternate allele divided by the total number of alleles for the
+locus, i.e., 2 * <n_ind>.
 
-The MAFs can be specified through directly through the --value flag, in which case
-<n_loci> double values in the range [0.0, 1.0] must be specified. On the other hand,
-these data may be supplied through the --file option, which takes as argument a path
-to a file. Lastly, the --dist flag can be used to specify a probability distribution
-from which these frequencies are drawn.
+The frequencies can be specified through directly through the --value flag, in which
+case a constant double value in the range [0.0, 1.0] must be specified. On the other
+hand, if one wishes for the frequencies to vary by locus, these data may be supplied
+through the --file option, which takes as argument a path to a file. Lastly, the
+--dist flag can be used to specify a probability distribution from which these
+frequencies are drawn.
 
 For more information on virtual flags and their use, run --help on flags --value,
 --file, --dist, and --singular-values.
@@ -542,7 +554,7 @@ that position rather than continuing to inherit from the same parental strand. A
 value of 0.5 corresponds to free recombination or independence between adjoining
 loci, whereas a value near 0.0 corresponds to tight linkage.
 
-As with --locus-maf, these can be specified directly through the --value flag
+As with --locus-freq, these can be specified directly through the --value flag
 (<n_loci> values in [0.0, 1.0]), loaded from a file via --file, or drawn from a
 distribution via --dist. Since these are probabilities, --dist is restricted to
 [0,1]-supported distributions (uniform, beta).
@@ -556,7 +568,7 @@ Specify the per-locus mutation probabilities, i.e., the chance that a given alle
 is flipped to its complement when passed from parent to offspring. One value per
 locus, in [0.0, 1.0], with default 0.0 (no mutation).
 
-As with --locus-maf and --locus-rec, these can be specified directly through the
+As with --locus-freq and --locus-rec, these can be specified directly through the
 --value flag, loaded from a file via --file, or drawn from a distribution via
 --dist, restricted to [0,1]-supported distributions (uniform, beta) since these
 are probabilities.
@@ -602,7 +614,7 @@ For more information on virtual flags and their use, run --help on flags --value
 computed once per generation over the full population. Repeat the flag to add more
 than one.
 
-  --estimator {genotype-mean | genotype-var | genotype-maf | genotype-cov |
+  --estimator {genotype-mean | genotype-var | genotype-freq | genotype-cov |
                genotype-cor | heritability | pheno-mean(<component>) |
                pheno-var(<component>) | pheno-cor(<component>) |
                pheno-cov(<component>) | mate-cor(<component>) |
@@ -621,7 +633,7 @@ on. Resolving degree d requires a pedigree deep enough to reach it; see
 --pedigree-max-depth and --pedigree-warmup.
 
 Examples:
-  --estimator genotype-maf
+  --estimator genotype-freq
   --estimator heritability
   --estimator 'pheno-cor(genetic)'
   --estimator 'cousin-cov(total,2)'
@@ -635,20 +647,20 @@ argument in quotes.
 --value <val(s)> supplies data inline on the command line. What is expected
 depends on which flag opened the current context:
 
-  --locus-maf / --locus-rec / --locus-mut   a single value (broadcast to every
-                                             locus) or one value per locus
-  --loci                                    whitespace- or comma-separated causal
-                                             locus indices
-  --effects                                 a single value (broadcast to every
-                                             causal locus) or one value per locus
-  --pheno-gen-cor / --pheno-env-cor         a symmetric P x P matrix, entered as
-                                             rows separated by ';' or a newline,
-                                             values within a row separated by a
-                                             comma or space; a single row
-                                             collapses to a vector
+  --locus-freq / --locus-rec / --locus-mut   a single value (broadcast to every
+                                              locus) or one value per locus
+  --loci                                     whitespace- or comma-separated causal
+                                              locus indices
+  --effects                                  a single value (broadcast to every
+                                              causal locus) or one value per locus
+  --pheno-gen-cor / --pheno-env-cor          a symmetric P x P matrix, entered as
+                                              rows separated by ';' or a newline,
+                                              values within a row separated by a
+                                              comma or space; a single row
+                                              collapses to a vector
 
-Example: --locus-maf --value 0.25                     (one MAF for every locus)
-         --pheno-gen-cor --value "1,0.5;0.5,1"           (an inline 2x2 matrix)
+Example: --locus-freq --value 0.25                       (constant allele freqs)
+         --pheno-gen-cor --value "1,0.5;0.5,1"            (an inline 2x2 matrix)
   )";
 
   docs[Option::VirtualFile] = R"(
@@ -658,8 +670,8 @@ single row is read as a vector rather than a 1xN matrix. Tabs are not a recognis
 separator.
 
 Which flag opens the context determines what the loaded data is used for, exactly
-as with --value: locus MAFs / recombination / mutation probabilities, causal locus
-indices, effect sizes, or a phenotype gen-cor / env-cor / mate-cor matrix.
+as with --value: locus allele frequencies / recombination / mutation probabilities,
+causal locus indices, effect sizes, or a phenotype gen-cor / env-cor / mate-cor matrix.
   )";
 
   docs[Option::VirtualDistribution] = R"(
@@ -734,10 +746,10 @@ std::vector<option> getOptions() {
       {"no-run", no_argument, nullptr, GlobalNoRun},
 
       // Genome options
-      {"loc-maf", no_argument, nullptr, GenomeLocusInitMAFs},
+      {"loc-freq", no_argument, nullptr, GenomeLocusInitFreqs},
       {"loc-rec", no_argument, nullptr, GenomeLocusRecombinationProbs},
       {"loc-mut", no_argument, nullptr, GenomeLocusMutationProbs},
-      {"locus-maf", no_argument, nullptr, GenomeLocusInitMAFs},
+      {"locus-freq", no_argument, nullptr, GenomeLocusInitFreqs},
       {"locus-rec", no_argument, nullptr, GenomeLocusRecombinationProbs},
       {"locus-mut", no_argument, nullptr, GenomeLocusMutationProbs},
 
@@ -805,12 +817,6 @@ int main(int argc, char* argv[]) {
 
   // context helps us resolve what options are legal
   Context context = Context::Global;
-
-  auto check_context = [&](Context expected, std::string_view flag) {
-    if (contextDomain(context) != expected)
-      throw std::runtime_error(
-          std::format("Unexpected flag '{}' in current context", flag));
-  };
 
   // auxiliary boolean variables to manage CLI control flow
   bool run = true;
@@ -976,8 +982,8 @@ int main(int argc, char* argv[]) {
 
       // Genome configuration
       switch (opt) {
-        case Option::GenomeLocusInitMAFs:
-          context = Context::GenomeInitMAFs;
+        case Option::GenomeLocusInitFreqs:
+          context = Context::GenomeInitAlleleFreqs;
           continue;
         case Option::GenomeLocusRecombinationProbs:
           context = Context::GenomeRecombinationProbs;
@@ -996,17 +1002,17 @@ int main(int argc, char* argv[]) {
           continue;
         }
         case Option::PhenotypeVarGenetic:
-          check_context(Context::Phenotype, "--var-genetic");
+          checkContext(context, Context::Phenotype, "--var-genetic");
           spec.phenotypes.back().var_genetic =
               amsim::parse<double>(optarg, "--var-genetic");
           continue;
         case Option::PhenotypeVarEnvironmental:
-          check_context(Context::Phenotype, "--var-environmental");
+          checkContext(context, Context::Phenotype, "--var-environmental");
           spec.phenotypes.back().var_environmental =
               amsim::parse<double>(optarg, "--var-environmental");
           continue;
         case Option::PhenotypeVarVertical:
-          check_context(Context::Phenotype, "--var-vertical");
+          checkContext(context, Context::Phenotype, "--var-vertical");
           spec.phenotypes.back().var_vertical =
               amsim::parse<double>(optarg, "--var-vertical");
           continue;
@@ -1017,11 +1023,11 @@ int main(int argc, char* argv[]) {
           context = Context::PhenotypeEnvironmentalCorrelation;
           continue;
         case Option::PhenotypeLocusEffects:
-          check_context(Context::Phenotype, "--effects");
+          checkContext(context, Context::Phenotype, "--effects");
           context = Context::PhenotypeEffectSizes;
           continue;
         case Option::PhenotypeLocusIndices:
-          check_context(Context::Phenotype, "--loci");
+          checkContext(context, Context::Phenotype, "--loci");
           context = Context::PhenotypeCausalLoci;
           continue;
       }
@@ -1033,31 +1039,32 @@ int main(int argc, char* argv[]) {
             spec.mating.type = "random";
           } else if (std::string_view(optarg) == "assortative") {
             context = Context::Mating;
+            spec.mating.max_iterations = 2000000;
             spec.mating.type = "assortative";
           } else
             throw std::invalid_argument(
                 "Unsupported mating type " + std::string(optarg));
           continue;
         case Option::MatingCor:
-          check_context(Context::Mating, "--mate-cor");
+          checkContext(context, Context::Mating, "--mate-cor");
           context = Context::MatingCorrelation;
           continue;
         case Option::MatingErrorTolerance:
-          check_context(Context::Mating, "--tol-inf");
+          checkContext(context, Context::Mating, "--tol-inf");
           spec.mating.tolerance = amsim::parse<double>(optarg, "--tol-inf");
           continue;
         case Option::MatingMaxIterations:
-          check_context(Context::Mating, "--max-itr");
+          checkContext(context, Context::Mating, "--max-itr");
           spec.mating.max_iterations =
               amsim::parse<std::size_t>(optarg, "--max-itr");
           continue;
         case Option::MatingAnnealingTempInit:
-          check_context(Context::Mating, "--temp-init");
+          checkContext(context, Context::Mating, "--temp-init");
           spec.mating.initial_temperature =
               amsim::parse<double>(optarg, "--temp-init");
           continue;
         case Option::MatingAnnealingTempDecay:
-          check_context(Context::Mating, "--temp-decay");
+          checkContext(context, Context::Mating, "--temp-decay");
           spec.mating.temperature_decay =
               amsim::parse<double>(optarg, "--temp-decay");
           continue;
@@ -1082,7 +1089,7 @@ int main(int argc, char* argv[]) {
           continue;
         }
         case Option::SampleEstimatorType: {
-          check_context(Context::SampleEstimator, "--type");
+          checkContext(context, Context::SampleEstimator, "--type");
           auto [name, params] = amsim::parseFunction(optarg);
           spec.sample_estimator_spec.back().type = name;
           if (!params.empty())
@@ -1090,33 +1097,49 @@ int main(int argc, char* argv[]) {
           continue;
         }
         case Option::SampleEstimatorExec: {
-          check_context(Context::SampleEstimator, "--exec");
-          std::vector<std::string> tokens =
-              amsim::utils::splitString(optarg, ' ');
+          checkContext(context, Context::SampleEstimator, "--exec");
+
+          // WRDE_NOCMD flag disallows command substitution, important for e.g.
+          // R users which may want to use $ or `` in their exec string
+          wordexp_t exp;
+          int rc = wordexp(optarg, &exp, WRDE_NOCMD);
+          if (rc != 0)
+            throw std::runtime_error(
+                std::format(
+                    "Failed to parse --exec argument '{}' (code {})",
+                    optarg,
+                    rc));
+
+          std::vector<std::string> tokens(
+              exp.we_wordv, exp.we_wordv + exp.we_wordc);
+
+          wordfree(&exp);
+
           if (tokens.empty())
             throw std::invalid_argument("--exec requires a command");
+
           spec.sample_estimator_spec.back().exec = tokens.front();
           spec.sample_estimator_spec.back().exec_args =
               std::vector<std::string>(tokens.begin() + 1, tokens.end());
           continue;
         }
         case Option::SampleEstimatorNumRows:
-          check_context(Context::SampleEstimator, "--n-rows");
+          checkContext(context, Context::SampleEstimator, "--n-rows");
           spec.sample_estimator_spec.back().n_rows =
               amsim::parse<std::size_t>(optarg, "--n-rows");
           continue;
         case Option::SampleEstimatorNumCols:
-          check_context(Context::SampleEstimator, "--n-cols");
+          checkContext(context, Context::SampleEstimator, "--n-cols");
           spec.sample_estimator_spec.back().n_cols =
               amsim::parse<std::size_t>(optarg, "--n-cols");
           continue;
         case Option::SampleEstimatorRowNames:
-          check_context(Context::SampleEstimator, "--row-names");
+          checkContext(context, Context::SampleEstimator, "--row-names");
           spec.sample_estimator_spec.back().row_names =
               amsim::utils::splitString(optarg);
           continue;
         case Option::SampleEstimatorColNames:
-          check_context(Context::SampleEstimator, "--col-names");
+          checkContext(context, Context::SampleEstimator, "--col-names");
           spec.sample_estimator_spec.back().col_names =
               amsim::utils::splitString(optarg);
           continue;
@@ -1128,33 +1151,33 @@ int main(int argc, char* argv[]) {
           continue;
         }
         case Option::SampleProbandType:
-          check_context(Context::Sample, "--proband");
+          checkContext(context, Context::Sample, "--proband");
           spec.sample_spec.back().proband_type = optarg;
           continue;
         case Option::SampleNumProbands:
-          check_context(Context::Sample, "--n-probands");
+          checkContext(context, Context::Sample, "--n-probands");
           spec.sample_spec.back().n_probands =
               amsim::parse<std::size_t>(optarg, "--n-probands");
           continue;
         case Option::SampleWeightOnPhenotypes: {
-          check_context(Context::Sample, "--on");
+          checkContext(context, Context::Sample, "--on");
           spec.sample_spec.back().on = amsim::utils::splitString(optarg);
           continue;
         }
         case Option::SampleWeightOfMembers:
-          check_context(Context::Sample, "--of");
+          checkContext(context, Context::Sample, "--of");
           spec.sample_spec.back().of = amsim::utils::splitString(optarg);
           continue;
         case Option::SampleWeightAggregation:
-          check_context(Context::Sample, "--agg");
+          checkContext(context, Context::Sample, "--agg");
           spec.sample_spec.back().agg = optarg;
           continue;
         case Option::SampleWeightFunction:
-          check_context(Context::Sample, "--weight");
+          checkContext(context, Context::Sample, "--weight");
           spec.sample_spec.back().weight_function = optarg;
           continue;
         case Option::SampleEstimators:
-          check_context(Context::Sample, "--estimators");
+          checkContext(context, Context::Sample, "--estimators");
           spec.sample_spec.back().estimators =
               amsim::utils::splitString(optarg);
           continue;
@@ -1180,23 +1203,23 @@ int main(int argc, char* argv[]) {
           }
 
           auto matrix = amsim::parse<Eigen::MatrixXd>(optarg, "--value");
-          if (context == Context::GenomeInitMAFs) {
+          if (context == Context::GenomeInitAlleleFreqs) {
             if (matrix.size() != 1)
               throw std::invalid_argument(
-                  "--locus-maf takes a single constant with --value");
-            spec.genome.v_maf = matrix(0);
+                  "--locus-freq takes a single constant with --value");
+            spec.genome.locus_freq = matrix(0);
           }
           if (context == Context::GenomeRecombinationProbs) {
             if (matrix.size() != 1)
               throw std::invalid_argument(
                   "--locus-rec takes a single constant with --value");
-            spec.genome.v_rec = matrix(0);
+            spec.genome.locus_rec = matrix(0);
           }
           if (context == Context::GenomeMutationProbs) {
             if (matrix.size() != 1)
               throw std::invalid_argument(
                   "--locus-mut takes a single constant with --value");
-            spec.genome.v_mut = matrix(0);
+            spec.genome.locus_mut = matrix(0);
           }
           if (context == Context::PhenotypeEffectSizes) {
             if (matrix.size() != 1)
@@ -1218,12 +1241,13 @@ int main(int argc, char* argv[]) {
             spec.phenotypes.back().causal_loci = file;
             continue;
           }
-
           auto file = amsim::File<Eigen::MatrixXd>{.path = optarg};
-          if (context == Context::GenomeInitMAFs) spec.genome.v_maf = file;
+          if (context == Context::GenomeInitAlleleFreqs)
+            spec.genome.locus_freq = file;
           if (context == Context::GenomeRecombinationProbs)
-            spec.genome.v_rec = file;
-          if (context == Context::GenomeMutationProbs) spec.genome.v_mut = file;
+            spec.genome.locus_rec = file;
+          if (context == Context::GenomeMutationProbs)
+            spec.genome.locus_mut = file;
           if (context == Context::PhenotypeEffectSizes)
             spec.phenotypes.back().effects = file;
           if (context == Context::PhenotypeGeneticCorrelation)
@@ -1254,10 +1278,12 @@ int main(int argc, char* argv[]) {
         case Option::VirtualDistribution: {
           auto dist = amsim::parse<amsim::Distribution>(optarg, "--dist");
 
-          if (context == Context::GenomeInitMAFs) spec.genome.v_maf = dist;
+          if (context == Context::GenomeInitAlleleFreqs)
+            spec.genome.locus_freq = dist;
           if (context == Context::GenomeRecombinationProbs)
-            spec.genome.v_rec = dist;
-          if (context == Context::GenomeMutationProbs) spec.genome.v_mut = dist;
+            spec.genome.locus_rec = dist;
+          if (context == Context::GenomeMutationProbs)
+            spec.genome.locus_mut = dist;
           if (context == Context::PhenotypeEffectSizes)
             spec.phenotypes.back().effects = dist;
           continue;
