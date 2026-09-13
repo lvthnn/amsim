@@ -18,7 +18,7 @@
 #include <amsim/core/generation.h>
 #include <amsim/core/params.h>
 #include <amsim/data/genome.h>
-#include <amsim/data/mating.h>
+#include <amsim/data/matching.h>
 #include <amsim/data/pedigree.h>
 #include <amsim/data/phenome.h>
 
@@ -32,8 +32,8 @@ struct State {
   std::size_t parity = 0;
 
   // store current and parent generation
-  std::array<GenoBuf, 2> genos;
-  std::array<PhenoBuf, 2> phenos;
+  std::array<GenotypeBuffer, 2> genos;
+  std::array<PhenotypeBuffer, 2> phenos;
   std::array<Matching, 2> matchings;
   std::array<Matching, 2> inv_matchings;
 
@@ -44,11 +44,11 @@ struct State {
     return (generation == Generation::Current) ? parity : 1 - parity;
   }
 
-  GenoBuf& geno(Generation generation = Generation::Current) {
+  GenotypeBuffer& geno(Generation generation = Generation::Current) {
     return genos[getParity(generation)];
   }
 
-  PhenoBuf& pheno(Generation generation = Generation::Current) {
+  PhenotypeBuffer& pheno(Generation generation = Generation::Current) {
     return phenos[getParity(generation)];
   }
 
@@ -60,11 +60,11 @@ struct State {
     return inv_matchings[getParity(generation)];
   }
 
-  const GenoBuf& geno(Generation generation = Generation::Current) const {
+  const GenotypeBuffer& geno(Generation generation = Generation::Current) const {
     return genos[getParity(generation)];
   }
 
-  const PhenoBuf& pheno(Generation generation = Generation::Current) const {
+  const PhenotypeBuffer& pheno(Generation generation = Generation::Current) const {
     return phenos[getParity(generation)];
   }
 
@@ -94,8 +94,8 @@ inline State buildState(const Params& params) {
   return State{
       .n_sex = params.global.n_ind / 2,
       .rep = params.global.rep_id,
-      .genos = {GenoBuf(params), GenoBuf(params)},
-      .phenos = {PhenoBuf(params), PhenoBuf(params)},
+      .genos = {GenotypeBuffer(params), GenotypeBuffer(params)},
+      .phenos = {PhenotypeBuffer(params), PhenotypeBuffer(params)},
       .matchings =
           {std::vector<std::size_t>(params.global.n_ind / 2),
            std::vector<std::size_t>(params.global.n_ind / 2)},

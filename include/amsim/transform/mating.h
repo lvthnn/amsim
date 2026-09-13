@@ -17,6 +17,7 @@
 
 #include <amsim/core/params.h>
 #include <amsim/core/state.h>
+#include <amsim/data/matching.h>
 
 #include <Eigen/Dense>
 #include <algorithm>
@@ -262,19 +263,15 @@ inline void AssortativeMating::operator()(State& state) {
 
     if (itr % log_interval_ == 0) {
       Log::debug(
-          std::format(
-              "AssortativeMating: iteration {}\n"
-              "         error l2: {:3g}\n"
-              "       optimal l2: {:3g}\n"
-              "     error linfty: {:3g}\n"
-              "   optimal linfty: {:3g}\n"
-              "      temperature: {:3g}",
-              itr,
-              err_l2_cur_,
-              err_l2_opt_,
-              ell_cur_.array().abs().maxCoeff(),
-              err_linfty_opt_,
-              temp_cur_));
+          "AssortativeMating: iteration {}, error l2 {:.3g} (optimal "
+          "{:.3g}), error linfty {:.3g} (optimal {:.3g}), temperature "
+          "{:.3g}",
+          itr,
+          err_l2_cur_,
+          err_l2_opt_,
+          ell_cur_.array().abs().maxCoeff(),
+          err_linfty_opt_,
+          temp_cur_);
     }
 
     if (err_linfty_opt_ < tol_inf_) {
@@ -286,15 +283,14 @@ inline void AssortativeMating::operator()(State& state) {
   if (linftyError() > tol_inf_) {
     n_itr_ = max_itr_;
     Log::warning(
-        std::format(
-            "AssortativeMating: mate correlation error exceeds tolerance "
-            "after {} iterations (max abs error: {:.3g}, l2 error: {:.3g}, "
-            "tolerance: {:.3g}). Consider raising --max-itr, loosening "
-            "--tol-inf, or checking whether the target matrix is achievable.",
-            n_itr_,
-            linftyError(),
-            l2Error(),
-            tol_inf_));
+        "AssortativeMating: mate correlation error exceeds tolerance "
+        "after {} iterations (max abs error: {:.3g}, l2 error: {:.3g}, "
+        "tolerance: {:.3g}). Consider raising --max-itr or loosening "
+        "--tol-inf.",
+        n_itr_,
+        linftyError(),
+        l2Error(),
+        tol_inf_);
   }
 
   cor_ = ell_opt_ + mate_cor_;

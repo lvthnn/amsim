@@ -17,7 +17,7 @@
 
 #include <amsim/core/generation.h>
 #include <amsim/core/params.h>
-#include <amsim/data/mating.h>
+#include <amsim/data/matching.h>
 
 #include <algorithm>
 #include <cstddef>
