@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include <boost/algorithm/string.hpp>
 #include <condition_variable>
 #include <deque>
 #include <filesystem>
@@ -23,8 +24,6 @@
 #include <iostream>
 #include <mutex>
 #include <thread>
-
-#include <boost/algorithm/string.hpp>
 
 namespace amsim {
 
@@ -81,13 +80,23 @@ class Log {
     if (thread_.joinable()) thread_.join();
   }
 
-  void log(const std::string& msg, LogLevel level);
   static void file(const std::filesystem::path& path, LogLevel level);
   static void stream(std::ostream& stream, LogLevel level);
-  static void debug(const std::string& msg);
-  static void info(const std::string& msg);
-  static void warning(const std::string& msg);
-  static void error(const std::string& msg);
+
+  template <typename... Args>
+  void log(LogLevel level, std::format_string<Args...>, Args&&... args);
+
+  template <typename... Args>
+  static void debug(std::format_string<Args...>, Args&&... args);
+
+  template <typename... Args>
+  static void info(std::format_string<Args...>, Args&&... args);
+
+  template <typename... Args>
+  static void warning(std::format_string<Args...>, Args&&... args);
+
+  template <typename... Args>
+  static void error(std::format_string<Args...>, Args&&... args);
 
  private:
   explicit Log(
@@ -133,11 +142,7 @@ inline std::string Log::getTimeStr() {
   std::time_t t = std::chrono::system_clock::to_time_t(now);
   std::tm tm_now;
 
-#if defined(_WIN32) || defined(_WIN64)
-  localtime_s(&tm_now, &t);
-#else
   localtime_r(&t, &tm_now);
-#endif
 
   std::ostringstream oss;
 
@@ -163,9 +168,13 @@ inline std::string Log::formatMsg(
   return prefix + body;
 }
 
-inline void Log::log(const std::string& msg, const LogLevel level) {
+// TODO: make this wrap std::format
+template <typename... Args>
+inline void Log::log(
+    LogLevel level, std::format_string<Args...> fmt, Args&&... args) {
   if (level < level_) return;
   {
+    std::string msg = std::format(fmt, std::forward<Args>(args)...);
     std::lock_guard<std::mutex> lg(mutex_);
     std::string msg_format = formatMsg(msg, level);
     messages_.push_back(msg_format);
@@ -182,20 +191,24 @@ inline void Log::stream(std::ostream& stream, LogLevel log_level) {
   Log::getInstance(stream, log_level);
 }
 
-inline void Log::debug(const std::string& msg) {
-  Log::getInstance().log(msg, LogLevel::Debug);
+template <typename... Args>
+inline void Log::debug(std::format_string<Args...> fmt, Args&&... args) {
+  Log::getInstance().log(LogLevel::Debug, fmt, std::forward<Args>(args)...);
 }
 
-inline void Log::info(const std::string& msg) {
-  Log::getInstance().log(msg, LogLevel::Info);
+template <typename... Args>
+inline void Log::info(std::format_string<Args...> fmt, Args&&... args) {
+  Log::getInstance().log(LogLevel::Info, fmt, std::forward<Args>(args)...);
 }
 
-inline void Log::warning(const std::string& msg) {
-  Log::getInstance().log(msg, LogLevel::Warning);
+template <typename... Args>
+inline void Log::warning(std::format_string<Args...> fmt, Args&&... args) {
+  Log::getInstance().log(LogLevel::Warning, fmt, std::forward<Args>(args)...);
 }
 
-inline void Log::error(const std::string& msg) {
-  Log::getInstance().log(msg, LogLevel::Error);
+template <typename... Args>
+inline void Log::error(std::format_string<Args...> fmt, Args&&... args) {
+  Log::getInstance().log(LogLevel::Error, fmt, std::forward<Args>(args)...);
 }
 
 }  // namespace amsim

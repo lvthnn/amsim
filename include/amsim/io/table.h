@@ -49,10 +49,10 @@ constexpr bool sameName() {
     return false;
 }
 
-template <FixedString ColName, typename T>
+template <FixedString ColumnName, typename ColumnType>
 struct Column {
-  static constexpr auto Name = ColName;
-  using Type = T;
+  static constexpr FixedString Name = ColumnName;
+  using Type = ColumnType;
 };
 
 template <FixedString Name, typename... Columns>
@@ -379,11 +379,10 @@ inline std::vector<std::string> TableXd<Columns...>::resolveBufNames(
   if (buf_names.has_value() &&
       static_cast<Eigen::Index>(buf_names.value().size()) != buf_.cols()) {
     Log::error(
-        std::format(
-            "TableXd::writeFile: {} names given for {} matrix columns — "
-            "falling back to numeric column headers",
-            buf_names.value().size(),
-            buf_.cols()));
+        "TableXd::writeFile: {} names given for {} matrix columns — "
+        "falling back to numeric column headers",
+        buf_names.value().size(),
+        buf_.cols());
     buf_names.reset();
   }
 

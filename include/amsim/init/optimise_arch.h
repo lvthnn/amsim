@@ -222,9 +222,8 @@ inline void OptimisePhenotypeArchitecture::operator()() {
 
   // consider adding some tol_inf argument, decided against it for now
   Log::debug(
-      std::format(
-          "OptimisePhenotypeArchitecture::operator(): finished with error {}",
-          errFrobenius()));
+      "OptimisePhenotypeArchitecture::operator(): finished with error {}",
+      errFrobenius());
 }
 
 }  // namespace amsim

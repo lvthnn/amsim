@@ -36,9 +36,10 @@ inline std::uint64_t shuffleSeed(std::uint64_t rng_seed, std::size_t rep_id) {
 }
 
 inline Params preprocessSimulation(const SimulationSpec& spec) {
-  Params params = build_params(spec);
-  OptimisePhenotypeArchitecture opt(params);
+  Log::info("Preprocessing simulation");
 
+  Params params = buildParams(spec);
+  OptimisePhenotypeArchitecture opt(params);
   opt();
 
   return params;
@@ -50,8 +51,7 @@ inline std::filesystem::path outputSetup(std::uint64_t seed) {
   std::filesystem::path tmp = std::filesystem::temp_directory_path() /
                               std::format("amsim_{}_{}", seed, ms);
   std::filesystem::create_directories(tmp);
-  Log::debug(
-      std::format("Created simulation workspace directory {}", tmp.string()));
+  Log::debug("Created simulation workspace directory {}", tmp.string());
   return tmp;
 }
 
@@ -74,6 +74,104 @@ inline void logSetup(const SimulationSpec& spec) {
   } else {
     Log::stream(std::cout, spec.log_level);
   }
+}
+
+inline std::string describeGenomeParam(
+    const std::variant<double, File<Eigen::MatrixXd>, Distribution>& v) {
+  if (std::holds_alternative<double>(v))
+    return std::format("constant({})", std::get<double>(v));
+  if (std::holds_alternative<Distribution>(v))
+    return std::format("distribution({})", std::get<Distribution>(v).name);
+  return std::format(
+      "file({})", std::get<File<Eigen::MatrixXd>>(v).path.string());
+}
+
+inline std::string describeMatrixParam(
+    const std::optional<std::variant<File<Eigen::MatrixXd>, Eigen::MatrixXd>>&
+        v) {
+  if (!v.has_value()) return "default";
+  if (std::holds_alternative<Eigen::MatrixXd>(v.value())) {
+    const auto& m = std::get<Eigen::MatrixXd>(v.value());
+    return std::format("inline matrix ({}x{})", m.rows(), m.cols());
+  }
+  return std::format(
+      "file({})", std::get<File<Eigen::MatrixXd>>(v.value()).path.string());
+}
+
+inline void logSimulationSpec(const SimulationSpec& spec) {
+  Log::debug("Starting simulation with config:");
+  Log::debug("  n_individuals={}", spec.n_individuals);
+  Log::debug("  n_generations={}", spec.n_generations);
+  Log::debug("  n_replicates={}", spec.n_replicates);
+  Log::debug("  n_threads={}", spec.n_threads);
+  Log::debug(
+      "  random_seed={}",
+      spec.random_seed.has_value() ? std::to_string(spec.random_seed.value())
+                                   : std::string("none (random)"));
+  Log::debug("  share_init_state={}", spec.share_init_state);
+  Log::debug(
+      "  pedigree_warmup={}, pedigree_max_depth={}",
+      spec.pedigree_warmup,
+      spec.pedigree_max_depth);
+  Log::debug("  output_dir={}", spec.output_dir.string());
+  Log::debug("  output_name={}", spec.output_name.value_or("(default)"));
+  Log::debug(
+      "  log_level={}, log_to_file={}",
+      logLevelToString(spec.log_level),
+      spec.log_to_file);
+
+  Log::debug("  genome.n_loci={}", spec.genome.n_loci);
+  Log::debug(
+      "  genome.locus_freq={}", describeGenomeParam(spec.genome.locus_freq));
+  Log::debug(
+      "  genome.locus_rec={}", describeGenomeParam(spec.genome.locus_rec));
+  Log::debug(
+      "  genome.locus_mut={}", describeGenomeParam(spec.genome.locus_mut));
+
+  Log::debug("  mating.type={}", spec.mating.type);
+  Log::debug("  mating.tolerance={}", spec.mating.tolerance);
+  Log::debug("  mating.max_iterations={}", spec.mating.max_iterations);
+  Log::debug(
+      "  mating.initial_temperature={}", spec.mating.initial_temperature);
+  Log::debug("  mating.temperature_decay={}", spec.mating.temperature_decay);
+  Log::debug("  mating.mate_cor={}", describeMatrixParam(spec.mating.mate_cor));
+
+  Log::debug(
+      "  genetic_component_cor={}",
+      describeMatrixParam(spec.genetic_component_cor));
+  Log::debug(
+      "  environmental_component_cor={}",
+      describeMatrixParam(spec.environmental_component_cor));
+
+  Log::debug("  phenotypes ({} total):", spec.phenotypes.size());
+  for (const auto& pheno : spec.phenotypes) {
+    Log::debug(
+        "    {}: n_causal_loci={}, var_genetic={}, var_environmental={}, "
+        "var_vertical={}",
+        pheno.name,
+        pheno.n_causal_loci,
+        pheno.var_genetic,
+        pheno.var_environmental,
+        pheno.var_vertical);
+  }
+
+  Log::debug("  population estimators ({} total):", spec.estimators.size());
+  for (const auto& est : spec.estimators) Log::debug("    {}", est.name);
+
+  Log::debug("  sample specs ({} total):", spec.sample_spec.size());
+  for (const auto& sample : spec.sample_spec) {
+    Log::debug(
+        "    {}: proband_type={}, n_probands={}, estimators=[{}]",
+        sample.name,
+        sample.proband_type,
+        sample.n_probands,
+        boost::algorithm::join(sample.estimators, ", "));
+  }
+
+  Log::debug(
+      "  sample estimator specs ({} total):", spec.sample_estimator_spec.size());
+  for (const auto& est : spec.sample_estimator_spec)
+    Log::debug("    {} (type={})", est.name, est.type);
 }
 
 inline std::filesystem::path replicateSetup(
@@ -115,9 +213,9 @@ inline void runReplicate(const Params& params) {
       params.global.pedigree_warmup ? params.global.pedigree_max_depth : 1;
 
   for (std::size_t it = 0; it < n_it; ++it) {
-    Log::info(std::format("Simulating panmictic generation {}", it + 1));
+    Log::info("Simulating panmictic generation {}", it + 1);
     score(state);
-    state.pheno().compute_stats();
+    state.pheno().computeStats();
     founder_mate(state);
     state.updatePedigree();
     state.transpose();
@@ -131,20 +229,19 @@ inline void runReplicate(const Params& params) {
   if (params.global.post_init_seed.has_value()) {
     rng::setSeed(params.global.post_init_seed.value());
     Log::debug(
-        std::format(
-            "Setting post init seed from shared state to {}",
-            params.global.post_init_seed.value()));
+        "Setting post init seed from shared state to {}",
+        params.global.post_init_seed.value());
   }
 
   // run the core simulation loop
   while (state.gen <= params.global.n_gens) {
-    Log::info("Simulating generation " + std::to_string(state.gen));
+    Log::info("Simulating generation {}", state.gen);
     state.geno().computeLocusFreqs();
     state.geno().computeLocusStats();
 
     // score phenotypes
     score(state);
-    state.pheno().compute_stats();
+    state.pheno().computeStats();
 
     // match mates
     mate(state);
@@ -173,6 +270,8 @@ inline void runSimulation(const SimulationSpec& spec) {
 
   // set up the log
   details::logSetup(spec);
+
+  details::logSimulationSpec(spec);
 
   // set up random seed
   std::uint64_t seed = rng::seedOrRandom(spec.random_seed);

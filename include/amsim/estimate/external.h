@@ -16,23 +16,26 @@
 #pragma once
 
 #include <amsim/core/utils.h>
-#include <amsim/estimate/process.h>
+#include <amsim/estimate/external_process.h>
 #include <amsim/estimate/sample.h>
 #include <amsim/io/parse.h>
 #include <amsim/sample/proband.h>
 
+#include <boost/process.hpp>
 #include <utility>
 
 namespace amsim {
 
+namespace bp = boost::process;
+
 template <Proband P>
-class ExternalEstimator : public SampleEstimatorStrategy<P> {
+class SampleEstimatorExternalStrategy : public SampleEstimatorStrategy<P> {
  public:
-  ExternalEstimator(
-      std::string_view sample_name,
+  SampleEstimatorExternalStrategy(
+      const std::string& sample_name,
       const std::filesystem::path& sample_dir,
-      std::string_view name,
-      std::string exec,
+      const std::string& name,
+      const std::string& cmd,
       std::vector<std::string> args,
       std::size_t n_rows,
       std::size_t n_cols = 1,
@@ -46,11 +49,10 @@ class ExternalEstimator : public SampleEstimatorStrategy<P> {
             std::move(col_labels.value_or(std::vector<std::string>{})),
             n_rows,
             n_cols),
-        cmd_(std::move(exec)),
+        cmd_(std::move(process::resolveExecutable(cmd))),
         args_(std::move(args)),
         bfile_(sample_dir / "data"),
         out_path_(sample_dir / std::format("results_{}", name)) {
-    process::checkProcessAvailable(cmd_);
     args_.push_back("--bfile");
     args_.push_back(bfile_.string());
     args_.push_back("--out");
@@ -65,7 +67,7 @@ class ExternalEstimator : public SampleEstimatorStrategy<P> {
       throw std::runtime_error(
           std::format(
               "{}: expected {}x{}, got {}x{}",
-              cmd_,
+              cmd_.string(),
               this->numRows(),
               this->numCols(),
               result.rows(),
@@ -74,22 +76,33 @@ class ExternalEstimator : public SampleEstimatorStrategy<P> {
   }
 
  private:
-  std::string cmd_;
+  bp::filesystem::path cmd_;
   std::vector<std::string> args_;
   std::filesystem::path bfile_;
   std::filesystem::path out_path_;
 
   void runCommand() {
     process::ProcessResult result = process::runProcess(cmd_, args_);
+
+    if (!result.output.empty()) {
+      if (result.output.back() == '\n') result.output.pop_back();
+      if (result.exit_code != 0)
+        Log::error("{}", result.output);
+      else
+        Log::info("{}", result.output);
+    }
+
     if (result.exit_code != 0)
       throw std::runtime_error(
           std::format(
-              "{} exited {}: {}", cmd_, result.exit_code, result.output));
+              "{} exited with code {}, check log for detailed output",
+              cmd_.string(),
+              result.exit_code));
   }
 };
 
 template <Proband P>
-inline SampleEstimator<P> SampleExternalEstimator(
+inline SampleEstimator<P> sampleExternal(
     std::string name,
     std::string cmd,
     std::vector<std::string> args,
@@ -109,7 +122,7 @@ inline SampleEstimator<P> SampleExternalEstimator(
                 const Params& /*params*/,
                 std::size_t /*n_probands*/,
                 const std::filesystem::path& sample_dir) {
-        return std::make_unique<ExternalEstimator<P>>(
+        return std::make_unique<SampleEstimatorExternalStrategy<P>>(
             sample_dir.filename().string(),
             sample_dir,
             name,
