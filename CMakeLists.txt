@@ -47,7 +47,7 @@ include(FetchContent)
 set(FETCHCONTENT_QUIET False)
 
 # Boost
-set(BOOST_INCLUDE_LIBRARIES algorithm math)
+set(BOOST_INCLUDE_LIBRARIES algorithm math process)
 set(BOOST_ENABLE_CMAKE ON)
 
 FetchContent_Declare(
@@ -60,7 +60,11 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(Boost)
 
-target_link_libraries(amsimcpp INTERFACE Boost::math Boost::algorithm)
+target_link_libraries(amsimcpp INTERFACE
+  Boost::math
+  Boost::algorithm
+  Boost::process
+)
 
 # Eigen
 FetchContent_Declare(
