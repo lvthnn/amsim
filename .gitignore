@@ -62,6 +62,3 @@ compile_commands.json
 
 # C extensions
 *.so
-
-# Ignore documentation
-docs/
