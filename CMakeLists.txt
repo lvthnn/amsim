@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(amsimcpp LANGUAGES CXX VERSION 0.1.0)
+project(amsimcpp LANGUAGES CXX VERSION 0.2.0)
 
 # C++ standard
 set(CMAKE_CXX_STANDARD 20)
