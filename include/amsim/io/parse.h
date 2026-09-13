@@ -25,6 +25,7 @@
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim.hpp>
 #include <filesystem>
 #include <fstream>
 #include <utility>
@@ -41,6 +42,32 @@ inline std::string parseExceptionStr(
       flag.has_value() ? "(passed to " + flag.value() + ")" : "");
 }
 
+// TODO: add templating to specify the arguments to be parsed from the function.
+// For example, when parsing case-control weight functions, we would like to be
+// able to declare three parameters: a threshold (double), a direction ('<'|'>'),
+// and a vector of weights (Eigen::VectorXd).
+//
+// So we could, for example, while processing the params (which is currently
+// done via utils::splitString), we could declare
+//
+//   std::vector<std::string> params = parseParams<
+//      Param<"threshold", double, 1>,
+//      Param<"direction", std::string, 1>,
+//      Param<"effects", Eigen::VectorXd, -1>>(param_str);
+//
+// Param could be defined as follows:
+//
+//   template <FixedString ParamName, typename ParamType, int ParamSize>
+//   struct Param {
+//     static constexpr auto Name = ParamName;
+//     using Type = ParamType;
+//     static constexpr Size = ParamSize;
+//   }
+//
+// The struct fields Type and Size refer to the type supplied to the parse
+// function parse<Type>, and Size refers to the number of elements that the
+// parameter should contain. For example, if Param::Type is a vector of integers
+// with Param::Size == 2, then we parse two integers into a std::vector<int>.
 inline std::pair<std::string, std::vector<std::string>> parseFunction(
     const std::string& s) {
   int paren_begin = s.find('(');
@@ -186,6 +213,31 @@ inline WeightFunction parse(const std::string& s) {
     return amsim::logistic(
         Eigen::Map<Eigen::VectorXd>(params.data(), params.size()));
   }
+  if (weight_name == "case-control") {
+    if (params_str.size() < 2)
+      throw std::runtime_error(
+          "case-control requires at least threshold and direction (< or >)");
+
+    double threshold = parse<double>(params_str[0]);
+
+    std::string dir_token = params_str[1];
+    boost::trim(dir_token);
+    bool above;
+    if (dir_token == ">")
+      above = true;
+    else if (dir_token == "<")
+      above = false;
+    else
+      throw std::runtime_error("case-control direction must be '<' or '>'");
+
+    std::vector<double> effects = parseEach<double>(
+        std::vector<std::string>(params_str.begin() + 2, params_str.end()));
+
+    return amsim::caseControl(
+        threshold,
+        above,
+        Eigen::Map<Eigen::VectorXd>(effects.data(), effects.size()));
+  }
 
   throw std::runtime_error("Unrecognised weight function " + s);
 }
@@ -217,6 +269,7 @@ struct File {
   T load() const { return parseFile<T>(path); }
 };
 
+// TODO: deprecate this in favour of TableXd imports
 inline Eigen::MatrixXd parsePhenoFile(const std::filesystem::path& path) {
   std::ifstream file(path);
   if (!file.is_open())

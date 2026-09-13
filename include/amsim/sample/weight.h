@@ -36,4 +36,17 @@ inline WeightFunction logistic(const Eigen::VectorXd& effects) {
   };
 }
 
+inline WeightFunction caseControl(
+    double threshold, bool above, const Eigen::VectorXd& effects) {
+  return [threshold, above, effects](
+             const Eigen::MatrixXd& agg, Eigen::VectorXd& res) {
+    Eigen::VectorXd score = agg * effects;
+    if (above) {
+      res = (score.array() > threshold).cast<double>().matrix();
+    } else {
+      res = (score.array() < threshold).cast<double>().matrix();
+    }
+  };
+}
+
 };  // namespace amsim
