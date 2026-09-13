@@ -75,7 +75,7 @@ class ScorePhenotypes {
 };
 
 inline void ScorePhenotypes::scoreGenetic(State& state) {
-  if (state.geno().view() != HaploView::LocusMajor)
+  if (state.geno().view() != BufferLayout::LocusMajor)
     throw std::runtime_error("phenotype scoring requires loc-major view");
 
   auto& geno_buf = state.geno();

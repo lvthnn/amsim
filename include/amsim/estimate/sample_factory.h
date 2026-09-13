@@ -28,7 +28,7 @@ template <Proband P>
 inline SampleEstimator<P> buildSampleEstimator(
     const SampleEstimatorSpec& spec) {
   if (spec.type == "external") {
-    return SampleExternalEstimator<P>(
+    return sampleExternal<P>(
         spec.name,
         spec.exec.value(),
         spec.exec_args,
@@ -37,25 +37,22 @@ inline SampleEstimator<P> buildSampleEstimator(
         spec.row_names,
         spec.col_names);
   }
-  if (spec.type == "sample-mean") return SampleMeanEstimator<P>();
-  if (spec.type == "sample-var") return SampleVarEstimator<P>();
-  if (spec.type == "sample-cov") return SampleCovEstimator<P>();
-  if (spec.type == "sample-mate-cor") return SampleMateCorEstimator<P>();
+  if (spec.type == "sample-mean") return sampleMean<P>();
+  if (spec.type == "sample-var") return sampleVar<P>();
+  if (spec.type == "sample-cov") return sampleCov<P>();
+  if (spec.type == "sample-mate-cor") return sampleMateCor<P>();
   if (spec.type == "haseman-elston")
-    return SampleHasemanElstonEstimator<P>(spec.name);
-  if (spec.type == "greml") return SampleGREMLEstimator<P>(spec.name);
+    return sampleHasemanElston<P>(spec.name);
+  if (spec.type == "greml") return sampleGREML<P>(spec.name);
   if (spec.type == "gwas") {
     std::size_t n_pcs = 0;
     double pval_threshold = 5e-8;
-
     if (spec.params.size() == 1) n_pcs = std::stoull(spec.params[0]);
-
     if (spec.params.size() == 2) {
       n_pcs = parse<std::size_t>(spec.params[0]);
       pval_threshold = parse<double>(spec.params[1]);
     }
-
-    return SampleGWASEstimator<P>(spec.name, n_pcs, pval_threshold);
+    return sampleGWAS<P>(spec.name, n_pcs, pval_threshold);
   }
   throw std::runtime_error("Unknown sample estimator type: " + spec.type);
 }

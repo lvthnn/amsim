@@ -28,9 +28,9 @@ namespace amsim {
 
 namespace details {
 
-class EstimatorHeritability : public PopulationEstimatorStrategy {
+class EstimatorHeritabilityStrategy : public PopulationEstimatorStrategy {
  public:
-  explicit EstimatorHeritability(const Params& params)
+  explicit EstimatorHeritabilityStrategy(const Params& params)
       : PopulationEstimatorStrategy(
             "pheno_h2", {}, params.pheno.names, params.pheno.n_pheno) {
     n_pheno_ = params.pheno.n_pheno;
@@ -38,17 +38,17 @@ class EstimatorHeritability : public PopulationEstimatorStrategy {
 
   void compute(const State& state) override {
     for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
-      data_(pheno) = state.pheno().comp_var(pheno, Component::Genetic) /
-                     state.pheno().comp_var(pheno, Component::Total);
+      data_(pheno) = state.pheno().componentVar(pheno, Component::Genetic) /
+                     state.pheno().componentVar(pheno, Component::Total);
   }
 
  private:
   std::size_t n_pheno_;
 };
 
-class EstimatorComponentMean : public PopulationEstimatorStrategy {
+class EstimatorComponentMeanStrategy : public PopulationEstimatorStrategy {
  public:
-  explicit EstimatorComponentMean(const Params& params, Component type)
+  explicit EstimatorComponentMeanStrategy(const Params& params, Component type)
       : PopulationEstimatorStrategy(
             "pheno_" + componentToString(type) + "_mean",
             {},
@@ -59,7 +59,7 @@ class EstimatorComponentMean : public PopulationEstimatorStrategy {
 
   void compute(const State& state) override {
     for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
-      data_(pheno) = state.pheno().comp_mean(pheno, type_);
+      data_(pheno) = state.pheno().componentMean(pheno, type_);
   }
 
  private:
@@ -67,9 +67,9 @@ class EstimatorComponentMean : public PopulationEstimatorStrategy {
   std::size_t n_pheno_;
 };
 
-class EstimatorComponentVar : public PopulationEstimatorStrategy {
+class EstimatorComponentVarStrategy : public PopulationEstimatorStrategy {
  public:
-  explicit EstimatorComponentVar(const Params& params, Component type)
+  explicit EstimatorComponentVarStrategy(const Params& params, Component type)
       : PopulationEstimatorStrategy(
             "pheno_" + componentToString(type) + "_var",
             {},
@@ -80,7 +80,7 @@ class EstimatorComponentVar : public PopulationEstimatorStrategy {
 
   void compute(const State& state) override {
     for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
-      data_(pheno) = state.pheno().comp_var(pheno, type_);
+      data_(pheno) = state.pheno().componentVar(pheno, type_);
   }
 
  private:
@@ -88,9 +88,9 @@ class EstimatorComponentVar : public PopulationEstimatorStrategy {
   std::size_t n_pheno_;
 };
 
-class EstimatorComponentCor : public PopulationEstimatorStrategy {
+class EstimatorComponentCorStrategy : public PopulationEstimatorStrategy {
  public:
-  explicit EstimatorComponentCor(
+  explicit EstimatorComponentCorStrategy(
       const Params& params, Component type_l, std::optional<Component> type_r)
       : PopulationEstimatorStrategy(
             "pheno_" + componentToString(type_l) + "_" +
@@ -122,9 +122,9 @@ class EstimatorComponentCor : public PopulationEstimatorStrategy {
   Eigen::MatrixXd std_r_;
 };
 
-class EstimatorComponentCov : public PopulationEstimatorStrategy {
+class EstimatorComponentCovStrategy : public PopulationEstimatorStrategy {
  public:
-  explicit EstimatorComponentCov(
+  explicit EstimatorComponentCovStrategy(
       const Params& params, Component type_l, std::optional<Component> type_r)
       : PopulationEstimatorStrategy(
             "pheno_" + componentToString(type_l) + "_" +
@@ -159,51 +159,51 @@ class EstimatorComponentCov : public PopulationEstimatorStrategy {
 
 }  // namespace details
 
-inline PopulationEstimator PopulationHeritability() {
+inline PopulationEstimator populationHeritability() {
   return PopulationEstimator{
       .name = "heritability", .fn = [](const Params& params) {
-        return std::make_unique<details::EstimatorHeritability>(params);
+        return std::make_unique<details::EstimatorHeritabilityStrategy>(params);
       }};
 }
 
-inline PopulationEstimator PopulationComponentMean(
+inline PopulationEstimator populationComponentMean(
     Component type = Component::Total) {
   return PopulationEstimator{
       .name = "pheno-mean-" + componentToString(type),
       .fn = [type](const Params& params) {
-        return std::make_unique<details::EstimatorComponentMean>(params, type);
+        return std::make_unique<details::EstimatorComponentMeanStrategy>(params, type);
       }};
 }
 
-inline PopulationEstimator PopulationComponentVar(
+inline PopulationEstimator populationComponentVar(
     Component type = Component::Total) {
   return PopulationEstimator{
       .name = "pheno-var-" + componentToString(type),
       .fn = [type](const Params& params) {
-        return std::make_unique<details::EstimatorComponentVar>(params, type);
+        return std::make_unique<details::EstimatorComponentVarStrategy>(params, type);
       }};
 }
 
-inline PopulationEstimator PopulationComponentCor(
+inline PopulationEstimator populationComponentCor(
     Component type_l = Component::Total,
     std::optional<Component> type_r = std::nullopt) {
   return PopulationEstimator{
       .name = "pheno-cor-" + componentToString(type_l) + "-" +
               componentToString(type_r.value_or(type_l)),
       .fn = [type_l, type_r](const Params& params) {
-        return std::make_unique<details::EstimatorComponentCor>(
+        return std::make_unique<details::EstimatorComponentCorStrategy>(
             params, type_l, type_r);
       }};
 }
 
-inline PopulationEstimator PopulationComponentCov(
+inline PopulationEstimator populationComponentCov(
     Component type_l = Component::Total,
     std::optional<Component> type_r = std::nullopt) {
   return PopulationEstimator{
       .name = "pheno-cov-" + componentToString(type_l) + "-" +
               componentToString(type_r.value_or(type_l)),
       .fn = [type_l, type_r](const Params& params) {
-        return std::make_unique<details::EstimatorComponentCov>(
+        return std::make_unique<details::EstimatorComponentCovStrategy>(
             params, type_l, type_r);
       }};
 }

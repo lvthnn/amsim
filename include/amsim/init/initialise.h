@@ -23,14 +23,14 @@ namespace amsim {
 class HaplotypeGenerator {
  public:
   virtual ~HaplotypeGenerator() = default;
-  virtual void generateHaplotypes(GenoBuf& buf) = 0;
+  virtual void generateHaplotypes(GenotypeBuffer& buf) = 0;
 };
 
 // Class to initialise founder population genotypes from unlinked loci
 class HaplotypeGeneratorIID : public HaplotypeGenerator {
  public:
   explicit HaplotypeGeneratorIID(const Params& params)
-      : v_maf_(params.geno.v_maf), bw_() {};
+      : v_maf_(params.geno.locus_freq), bw_() {};
 
   void operator()(State& state);
 
@@ -38,15 +38,15 @@ class HaplotypeGeneratorIID : public HaplotypeGenerator {
   const Eigen::VectorXd& v_maf_;
   rng::BernoulliWord<16> bw_;
 
-  void generateHaplotypes(GenoBuf& buf) override;
+  void generateHaplotypes(GenotypeBuffer& buf) override;
 };
 
-inline void HaplotypeGeneratorIID::generateHaplotypes(GenoBuf& buf) {
-  if (buf.view() != HaploView::LocusMajor)
+inline void HaplotypeGeneratorIID::generateHaplotypes(GenotypeBuffer& buf) {
+  if (buf.view() != BufferLayout::LocusMajor)
     throw std::runtime_error("generate haplotypes in loc-major view");
 
-  HaploBuf& h0 = buf.h0();
-  HaploBuf& h1 = buf.h1();
+  HaplotypeBuffer& h0 = buf.h0();
+  HaplotypeBuffer& h1 = buf.h1();
   std::size_t n_ind = h0.numIndividuals();
   std::size_t n_loc = buf.numLoci();
   std::size_t n_words = buf.numWords();

@@ -166,11 +166,11 @@ inline double memberPheno(
 }
 
 template <Proband P>
-constexpr std::string_view prefixOf(
+constexpr std::string prefixOf(
     typename ProbandData<P>::ProbandEnum member);
 
 template <>
-constexpr std::string_view prefixOf<Proband::Individual>(Individual member) {
+constexpr std::string prefixOf<Proband::Individual>(Individual member) {
   switch (member) {
     case Individual::Self:
       return "IND";
@@ -180,7 +180,7 @@ constexpr std::string_view prefixOf<Proband::Individual>(Individual member) {
 }
 
 template <>
-constexpr std::string_view prefixOf<Proband::Mate>(Mate member) {
+constexpr std::string prefixOf<Proband::Mate>(Mate member) {
   switch (member) {
     case Mate::Husband:
       return "HUS";
@@ -200,7 +200,7 @@ constexpr std::string_view prefixOf<Proband::Mate>(Mate member) {
 }
 
 template <>
-constexpr std::string_view prefixOf<Proband::Family>(Family member) {
+constexpr std::string prefixOf<Proband::Family>(Family member) {
   switch (member) {
     case Family::Father:
       return "FAT";

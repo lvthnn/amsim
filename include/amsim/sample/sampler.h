@@ -274,7 +274,7 @@ inline void Sampler::Model<P>::writeBIM() const {
 
 template <Proband P>
 inline void Sampler::Model<P>::writeBED(const State& state) const {
-  if (state.geno().view() != HaploView::LocusMajor)
+  if (state.geno().view() != BufferLayout::LocusMajor)
     throw std::runtime_error(
         "Sampler::Model<P>::writeBED: require locus-major layout");
 
@@ -351,9 +351,10 @@ inline void Sampler::Model<P>::writeFAM(const State& state) const {
 template <Proband P>
 inline void Sampler::Model<P>::writePHENO(
     const State& state, Component type) const {
-  auto path = (type == Component::Total)
-                  ? sample_dir / "data.pheno"
-                  : sample_dir / std::format("data.{}.pheno", componentToString(type));
+  auto path =
+      (type == Component::Total)
+          ? sample_dir / "data.pheno"
+          : sample_dir / std::format("data.{}.pheno", componentToString(type));
 
   std::fstream pheno_file(path, std::ios::out);
 

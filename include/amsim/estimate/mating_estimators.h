@@ -27,9 +27,9 @@ namespace amsim {
 
 namespace details {
 
-class EstimatorMateCor : public PopulationEstimatorStrategy {
+class EstimatorMateCorStrategy : public PopulationEstimatorStrategy {
  public:
-  explicit EstimatorMateCor(const Params& params, Component type)
+  explicit EstimatorMateCorStrategy(const Params& params, Component type)
       : PopulationEstimatorStrategy(
             "mate_" + componentToString(type) + "_cor",
             utils::vectorSuffix(params.pheno.names, "_male"),
@@ -63,12 +63,12 @@ class EstimatorMateCor : public PopulationEstimatorStrategy {
 
 }  // namespace details
 
-inline PopulationEstimator PopulationMateCor(
+inline PopulationEstimator populationMateCor(
     Component type = Component::Total) {
   return PopulationEstimator{
       .name = "mate-cor-" + componentToString(type),
       .fn = [type](const Params& params) {
-        return std::make_unique<details::EstimatorMateCor>(params, type);
+        return std::make_unique<details::EstimatorMateCorStrategy>(params, type);
       }};
 }
 

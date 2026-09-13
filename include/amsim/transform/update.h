@@ -28,8 +28,8 @@ class UpdateGenome {
       : n_loc_(params.geno.n_loc),
         n_ind_(params.global.n_ind),
         n_sex_(n_ind_ / 2),
-        v_rec_(params.geno.v_rec),
-        v_mut_(params.geno.v_mut),
+        v_rec_(params.geno.locus_rec),
+        v_mut_(params.geno.locus_mut),
         bw_() {};
   void operator()(State& state);
 
@@ -79,16 +79,16 @@ inline std::uint64_t UpdateGenome::gamWord(
 }
 
 inline void UpdateGenome::operator()(State& state) {
-  if (state.geno().view() != HaploView::IndividualMajor)
+  if (state.geno().view() != BufferLayout::IndividualMajor)
     throw std::runtime_error("update genome requires ind-major view");
 
   constexpr std::size_t IncWord = 64;
   const std::size_t n_words = state.geno().numWords();
 
-  HaploBuf& h0 = state.geno().h0();
-  HaploBuf& h1 = state.geno().h1();
-  HaploBuf& h0_off = state.geno(Generation::Parents).h0();
-  HaploBuf& h1_off = state.geno(Generation::Parents).h1();
+  HaplotypeBuffer& h0 = state.geno().h0();
+  HaplotypeBuffer& h1 = state.geno().h1();
+  HaplotypeBuffer& h0_off = state.geno(Generation::Parents).h0();
+  HaplotypeBuffer& h1_off = state.geno(Generation::Parents).h1();
   const Matching& matching = state.matching();
 
   for (std::size_t pair = 0; pair < n_sex_; ++pair) {

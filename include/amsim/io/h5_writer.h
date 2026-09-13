@@ -198,9 +198,9 @@ inline void H5Writer::writeParams(const Params& params) {
 
   file_.createGroup("params/genome");
   file_.createDataSet("params/genome/n_loc", params.geno.n_loc);
-  file_.createDataSet("params/genome/v_maf", params.geno.v_maf);
-  file_.createDataSet("params/genome/v_rec", params.geno.v_rec);
-  file_.createDataSet("params/genome/v_mut", params.geno.v_mut);
+  file_.createDataSet("params/genome/locus_freq", params.geno.locus_freq);
+  file_.createDataSet("params/genome/locus_rec", params.geno.locus_rec);
+  file_.createDataSet("params/genome/locus_mut", params.geno.locus_mut);
 
   file_.createGroup("params/phenome");
   file_.createDataSet("params/phenome/n_pheno", params.pheno.n_pheno);

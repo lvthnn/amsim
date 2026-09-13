@@ -31,9 +31,9 @@ namespace amsim {
 
 struct GenomeParams {
   std::size_t n_loc;
-  Eigen::VectorXd v_maf;
-  Eigen::VectorXd v_rec;
-  Eigen::VectorXd v_mut;
+  Eigen::VectorXd locus_freq;
+  Eigen::VectorXd locus_rec;
+  Eigen::VectorXd locus_mut;
 };
 
 struct PhenomeParams {

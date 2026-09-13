@@ -37,57 +37,57 @@ inline PopulationEstimator buildPopulationEstimator(
       Registry = {
           {"genotype-mean",
            [](const std::vector<std::string>& /*s*/) {
-             return PopulationGenotypeMean();
+             return populationGenotypeMean();
            }},
           {"genotype-var",
            [](const std::vector<std::string>& /*s*/) {
-             return PopulationGenotypeVar();
+             return populationGenotypeVar();
            }},
-          {"genotype-maf",
+          {"genotype-freq",
            [](const std::vector<std::string>& /*s*/) {
-             return PopulationGenotypeMAF();
+             return populationGenotypeFreq();
            }},
           {"genotype-cov",
            [](const std::vector<std::string>& /*s*/) {
-             return PopulationGenotypeCov();
+             return populationGenotypeCov();
            }},
           {"genotype-cor",
            [](const std::vector<std::string>& /*s*/) {
-             return PopulationGenotypeCor();
+             return populationGenotypeCor();
            }},
           {"heritability",
            [](const std::vector<std::string>& /*s*/) {
-             return PopulationHeritability();
+             return populationHeritability();
            }},
           {"pheno-mean",
            [](const std::vector<std::string>& s) {
              Component component = Component::Total;
              if (!s.empty()) component = componentFromString(s[0]);
-             return PopulationComponentMean(component);
+             return populationComponentMean(component);
            }},
           {"pheno-var",
            [](const std::vector<std::string>& s) {
              Component component = Component::Total;
              if (!s.empty()) component = componentFromString(s[0]);
-             return PopulationComponentVar(component);
+             return populationComponentVar(component);
            }},
           {"pheno-cor",
            [](const std::vector<std::string>& s) {
              Component component = Component::Total;
              if (!s.empty()) component = componentFromString(s[0]);
-             return PopulationComponentCor(component);
+             return populationComponentCor(component);
            }},
           {"pheno-cov",
            [](const std::vector<std::string>& s) {
              Component component = Component::Total;
              if (!s.empty()) component = componentFromString(s[0]);
-             return PopulationComponentCov(component);
+             return populationComponentCov(component);
            }},
           {"mate-cor",
            [](const std::vector<std::string>& s) {
              Component component = Component::Total;
              if (!s.empty()) component = componentFromString(s[0]);
-             return PopulationMateCor(component);
+             return populationMateCor(component);
            }},
           {"cousin-cov",
            [](const std::vector<std::string>& s) {
@@ -96,7 +96,7 @@ inline PopulationEstimator buildPopulationEstimator(
              if (!s.empty()) component = componentFromString(s[0]);
              if (s.size() > 1) degree = parse<std::size_t>(s[1]);
 
-             return PopulationCousinCov(degree, component);
+             return populationCousinCov(degree, component);
            }},
           {"ancestor-cov", [](const std::vector<std::string>& s) {
              std::size_t degree = 1;
@@ -104,7 +104,7 @@ inline PopulationEstimator buildPopulationEstimator(
              if (!s.empty()) component = componentFromString(s[0]);
              if (s.size() > 1) degree = parse<std::size_t>(s[1]);
 
-             return PopulationAncestorCov(degree, component);
+             return populationAncestorCov(degree, component);
            }}};
 
   auto it = Registry.find(name);

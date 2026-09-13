@@ -18,23 +18,26 @@
 #include <amsim/core/log.h>
 #include <amsim/core/params.h>
 #include <amsim/core/utils.h>
-#include <amsim/estimate/process.h>
+#include <amsim/estimate/external_process.h>
 #include <amsim/estimate/sample.h>
 #include <amsim/io/h5_writer.h>
 #include <amsim/io/table.h>
 #include <amsim/sample/proband.h>
 
 #include <Eigen/Dense>
+#include <boost/process.hpp>
 #include <filesystem>
 #include <limits>
 #include <utility>
 
 namespace amsim {
 
+namespace bp = boost::process;
+
 template <Proband P>
-class GWASEstimator : public SampleEstimatorStrategy<P> {
+class SampleEstimatorGWASStrategy : public SampleEstimatorStrategy<P> {
  public:
-  GWASEstimator(
+  SampleEstimatorGWASStrategy(
       const Params& params,
       std::string sample_name,
       std::filesystem::path sample_dir,
@@ -49,6 +52,7 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
             {"l2_effect", "fpr", "tpr", "pgs_r2", "pgs_rmse"},
             params.pheno.n_pheno,
             5),
+        plink2_(std::move(process::resolveExecutable("plink2"))),
         n_pheno_(params.pheno.n_pheno),
         n_loc_(params.geno.n_loc),
         pval_threshold_(pval_threshold),
@@ -57,7 +61,6 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
         random_seed_(params.global.rng_seed),
         beta_true_(n_pheno_, Eigen::VectorXd::Zero(n_loc_)),
         causal_mask_(n_pheno_, Eigen::VectorXd::Zero(n_loc_)) {
-    process::checkProcessAvailable("plink2");
     for (std::size_t p = 0; p < n_pheno_; ++p)
       for (std::size_t i = 0; i < params.pheno.pheno_loc[p].size(); ++i) {
         std::size_t loc = params.pheno.pheno_loc[p][i];
@@ -88,6 +91,7 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
   }
 
  private:
+  bp::filesystem::path plink2_;
   std::size_t n_pheno_;
   std::size_t n_loc_;
   double pval_threshold_;
@@ -109,7 +113,7 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
   void runGWAS() {
     if (n_pcs_ > 0) {
       process::runProcess(
-          "plink2",
+          plink2_,
           {"--bfile",
            (this->sample_dir_ / "data").string(),
            "--pca",
@@ -123,7 +127,7 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
            (this->sample_dir_ / (this->name_ + "_pca")).string()});
 
       process::runProcess(
-          "plink2",
+          plink2_,
           {"--bfile",
            (this->sample_dir_ / "data").string(),
            "--pheno",
@@ -140,7 +144,7 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
 
     } else {
       process::runProcess(
-          "plink2",
+          plink2_,
           {"--bfile",
            (this->sample_dir_ / "data").string(),
            "--pheno",
@@ -193,12 +197,11 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
 
     if (hits.empty()) {
       Log::warning(
-          std::format(
-              "{}: no genome-wide-significant hits for phenotype '{}' "
-              "(pval < {}) — pgs_r2/pgs_rmse will be 0.0/NaN",
-              this->name_,
-              pheno_names_[p],
-              pval_threshold_));
+          "{}: no genome-wide-significant hits for phenotype '{}' "
+          "(pval < {}) — pgs_r2/pgs_rmse will be 0.0/NaN",
+          this->name_,
+          pheno_names_[p],
+          pval_threshold_);
       return {0.0, NaN};
     }
 
@@ -206,7 +209,7 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
 
     // based on GWAS hits, construct a polygenic score
     process::runProcess(
-        "plink2",
+        plink2_,
         {"--bfile",
          (this->sample_dir_ / "data").string(),
          "--score",
@@ -225,19 +228,17 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
 
     if (!std::filesystem::exists(sscore_path)) {
       Log::error(
-          std::format(
-              "{}: expected plink2 --score output not found: {}",
-              this->name_,
-              sscore_path));
+          "{}: expected plink2 --score output not found: {}",
+          this->name_,
+          sscore_path);
       return {NaN, NaN};
     }
 
     if (!std::filesystem::exists(gen_path)) {
       Log::error(
-          std::format(
-              "{}: expected genetic-value file not found: {}",
-              this->name_,
-              gen_path.string()));
+          "{}: expected genetic-value file not found: {}",
+          this->name_,
+          gen_path.string());
       return {NaN, NaN};
     }
 
@@ -246,12 +247,11 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
     pgs_table.readFile(sscore_path, '\t');
     if (pgs_table.empty()) {
       Log::error(
-          std::format(
-              "{}: {} exists but contains no scored individuals for "
-              "phenotype '{}'",
-              this->name_,
-              sscore_path,
-              pheno_names_[p]));
+          "{}: {} exists but contains no scored individuals for "
+          "phenotype '{}'",
+          this->name_,
+          sscore_path,
+          pheno_names_[p]);
       return {0.0, NaN};
     }
 
@@ -261,12 +261,11 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
     if (gen_table.known().empty() ||
         gen_table.matrix().cols() <= static_cast<Eigen::Index>(p)) {
       Log::error(
-          std::format(
-              "{}: {} has no data for phenotype '{}' (index {})",
-              this->name_,
-              gen_path.string(),
-              pheno_names_[p],
-              p));
+          "{}: {} has no data for phenotype '{}' (index {})",
+          this->name_,
+          gen_path.string(),
+          pheno_names_[p],
+          p);
       return {NaN, NaN};
     }
 
@@ -275,15 +274,14 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
     if (pgs_vals.empty() ||
         pgs_vals.size() != static_cast<std::size_t>(gen.size())) {
       Log::error(
-          std::format(
-              "{}: individual count mismatch between {} ({} rows) and {} "
-              "({} rows) for phenotype '{}'",
-              this->name_,
-              sscore_path,
-              pgs_vals.size(),
-              gen_path.string(),
-              gen.size(),
-              pheno_names_[p]));
+          "{}: individual count mismatch between {} ({} rows) and {} "
+          "({} rows) for phenotype '{}'",
+          this->name_,
+          sscore_path,
+          pgs_vals.size(),
+          gen_path.string(),
+          gen.size(),
+          pheno_names_[p]);
       return {NaN, NaN};
     }
 
@@ -300,7 +298,7 @@ class GWASEstimator : public SampleEstimatorStrategy<P> {
 };
 
 template <Proband P>
-inline SampleEstimator<P> SampleGWASEstimator(
+inline SampleEstimator<P> sampleGWAS(
     std::string name = "gwas",
     std::size_t n_pcs = 0,
     double pval_threshold = 5e-8) {
@@ -310,7 +308,7 @@ inline SampleEstimator<P> SampleGWASEstimator(
                 const Params& params,
                 std::size_t /*n_probands*/,
                 const std::filesystem::path& sample_dir) {
-        return std::make_unique<GWASEstimator<P>>(
+        return std::make_unique<SampleEstimatorGWASStrategy<P>>(
             params,
             sample_dir.filename().string(),
             sample_dir,

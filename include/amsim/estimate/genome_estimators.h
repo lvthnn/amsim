@@ -26,40 +26,40 @@ namespace amsim {
 
 namespace details {
 
-class EstimatorGenotypeMean : public PopulationEstimatorStrategy {
+class EstimatorGenotypeMeanStrategy : public PopulationEstimatorStrategy {
  public:
-  explicit EstimatorGenotypeMean(const Params& params)
+  explicit EstimatorGenotypeMeanStrategy(const Params& params)
       : PopulationEstimatorStrategy("geno_mean", {}, {}, params.geno.n_loc) {};
 
   void compute(const State& state) override { data_ = state.geno().locusMean(); }
 };
 
-class EstimatorGenotypeVar : public PopulationEstimatorStrategy {
+class EstimatorGenotypeVarStrategy : public PopulationEstimatorStrategy {
  public:
-  explicit EstimatorGenotypeVar(const Params& params)
+  explicit EstimatorGenotypeVarStrategy(const Params& params)
       : PopulationEstimatorStrategy("geno_var", {}, {}, params.geno.n_loc) {}
 
   void compute(const State& state) override { data_ = state.geno().locusVar(); }
 };
 
-class EstimatorGenotypeMAF : public PopulationEstimatorStrategy {
+class EstimatorGenotypeFreqStrategy : public PopulationEstimatorStrategy {
  public:
-  explicit EstimatorGenotypeMAF(const Params& params)
-      : PopulationEstimatorStrategy("geno_maf", {}, {}, params.geno.n_loc) {}
+  explicit EstimatorGenotypeFreqStrategy(const Params& params)
+      : PopulationEstimatorStrategy("geno_freq", {}, {}, params.geno.n_loc) {}
 
   void compute(const State& state) override { data_ = state.geno().locusFreq(); }
 };
 
-class EstimatorGenotypeCov : public PopulationEstimatorStrategy {
+class EstimatorGenotypeCovStrategy : public PopulationEstimatorStrategy {
  public:
-  explicit EstimatorGenotypeCov(const Params& params)
+  explicit EstimatorGenotypeCovStrategy(const Params& params)
       : PopulationEstimatorStrategy(
             "geno_cov", {}, {}, params.geno.n_loc, params.geno.n_loc) {
     n_loc_ = params.geno.n_loc;
   }
 
   void compute(const State& state) override {
-    const GenoBuf& geno = state.geno();
+    const GenotypeBuffer& geno = state.geno();
     std::size_t n_words = geno.numWords();
     std::size_t n_ind = geno.numIndividuals();
 
@@ -100,16 +100,16 @@ class EstimatorGenotypeCov : public PopulationEstimatorStrategy {
   std::size_t n_loc_;
 };
 
-class EstimatorGenotypeCor : public PopulationEstimatorStrategy {
+class EstimatorGenotypeCorStrategy : public PopulationEstimatorStrategy {
  public:
-  explicit EstimatorGenotypeCor(const Params& params)
+  explicit EstimatorGenotypeCorStrategy(const Params& params)
       : PopulationEstimatorStrategy(
             "geno_cor", {}, {}, params.geno.n_loc, params.geno.n_loc) {
     n_loc_ = params.geno.n_loc;
   }
 
   void compute(const State& state) override {
-    const GenoBuf& geno = state.geno();
+    const GenotypeBuffer& geno = state.geno();
     std::size_t n_words = geno.numWords();
     std::size_t n_ind = geno.numIndividuals();
 
@@ -153,38 +153,38 @@ class EstimatorGenotypeCor : public PopulationEstimatorStrategy {
 
 }  // namespace details
 
-inline PopulationEstimator PopulationGenotypeCov() {
+inline PopulationEstimator populationGenotypeCov() {
   return PopulationEstimator{
       .name = "genotype-cov", .fn = [](const Params& params) {
-        return std::make_unique<details::EstimatorGenotypeCov>(params);
+        return std::make_unique<details::EstimatorGenotypeCovStrategy>(params);
       }};
 }
 
-inline PopulationEstimator PopulationGenotypeMean() {
+inline PopulationEstimator populationGenotypeMean() {
   return PopulationEstimator{
       .name = "genotype-mean", .fn = [](const Params& params) {
-        return std::make_unique<details::EstimatorGenotypeMean>(params);
+        return std::make_unique<details::EstimatorGenotypeMeanStrategy>(params);
       }};
 }
 
-inline PopulationEstimator PopulationGenotypeVar() {
+inline PopulationEstimator populationGenotypeVar() {
   return PopulationEstimator{
       .name = "genotype-var", .fn = [](const Params& params) {
-        return std::make_unique<details::EstimatorGenotypeVar>(params);
+        return std::make_unique<details::EstimatorGenotypeVarStrategy>(params);
       }};
 }
 
-inline PopulationEstimator PopulationGenotypeMAF() {
+inline PopulationEstimator populationGenotypeFreq() {
   return PopulationEstimator{
-      .name = "genotype-maf", .fn = [](const Params& params) {
-        return std::make_unique<details::EstimatorGenotypeMAF>(params);
+      .name = "genotype-freq", .fn = [](const Params& params) {
+        return std::make_unique<details::EstimatorGenotypeFreqStrategy>(params);
       }};
 }
 
-inline PopulationEstimator PopulationGenotypeCor() {
+inline PopulationEstimator populationGenotypeCor() {
   return PopulationEstimator{
       .name = "genotype-cor", .fn = [](const Params& params) {
-        return std::make_unique<details::EstimatorGenotypeCor>(params);
+        return std::make_unique<details::EstimatorGenotypeCorStrategy>(params);
       }};
 }
 

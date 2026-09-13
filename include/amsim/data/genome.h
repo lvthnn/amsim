@@ -52,11 +52,11 @@ inline void bitmatrixTranspose(std::uint64_t* matrix) {
   }
 }
 
-enum class HaploView : bool { LocusMajor, IndividualMajor };
+enum class BufferLayout : bool { LocusMajor, IndividualMajor };
 
-class HaploBuf {
+class HaplotypeBuffer {
  public:
-  HaploBuf(std::size_t n_individuals, std::size_t n_loc)
+  HaplotypeBuffer(std::size_t n_individuals, std::size_t n_loc)
       : n_ind_(n_individuals),
         n_loc_(n_loc),
         n_rows_((n_loc_ + 63) & ~static_cast<std::size_t>(63)),
@@ -68,7 +68,7 @@ class HaploBuf {
   std::size_t numRows() const noexcept { return n_rows_; }
   std::size_t numWords() const noexcept { return n_words_; }
 
-  HaploView view() const noexcept { return view_; }
+  BufferLayout layout() const noexcept { return layout_; }
 
   std::uint64_t& operator()(std::size_t i, std::size_t j) noexcept {
     return buf_[(i * n_words_) + j];
@@ -90,23 +90,23 @@ class HaploBuf {
   const std::size_t n_ind_;
   const std::size_t n_loc_;
   std::size_t n_rows_;
-  std::size_t n_words_;
+  std::size_t n_words_{};
   std::vector<std::uint64_t> buf_;
-  HaploView view_{};
+  BufferLayout layout_{};
 };
 
-inline void HaploBuf::transpose() noexcept {
+inline void HaplotypeBuffer::transpose() noexcept {
   // pre-transpose
   const std::size_t src_rows = n_rows_;
   const std::size_t src_words = n_words_;
 
   // post-transpose
   const std::size_t dst_rows =
-      (view_ == HaploView::LocusMajor)
+      (layout_ == BufferLayout::LocusMajor)
           ? ((n_ind_ + 63) & ~static_cast<std::size_t>(63))
           : ((n_loc_ + 63) & ~static_cast<std::size_t>(63));
 
-  const std::size_t dst_cols_w = (view_ == HaploView::LocusMajor)
+  const std::size_t dst_cols_w = (layout_ == BufferLayout::LocusMajor)
                                      ? ((n_loc_ + 63) / 64)
                                      : ((n_ind_ + 63) / 64);
 
@@ -136,45 +136,46 @@ inline void HaploBuf::transpose() noexcept {
   buf_.swap(out);
   n_rows_ = dst_rows;
   n_words_ = dst_cols_w;
-  view_ = (view_ == HaploView::LocusMajor) ? HaploView::IndividualMajor
-                                           : HaploView::LocusMajor;
+  layout_ = (layout_ == BufferLayout::LocusMajor)
+                ? BufferLayout::IndividualMajor
+                : BufferLayout::LocusMajor;
 }
 
-class GenoBuf {
+class GenotypeBuffer {
  public:
-  explicit GenoBuf(const Params& params)
-      : v_mut_(std::move(params.geno.v_mut)),
-        v_rec_(std::move(params.geno.v_rec)),
-        v_maf_(std::move(params.geno.v_maf)),
-        v_lmean_(params.geno.n_loc),
-        v_lvar_(params.geno.n_loc),
-        v_lmaf_(params.geno.n_loc),
+  explicit GenotypeBuffer(const Params& params)
+      : loc_mut_(std::move(params.geno.locus_mut)),
+        loc_rec_(std::move(params.geno.locus_rec)),
+        loc_freq_(std::move(params.geno.locus_freq)),
+        loc_lmean_(params.geno.n_loc),
+        loc_lvar_(params.geno.n_loc),
+        loc_lfreq_(params.geno.n_loc),
         bw_(),
         h0_(params.global.n_ind, params.geno.n_loc),
         h1_(params.global.n_ind, params.geno.n_loc) {};
 
-  Eigen::VectorXd& locusMean() noexcept { return v_lmean_; }
-  Eigen::VectorXd& locusVar() noexcept { return v_lvar_; }
-  Eigen::VectorXd& locusFreq() noexcept { return v_lmaf_; }
+  Eigen::VectorXd& locusMean() noexcept { return loc_lmean_; }
+  Eigen::VectorXd& locusVar() noexcept { return loc_lvar_; }
+  Eigen::VectorXd& locusFreq() noexcept { return loc_lfreq_; }
 
-  const Eigen::VectorXd& locusMean() const noexcept { return v_lmean_; }
-  const Eigen::VectorXd& locusVar() const noexcept { return v_lvar_; }
-  const Eigen::VectorXd& locusFreq() const noexcept { return v_lmaf_; }
+  const Eigen::VectorXd& locusMean() const noexcept { return loc_lmean_; }
+  const Eigen::VectorXd& locusVar() const noexcept { return loc_lvar_; }
+  const Eigen::VectorXd& locusFreq() const noexcept { return loc_lfreq_; }
 
-  double locusMean(std::size_t loc) const noexcept { return v_lmean_(loc); }
-  double locusVar(std::size_t loc) const noexcept { return v_lvar_(loc); }
-  double locusFreq(std::size_t loc) const noexcept { return v_lmaf_(loc); }
+  double locusMean(std::size_t loc) const noexcept { return loc_lmean_(loc); }
+  double locusVar(std::size_t loc) const noexcept { return loc_lvar_(loc); }
+  double locusFreq(std::size_t loc) const noexcept { return loc_lfreq_(loc); }
 
   std::size_t numIndividuals() const noexcept { return h0_.numIndividuals(); }
   std::size_t numLoci() const noexcept { return h0_.numLoci(); }
   std::size_t numRows() const noexcept { return h0_.numRows(); }
   std::size_t numWords() const noexcept { return h0_.numWords(); }
 
-  HaploBuf& h0() noexcept { return h0_; }
-  HaploBuf& h1() noexcept { return h1_; }
-  const HaploBuf& h0() const noexcept { return h0_; }
-  const HaploBuf& h1() const noexcept { return h1_; }
-  HaploView view() const noexcept { return h0_.view(); }
+  HaplotypeBuffer& h0() noexcept { return h0_; }
+  HaplotypeBuffer& h1() noexcept { return h1_; }
+  const HaplotypeBuffer& h0() const noexcept { return h0_; }
+  const HaplotypeBuffer& h1() const noexcept { return h1_; }
+  BufferLayout view() const noexcept { return h0_.layout(); }
 
   void transpose() noexcept;
   void computeLocusFreqs();
@@ -189,24 +190,24 @@ class GenoBuf {
       bool scale = false);
 
  private:
-  const Eigen::VectorXd v_mut_;
-  const Eigen::VectorXd v_rec_;
-  const Eigen::VectorXd v_maf_;
-  Eigen::VectorXd v_lmean_;
-  Eigen::VectorXd v_lvar_;
-  Eigen::VectorXd v_lmaf_;
+  const Eigen::VectorXd loc_mut_;
+  const Eigen::VectorXd loc_rec_;
+  const Eigen::VectorXd loc_freq_;
+  Eigen::VectorXd loc_lmean_;
+  Eigen::VectorXd loc_lvar_;
+  Eigen::VectorXd loc_lfreq_;
   rng::BernoulliWord<16> bw_;
-  HaploBuf h0_;
-  HaploBuf h1_;
+  HaplotypeBuffer h0_;
+  HaplotypeBuffer h1_;
 };
 
-inline void GenoBuf::transpose() noexcept {
+inline void GenotypeBuffer::transpose() noexcept {
   h0_.transpose();
   h1_.transpose();
 }
 
-inline void GenoBuf::computeLocusFreqs() {
-  if (h0_.view() != HaploView::LocusMajor)
+inline void GenotypeBuffer::computeLocusFreqs() {
+  if (h0_.layout() != BufferLayout::LocusMajor)
     throw std::runtime_error(
         "GenoBuf::compute_mafs: compute MAFs in locus-major view.");
 
@@ -233,13 +234,13 @@ inline void GenoBuf::computeLocusFreqs() {
     }
 
     // Compute the MAF
-    v_lmaf_(loc) =
+    loc_lfreq_(loc) =
         static_cast<double>(ct_loc) / (2.0 * static_cast<double>(n_ind));
   }
 }
 
-inline void GenoBuf::computeLocusStats() {
-  if (h0_.view() != HaploView::LocusMajor)
+inline void GenotypeBuffer::computeLocusStats() {
+  if (h0_.layout() != BufferLayout::LocusMajor)
     throw std::runtime_error(
         "GenoBuf::compute_stats: compute stats in loc-major view.");
 
@@ -265,19 +266,19 @@ inline void GenoBuf::computeLocusStats() {
     double mean_sqloc = static_cast<double>((4.0 * hom) + het) / n_ind;
     double var_loc = mean_sqloc - (mean_loc * mean_loc);
 
-    v_lmean_(loc) = mean_loc;
-    v_lvar_(loc) = var_loc;
+    loc_lmean_(loc) = mean_loc;
+    loc_lvar_(loc) = var_loc;
   }
 }
 
-inline void GenoBuf::decompress(
+inline void GenotypeBuffer::decompress(
     std::size_t ind_start,
     std::size_t ind_end,
     const std::vector<std::size_t>& loc,
     Eigen::MatrixXd& out,
     bool centre,
     bool scale) {
-  if (view() != HaploView::LocusMajor)
+  if (view() != BufferLayout::LocusMajor)
     throw std::runtime_error("GenoBuf::decompress: require loc-major view");
   if (ind_end > numIndividuals())
     throw std::runtime_error(
@@ -288,8 +289,8 @@ inline void GenoBuf::decompress(
   std::size_t end = (ind_end + 63) / 64;
 
   for (std::size_t el = 0; el < n_loc; ++el) {
-    double scl = (scale) ? 1.0 / std::sqrt(v_lvar_[loc[el]]) : 1.0;
-    double cen = (centre) ? -v_lmean_[loc[el]] * scl : 0;
+    double scl = (scale) ? 1.0 / std::sqrt(loc_lvar_[loc[el]]) : 1.0;
+    double cen = (centre) ? -loc_lmean_[loc[el]] * scl : 0;
 
     for (std::size_t word = start; word < end; ++word) {
       std::size_t bit_lo = (word == start) ? (ind_start % 64) : 0;

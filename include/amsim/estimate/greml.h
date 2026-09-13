@@ -18,23 +18,26 @@
 #include <amsim/core/log.h>
 #include <amsim/core/params.h>
 #include <amsim/core/utils.h>
-#include <amsim/estimate/process.h>
+#include <amsim/estimate/external_process.h>
 #include <amsim/estimate/sample.h>
 #include <amsim/io/h5_writer.h>
 #include <amsim/io/table.h>
 #include <amsim/sample/proband.h>
 
 #include <Eigen/Dense>
+#include <boost/process.hpp>
 #include <filesystem>
 #include <limits>
 #include <utility>
 
 namespace amsim {
 
+namespace bp = boost::process;
+
 template <Proband P>
-class GREMLEstimator : public SampleEstimatorStrategy<P> {
+class SampleEstimatorGREMLStrategy : public SampleEstimatorStrategy<P> {
  public:
-  GREMLEstimator(
+  SampleEstimatorGREMLStrategy(
       const Params& params,
       std::string sample_name,
       std::filesystem::path sample_dir,
@@ -47,15 +50,14 @@ class GREMLEstimator : public SampleEstimatorStrategy<P> {
             {"V(G)", "V(E)", "V(G)/[V(G) + V(E)]"},
             params.pheno.n_pheno,
             3),
+        gcta64_(std::move(process::resolveExecutable("gcta64"))),
         n_pheno_(params.pheno.n_pheno),
-        pheno_names_(params.pheno.names) {
-    process::checkProcessAvailable("gcta64");
-  }
+        pheno_names_(params.pheno.names) {}
 
   void compute() override {
     if (!std::filesystem::exists(this->sample_dir_ / "grm.grm.bin")) {
       process::runProcess(
-          "gcta64",
+          gcta64_,
           {"--bfile",
            (this->sample_dir_ / "data").string(),
            "--make-grm",
@@ -69,7 +71,7 @@ class GREMLEstimator : public SampleEstimatorStrategy<P> {
       auto pfix = this->sample_dir_ / std::format("greml_{}", p);
 
       process::runProcess(
-          "gcta64",
+          gcta64_,
           {"--grm",
            (this->sample_dir_ / "grm").string(),
            "--pheno",
@@ -87,6 +89,7 @@ class GREMLEstimator : public SampleEstimatorStrategy<P> {
   }
 
  private:
+  bp::filesystem::path gcta64_;
   std::size_t n_pheno_;
   std::vector<std::string> pheno_names_;
 
@@ -96,12 +99,11 @@ class GREMLEstimator : public SampleEstimatorStrategy<P> {
 
     if (!std::filesystem::exists(path)) {
       Log::error(
-          std::format(
-              "{}: gcta64 --reml exited successfully but {} was never "
-              "written, for phenotype '{}'",
-              this->name_,
-              path,
-              pheno_names_[p]));
+          "{}: gcta64 --reml exited successfully but {} was never "
+          "written, for phenotype '{}'",
+          this->name_,
+          path,
+          pheno_names_[p]);
       return result;
     }
 
@@ -124,25 +126,24 @@ class GREMLEstimator : public SampleEstimatorStrategy<P> {
     }
     if (!any_matched)
       Log::error(
-          std::format(
-              "{}: {} parsed but none of V(G)/V(e)/V(G)/Vp were found for "
-              "phenotype '{}' — check gcta64's .hsq format hasn't changed",
-              this->name_,
-              path,
-              pheno_names_[p]));
+          "{}: {} parsed but none of V(G)/V(e)/V(G)/Vp were found for "
+          "phenotype '{}' — check gcta64's .hsq format hasn't changed",
+          this->name_,
+          path,
+          pheno_names_[p]);
     return result;
   }
 };
 
 template <Proband P>
-inline SampleEstimator<P> SampleGREMLEstimator(std::string name = "greml") {
+inline SampleEstimator<P> sampleGREML(std::string name = "greml") {
   return SampleEstimator<P>{
       .name = name,
       .fn = [name = std::move(name)](
                 const Params& params,
                 std::size_t /*n_probands*/,
                 const std::filesystem::path& sample_dir) {
-        return std::make_unique<GREMLEstimator<P>>(
+        return std::make_unique<SampleEstimatorGREMLStrategy<P>>(
             params, sample_dir.filename().string(), sample_dir, name);
       }};
 }

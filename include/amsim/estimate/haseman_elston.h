@@ -18,12 +18,13 @@
 #include <amsim/core/log.h>
 #include <amsim/core/params.h>
 #include <amsim/core/utils.h>
-#include <amsim/estimate/process.h>
+#include <amsim/estimate/external_process.h>
 #include <amsim/estimate/sample.h>
 #include <amsim/io/table.h>
 #include <amsim/sample/proband.h>
 
 #include <Eigen/Dense>
+#include <boost/process.hpp>
 #include <filesystem>
 #include <fstream>
 #include <limits>
@@ -31,10 +32,12 @@
 
 namespace amsim {
 
+namespace bp = boost::process;
+
 template <Proband P>
-class HasemanElstonEstimator : public SampleEstimatorStrategy<P> {
+class SampleEstimatorHasemanElstonStrategy : public SampleEstimatorStrategy<P> {
  public:
-  HasemanElstonEstimator(
+  SampleEstimatorHasemanElstonStrategy(
       const Params& params,
       std::string sample_name,
       std::filesystem::path sample_dir,
@@ -47,14 +50,13 @@ class HasemanElstonEstimator : public SampleEstimatorStrategy<P> {
             std::vector<std::string>{"V(G)/Vp"},
             params.pheno.n_pheno,
             1),
-        n_pheno_(params.pheno.n_pheno) {
-    process::checkProcessAvailable("gcta64");
-  }
+        gcta64_(std::move(process::resolveExecutable("gcta64"))),
+        n_pheno_(params.pheno.n_pheno) {}
 
   void compute() override {
     if (!std::filesystem::exists(this->sample_dir_ / "grm.grm.bin")) {
       process::runProcess(
-          "gcta64",
+          gcta64_,
           {"--bfile",
            (this->sample_dir_ / "data").string(),
            "--make-grm",
@@ -67,7 +69,7 @@ class HasemanElstonEstimator : public SampleEstimatorStrategy<P> {
     for (std::size_t p = 0; p < n_pheno_; ++p) {
       auto pfix = this->sample_dir_ / std::format("he_{}", p);
       process::runProcess(
-          "gcta64",
+          gcta64_,
           {"--grm",
            (this->sample_dir_ / "grm"),
            "--pheno",
@@ -85,18 +87,18 @@ class HasemanElstonEstimator : public SampleEstimatorStrategy<P> {
   }
 
  private:
+  bp::filesystem::path gcta64_;
   std::size_t n_pheno_;
 
   double parseHEreg(const std::string& path, std::size_t p) {
     constexpr double NaN = std::numeric_limits<double>::quiet_NaN();
     if (!std::filesystem::exists(path)) {
       Log::error(
-          std::format(
-              "{}: gcta64 --HEreg exited successfully but {} was never "
-              "written, for phenotype index {}",
-              this->name_,
-              path,
-              p));
+          "{}: gcta64 --HEreg exited successfully but {} was never "
+          "written, for phenotype index {}",
+          this->name_,
+          path,
+          p);
       return NaN;
     }
 
@@ -111,14 +113,8 @@ class HasemanElstonEstimator : public SampleEstimatorStrategy<P> {
     std::size_t block_end = contents.find("\n\n");
     std::string he_cp_block = contents.substr(0, block_end);
 
-    Log::debug("Found HE-CP block:");
-    Log::debug(he_cp_block);
-
     std::size_t header_start = he_cp_block.find('\n') + 1;
-
     std::string he_cp_table = he_cp_block.substr(header_start);
-    Log::debug("Parsed HE-CP block:");
-    Log::debug(he_cp_table);
 
     std::filesystem::path tmp_path = path + ".he-cp";
     std::ofstream tmp(tmp_path);
@@ -134,18 +130,17 @@ class HasemanElstonEstimator : public SampleEstimatorStrategy<P> {
       if (source == "V(G)/Vp") return variance;
     }
     Log::error(
-        std::format(
-            "{}: {} parsed but 'V(G)/Vp' was not found in HE-CP for "
-            "phenotype index {}",
-            this->name_,
-            path,
-            p));
+        "{}: {} parsed but 'V(G)/Vp' was not found in HE-CP for "
+        "phenotype index {}",
+        this->name_,
+        path,
+        p);
     return NaN;
   }
 };
 
 template <Proband P>
-inline SampleEstimator<P> SampleHasemanElstonEstimator(
+inline SampleEstimator<P> sampleHasemanElston(
     std::string name = "haseman-elston") {
   return SampleEstimator<P>{
       .name = name,
@@ -153,7 +148,7 @@ inline SampleEstimator<P> SampleHasemanElstonEstimator(
                 const Params& params,
                 std::size_t /*n_probands*/,
                 const std::filesystem::path& sample_dir) {
-        return std::make_unique<HasemanElstonEstimator<P>>(
+        return std::make_unique<SampleEstimatorHasemanElstonStrategy<P>>(
             params, sample_dir.filename().string(), sample_dir, name);
       }};
 }

@@ -25,9 +25,9 @@
 namespace amsim {
 
 // Buffer structure to store phenotype data
-class PhenoBuf {
+class PhenotypeBuffer {
  public:
-  explicit PhenoBuf(const Params& params)
+  explicit PhenotypeBuffer(const Params& params)
       : n_ind_(params.global.n_ind),
         n_sex_(n_ind_ / 2),
         n_pheno_(params.pheno.n_pheno),
@@ -131,13 +131,13 @@ class PhenoBuf {
   }
 
   // means and variances of phenotype components
-  void compute_stats();
+  void computeStats();
 
-  double comp_mean(std::size_t pheno_id, Component type) const {
+  double componentMean(std::size_t pheno_id, Component type) const {
     return comp_mean_(static_cast<int>(type), pheno_id);
   }
 
-  double comp_var(std::size_t pheno_id, Component type) const {
+  double componentVar(std::size_t pheno_id, Component type) const {
     return comp_var_(static_cast<int>(type), pheno_id);
   }
 
@@ -150,16 +150,16 @@ class PhenoBuf {
   }
 
  private:
-  const std::size_t n_ind_;    ///< Number of individuals
-  const std::size_t n_sex_;    ///< Number of reproducing pairs
-  const std::size_t n_pheno_;  ///< Number of phenotypes
-  std::vector<double> data_;   ///< Main phenotype component buffer
+  const std::size_t n_ind_;
+  const std::size_t n_sex_;
+  const std::size_t n_pheno_;
+  std::vector<double> data_;
 
-  Eigen::MatrixXd comp_mean_;  ///< Component means
-  Eigen::MatrixXd comp_var_;   ///< Component variances
+  Eigen::MatrixXd comp_mean_;
+  Eigen::MatrixXd comp_var_;
 };
 
-inline void PhenoBuf::compute_stats() {
+inline void PhenotypeBuffer::computeStats() {
   for (Component type :
        {Component::Genetic,
         Component::Environmental,

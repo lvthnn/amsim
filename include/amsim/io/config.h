@@ -285,9 +285,9 @@ inline void ConfigWriter::writeGlobalConfig() {
 inline void ConfigWriter::writeGenomeConfig() {
   writeToSection("genome");
   writeParam(spec_.genome.n_loci, "n_loci");
-  writeParam(spec_.genome.v_maf, "locus_maf");
-  writeParam(spec_.genome.v_rec, "locus_rec");
-  writeParam(spec_.genome.v_mut, "locus_mut");
+  writeParam(spec_.genome.locus_freq, "locus_maf");
+  writeParam(spec_.genome.locus_rec, "locus_rec");
+  writeParam(spec_.genome.locus_mut, "locus_mut");
 }
 
 inline void ConfigWriter::writePhenotypeConfig() {
@@ -518,9 +518,9 @@ inline void ConfigReader::readGlobalConfig() {
 
 inline void ConfigReader::readGenomeConfig() {
   readParam(spec_.genome.n_loci, "genome/n_loci");
-  readParam(spec_.genome.v_maf, "genome/locus_maf");
-  readParam(spec_.genome.v_mut, "genome/locus_mut");
-  readParam(spec_.genome.v_rec, "genome/locus_rec");
+  readParam(spec_.genome.locus_freq, "genome/locus_maf");
+  readParam(spec_.genome.locus_mut, "genome/locus_mut");
+  readParam(spec_.genome.locus_rec, "genome/locus_rec");
 }
 
 inline void ConfigReader::readPhenotypeConfig() {

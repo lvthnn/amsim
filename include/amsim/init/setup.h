@@ -52,7 +52,7 @@ inline Eigen::VectorXd expand(
   return res;
 }
 
-inline Eigen::MatrixXd expand_matrix(
+inline Eigen::MatrixXd expandMatrix(
     const std::variant<File<Eigen::MatrixXd>, Eigen::MatrixXd>& val) {
   if (std::holds_alternative<Eigen::MatrixXd>(val))
     return std::get<Eigen::MatrixXd>(val);
@@ -64,9 +64,9 @@ inline Eigen::MatrixXd expand_matrix(
 
 struct Genome {
   std::size_t n_loci = 5000;
-  std::variant<double, File<Eigen::MatrixXd>, Distribution> v_rec = 0.5;
-  std::variant<double, File<Eigen::MatrixXd>, Distribution> v_maf = 0.5;
-  std::variant<double, File<Eigen::MatrixXd>, Distribution> v_mut = 0.0;
+  std::variant<double, File<Eigen::MatrixXd>, Distribution> locus_rec = 0.5;
+  std::variant<double, File<Eigen::MatrixXd>, Distribution> locus_freq = 0.5;
+  std::variant<double, File<Eigen::MatrixXd>, Distribution> locus_mut = 0.0;
 };
 
 struct Phenotype {
@@ -94,7 +94,7 @@ struct Mating {
   std::optional<std::variant<File<Eigen::MatrixXd>, Eigen::MatrixXd>> mate_cor;
 
   double tolerance = 1e-7;
-  std::size_t max_iterations = 2000000;
+  std::size_t max_iterations = 0;
   double initial_temperature = 1.0;
   double temperature_decay = 0.99;
 };
@@ -131,7 +131,7 @@ struct SimulationSpec {
   bool log_to_file = true;
 };
 
-inline PhenomeParams build_pheno_params(const SimulationSpec& spec) {
+inline PhenomeParams buildPhenoParams(const SimulationSpec& spec) {
   std::size_t n_pheno = spec.phenotypes.size();
 
   std::vector<std::string> names(n_pheno);
@@ -141,9 +141,9 @@ inline PhenomeParams build_pheno_params(const SimulationSpec& spec) {
   std::vector<Eigen::VectorXd> pheno_effects(n_pheno);
   std::vector<std::vector<std::size_t>> pheno_loc(n_pheno);
 
-  Eigen::VectorXd h2_gen(n_pheno);
-  Eigen::VectorXd h2_env(n_pheno);
-  Eigen::VectorXd h2_nur(n_pheno);
+  Eigen::VectorXd var_gen(n_pheno);
+  Eigen::VectorXd var_env(n_pheno);
+  Eigen::VectorXd var_vert(n_pheno);
 
   Eigen::VectorXd rnur_pat(n_pheno);
   Eigen::VectorXd rnur_env(n_pheno);
@@ -217,9 +217,9 @@ inline PhenomeParams build_pheno_params(const SimulationSpec& spec) {
       throw std::runtime_error(
           "phenotype " + pheno_data.name +
           ": variance components must sum to a positive value");
-    h2_gen(pheno) = pheno_data.var_genetic / var_total;
-    h2_env(pheno) = pheno_data.var_environmental / var_total;
-    h2_nur(pheno) = pheno_data.var_vertical / var_total;
+    var_gen(pheno) = pheno_data.var_genetic / var_total;
+    var_env(pheno) = pheno_data.var_environmental / var_total;
+    var_vert(pheno) = pheno_data.var_vertical / var_total;
     rnur_pat(pheno) = pheno_data.nurture_paternal_ratio;
     rnur_env(pheno) = pheno_data.nurture_environmental_ratio;
     vert_pat(pheno) = pheno_data.vertical_paternal_ratio;
@@ -227,12 +227,12 @@ inline PhenomeParams build_pheno_params(const SimulationSpec& spec) {
 
   Eigen::MatrixXd gen_cor =
       spec.genetic_component_cor.has_value()
-          ? details::expand_matrix(spec.genetic_component_cor.value())
+          ? details::expandMatrix(spec.genetic_component_cor.value())
           : Eigen::MatrixXd::Identity(n_pheno, n_pheno);
 
   Eigen::MatrixXd env_cor =
       spec.environmental_component_cor.has_value()
-          ? details::expand_matrix(spec.environmental_component_cor.value())
+          ? details::expandMatrix(spec.environmental_component_cor.value())
           : Eigen::MatrixXd::Identity(n_pheno, n_pheno);
 
   return PhenomeParams{
@@ -242,9 +242,9 @@ inline PhenomeParams build_pheno_params(const SimulationSpec& spec) {
       .pheno_ids = std::move(pheno_ids),
       .pheno_effects = std::move(pheno_effects),
       .pheno_loc = std::move(pheno_loc),
-      .var_gen = h2_gen,
-      .var_env = h2_env,
-      .var_vert = h2_nur,
+      .var_gen = var_gen,
+      .var_env = var_env,
+      .var_vert = var_vert,
       .gen_cor = gen_cor,
       .env_cor = env_cor,
       .rnur_pat = rnur_pat,
@@ -252,18 +252,18 @@ inline PhenomeParams build_pheno_params(const SimulationSpec& spec) {
       .vert_pat = vert_pat};
 }
 
-inline Params build_params(const SimulationSpec& spec) {
+inline Params buildParams(const SimulationSpec& spec) {
   GenomeParams geno = GenomeParams{
       .n_loc = spec.genome.n_loci,
-      .v_maf = details::expand(spec.genome.v_maf, spec.genome.n_loci),
-      .v_rec = details::expand(spec.genome.v_rec, spec.genome.n_loci),
-      .v_mut = details::expand(spec.genome.v_mut, spec.genome.n_loci)};
+      .locus_freq = details::expand(spec.genome.locus_freq, spec.genome.n_loci),
+      .locus_rec = details::expand(spec.genome.locus_rec, spec.genome.n_loci),
+      .locus_mut = details::expand(spec.genome.locus_mut, spec.genome.n_loci)};
 
-  PhenomeParams pheno = build_pheno_params(spec);
+  PhenomeParams pheno = buildPhenoParams(spec);
 
   Eigen::MatrixXd mate_cor =
       (spec.mating.mate_cor.has_value())
-          ? details::expand_matrix(spec.mating.mate_cor.value())
+          ? details::expandMatrix(spec.mating.mate_cor.value())
           : Eigen::MatrixXd::Zero(pheno.n_pheno, pheno.n_pheno);
 
   MatingParams mate = MatingParams{

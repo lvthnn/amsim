@@ -33,8 +33,8 @@ template <Proband P>
 class SampleEstimatorStrategy {
  public:
   SampleEstimatorStrategy(
-      std::string_view estimator_name,
-      std::string_view sample_name,
+      const std::string& estimator_name,
+      const std::string& sample_name,
       std::filesystem::path sample_dir,
       std::vector<std::string> row_labels,
       std::vector<std::string> col_labels,
@@ -77,9 +77,9 @@ class SampleEstimatorStrategy {
 };
 
 template <Proband P>
-class SampleMean : public SampleEstimatorStrategy<P> {
+class SampleEstimatorMeanStrategy : public SampleEstimatorStrategy<P> {
  public:
-  explicit SampleMean(
+  explicit SampleEstimatorMeanStrategy(
       const Params& params,
       const std::string& sample_name,
       const std::filesystem::path& sample_dir)
@@ -99,9 +99,9 @@ class SampleMean : public SampleEstimatorStrategy<P> {
 };
 
 template <Proband P>
-class SampleVar : public SampleEstimatorStrategy<P> {
+class SampleEstimatorVarStrategy : public SampleEstimatorStrategy<P> {
  public:
-  explicit SampleVar(
+  explicit SampleEstimatorVarStrategy(
       const Params& params,
       const std::string& sample_name,
       const std::filesystem::path& sample_dir)
@@ -126,9 +126,9 @@ class SampleVar : public SampleEstimatorStrategy<P> {
 };
 
 template <Proband P>
-class SampleCov : public SampleEstimatorStrategy<P> {
+class SampleEstimatorCovStrategy : public SampleEstimatorStrategy<P> {
  public:
-  explicit SampleCov(
+  explicit SampleEstimatorCovStrategy(
       const Params& params,
       const std::string& sample_name,
       const std::filesystem::path& sample_dir)
@@ -156,9 +156,9 @@ class SampleCov : public SampleEstimatorStrategy<P> {
 };
 
 template <Proband P>
-class SampleMateCor : public SampleEstimatorStrategy<P> {
+class SampleEstimatorMateCorStrategy : public SampleEstimatorStrategy<P> {
  public:
-  explicit SampleMateCor(
+  explicit SampleEstimatorMateCorStrategy(
       const Params& params,
       const std::string& sample_name,
       const std::filesystem::path& sample_dir,
@@ -220,49 +220,49 @@ class SampleMateCor : public SampleEstimatorStrategy<P> {
 };
 
 template <Proband P>
-inline SampleEstimator<P> SampleMeanEstimator() {
+inline SampleEstimator<P> sampleMean() {
   return SampleEstimator<P>{
       .name = "sample-mean",
       .fn = [](const Params& params,
                std::size_t /*n_probands*/,
                const std::filesystem::path& sample_dir) {
-        return std::make_unique<SampleMean<P>>(
+        return std::make_unique<SampleEstimatorMeanStrategy<P>>(
             params, sample_dir.filename().string(), sample_dir);
       }};
 }
 
 template <Proband P>
-inline SampleEstimator<P> SampleVarEstimator() {
+inline SampleEstimator<P> sampleVar() {
   return SampleEstimator<P>{
       .name = "sample-var",
       .fn = [](const Params& params,
                std::size_t /*n_probands*/,
                const std::filesystem::path& sample_dir) {
-        return std::make_unique<SampleVar<P>>(
+        return std::make_unique<SampleEstimatorVarStrategy<P>>(
             params, sample_dir.filename().string(), sample_dir);
       }};
 }
 
 template <Proband P>
-inline SampleEstimator<P> SampleCovEstimator() {
+inline SampleEstimator<P> sampleCov() {
   return SampleEstimator<P>{
       .name = "sample-cov",
       .fn = [](const Params& params,
                std::size_t /*n_probands*/,
                const std::filesystem::path& sample_dir) {
-        return std::make_unique<SampleCov<P>>(
+        return std::make_unique<SampleEstimatorCovStrategy<P>>(
             params, sample_dir.filename().string(), sample_dir);
       }};
 }
 
 template <Proband P>
-inline SampleEstimator<P> SampleMateCorEstimator() {
+inline SampleEstimator<P> sampleMateCor() {
   return SampleEstimator<P>{
       .name = "sample-mate-cor",
       .fn = [](const Params& params,
                std::size_t n_probands,
                const std::filesystem::path& sample_dir) {
-        return std::make_unique<SampleMateCor<P>>(
+        return std::make_unique<SampleEstimatorMateCorStrategy<P>>(
             params, sample_dir.filename().string(), sample_dir, n_probands);
       }};
 }

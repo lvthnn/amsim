@@ -31,9 +31,9 @@ namespace amsim {
 
 namespace details {
 
-class EstimatorCousinCov : public PopulationEstimatorStrategy {
+class EstimatorCousinCovStrategy : public PopulationEstimatorStrategy {
  public:
-  explicit EstimatorCousinCov(
+  explicit EstimatorCousinCovStrategy(
       const Params& params, std::size_t degree, Component type)
       : type_(type),
         degree_(degree),
@@ -53,8 +53,8 @@ class EstimatorCousinCov : public PopulationEstimatorStrategy {
     if (params.global.pedigree_max_depth < degree_ + 2)
       Log::warning(
           "Pedigree depth is insufficient to compute cousin covariance of "
-          "degree " +
-          std::to_string(degree_));
+          "degree {}",
+          degree_);
   }
 
   void compute(const State& state) override {
@@ -90,9 +90,9 @@ class EstimatorCousinCov : public PopulationEstimatorStrategy {
   Eigen::MatrixXd cousin_;
 };
 
-class EstimatorAncestorCov : public PopulationEstimatorStrategy {
+class EstimatorAncestorCovStrategy : public PopulationEstimatorStrategy {
  public:
-  explicit EstimatorAncestorCov(
+  explicit EstimatorAncestorCovStrategy(
       const Params& params, std::size_t degree, Component type)
       : type_(type),
         degree_(degree),
@@ -141,14 +141,14 @@ class EstimatorAncestorCov : public PopulationEstimatorStrategy {
   std::size_t degree_;
   std::size_t n_ind_;
   std::size_t n_pheno_;
-  std::deque<PhenoBuf> history_;
+  std::deque<PhenotypeBuffer> history_;
   Eigen::MatrixXd self_;
   Eigen::MatrixXd ancestor_;
 
   void syncPhenotypes(const State& state);
 };
 
-inline void EstimatorAncestorCov::syncPhenotypes(const State& state) {
+inline void EstimatorAncestorCovStrategy::syncPhenotypes(const State& state) {
   if (state.gen == 1) {
     history_.emplace_front(state.pheno(Generation::Parents));
     history_.emplace_front(state.pheno(Generation::Current));
@@ -160,24 +160,24 @@ inline void EstimatorAncestorCov::syncPhenotypes(const State& state) {
 
 }  // namespace details
 
-inline PopulationEstimator PopulationCousinCov(
+inline PopulationEstimator populationCousinCov(
     std::size_t degree = 1, Component type = Component::Total) {
   return PopulationEstimator{
       .name = "cousin-" + std::to_string(degree) + "-cov-" +
               componentToString(type),
       .fn = [degree, type](const Params& params) {
-        return std::make_unique<details::EstimatorCousinCov>(
+        return std::make_unique<details::EstimatorCousinCovStrategy>(
             params, degree, type);
       }};
 }
 
-inline PopulationEstimator PopulationAncestorCov(
+inline PopulationEstimator populationAncestorCov(
     std::size_t degree = 1, Component type = Component::Total) {
   return PopulationEstimator{
       .name = "ancestor-" + std::to_string(degree) + "-cov-" +
               componentToString(type),
       .fn = [degree, type](const Params& params) {
-        return std::make_unique<details::EstimatorAncestorCov>(
+        return std::make_unique<details::EstimatorAncestorCovStrategy>(
             params, degree, type);
       }};
 }
