@@ -180,6 +180,7 @@ inline void runSimulation(const SimulationSpec& spec) {
 
   // preprocess parameters
   Params params = details::preprocessSimulation(spec);
+  params.global.rng_seed = seed;
 
   // validate output directory
   if (!std::filesystem::exists(spec.output_dir))

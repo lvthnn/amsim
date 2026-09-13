@@ -73,6 +73,8 @@ Context contextDomain(Context context) {
 }
 
 enum Option {
+  GlobalHelp,
+  GlobalVersion,
   GlobalNumIndividuals,
   GlobalNumGenerations,
   GlobalNumThreads,
@@ -436,6 +438,14 @@ To see all options, run "amsim --help".)";
 
 void displayHelpOption(Option option, const std::string& option_flag) {
   std::unordered_map<Option, std::string> docs;
+
+  docs[Option::GlobalHelp] = R"(
+:-)
+  )";
+
+  docs[Option::GlobalVersion] = R"(
+Displays version and build information.
+  )";
 
   docs[Option::GlobalNumIndividuals] = R"(
 Number of individuals to simulate in each generation. Positive, non-zero integer.
@@ -818,7 +828,8 @@ int main(int argc, char* argv[]) {
     }
 
     // check for the --help flag; if specified, either display the full message
-    // if no other arguments, or show option documentation
+    // if no other arguments, or show option documentation for every other
+    // flag named on the command line
     for (int i = 1; i < argc; ++i) {
       if (std::string_view(argv[i]) == "--help" ||
           std::string_view(argv[i]) == "-h") {
@@ -827,32 +838,43 @@ int main(int argc, char* argv[]) {
           displayHelp();
           exit(EXIT_SUCCESS);
         }
-        if (argc > 3) {
-          displayHeader();
-          displayHelpShort();
-          exit(EXIT_FAILURE);
-        }
 
-        Option opt;
-        std::string opt_flag = argv[(i == 1) ? 2 : 1];
-        auto pos = opt_flag.find_first_not_of('-');
-        std::string opt_name = opt_flag.substr(pos);
-
-        for (const auto& option : opts) {
-          if (option.name == nullptr) break;
-          if (option.name == opt_name) {
-            opt = static_cast<Option>(option.val);
-            displayHeader();
-            displayHelpOption(opt, opt_flag);
-            exit(EXIT_SUCCESS);
-          }
-        }
-
-        // we've not found the option — show a short help message and exit with
-        // failure
         displayHeader();
-        displayHelpShort();
-        exit(EXIT_FAILURE);
+        for (int j = 1; j < argc; ++j) {
+          if (j == i) continue;
+
+          std::string opt_flag = argv[j];
+          auto pos = opt_flag.find_first_not_of('-');
+          std::string opt_name = opt_flag.substr(pos);
+
+          Option opt;
+          bool found = false;
+          for (const auto& option : opts) {
+            if (option.name == nullptr) break;
+            if (opt_name == "help" || opt_name == "h") {
+              opt = Option::GlobalHelp;
+              found = true;
+              break;
+            }
+            if (opt_name == "version" || opt_name == "v") {
+              opt = Option::GlobalVersion;
+              found = true;
+              break;
+            }
+            if (option.name == opt_name) {
+              opt = static_cast<Option>(option.val);
+              found = true;
+              break;
+            }
+          }
+
+          if (!found)
+            throw std::runtime_error(
+                std::format("Unrecognised option '{}'", opt_flag));
+
+          displayHelpOption(opt, opt_flag);
+        }
+        exit(EXIT_SUCCESS);
       }
     }
 
@@ -1022,11 +1044,12 @@ int main(int argc, char* argv[]) {
           continue;
         case Option::MatingErrorTolerance:
           check_context(Context::Mating, "--tol-inf");
-          spec.mating.tolerance = amsim::parse<double>(optarg);
+          spec.mating.tolerance = amsim::parse<double>(optarg, "--tol-inf");
           continue;
         case Option::MatingMaxIterations:
           check_context(Context::Mating, "--max-itr");
-          spec.mating.max_iterations = amsim::parse<std::size_t>(optarg);
+          spec.mating.max_iterations =
+              amsim::parse<std::size_t>(optarg, "--max-itr");
           continue;
         case Option::MatingAnnealingTempInit:
           check_context(Context::Mating, "--temp-init");
@@ -1046,7 +1069,7 @@ int main(int argc, char* argv[]) {
           context = Context::PopulationEstimator;
 
           auto [name, params] = amsim::parseFunction(optarg);
-          auto estimator = amsim::build_population_estimator(name, params);
+          auto estimator = amsim::buildPopulationEstimator(name, params);
           estimator.name = optarg;
           spec.estimators.push_back(estimator);
 
@@ -1066,19 +1089,26 @@ int main(int argc, char* argv[]) {
             spec.sample_estimator_spec.back().params = params;
           continue;
         }
-        case Option::SampleEstimatorExec:
+        case Option::SampleEstimatorExec: {
           check_context(Context::SampleEstimator, "--exec");
-          spec.sample_estimator_spec.back().exec = optarg;
+          std::vector<std::string> tokens =
+              amsim::utils::splitString(optarg, ' ');
+          if (tokens.empty())
+            throw std::invalid_argument("--exec requires a command");
+          spec.sample_estimator_spec.back().exec = tokens.front();
+          spec.sample_estimator_spec.back().exec_args =
+              std::vector<std::string>(tokens.begin() + 1, tokens.end());
           continue;
+        }
         case Option::SampleEstimatorNumRows:
           check_context(Context::SampleEstimator, "--n-rows");
           spec.sample_estimator_spec.back().n_rows =
-              amsim::parse<std::size_t>(optarg);
+              amsim::parse<std::size_t>(optarg, "--n-rows");
           continue;
         case Option::SampleEstimatorNumCols:
           check_context(Context::SampleEstimator, "--n-cols");
           spec.sample_estimator_spec.back().n_cols =
-              amsim::parse<std::size_t>(optarg);
+              amsim::parse<std::size_t>(optarg, "--n-cols");
           continue;
         case Option::SampleEstimatorRowNames:
           check_context(Context::SampleEstimator, "--row-names");
@@ -1104,7 +1134,7 @@ int main(int argc, char* argv[]) {
         case Option::SampleNumProbands:
           check_context(Context::Sample, "--n-probands");
           spec.sample_spec.back().n_probands =
-              amsim::parse<std::size_t>(optarg);
+              amsim::parse<std::size_t>(optarg, "--n-probands");
           continue;
         case Option::SampleWeightOnPhenotypes: {
           check_context(Context::Sample, "--on");
@@ -1150,13 +1180,30 @@ int main(int argc, char* argv[]) {
           }
 
           auto matrix = amsim::parse<Eigen::MatrixXd>(optarg, "--value");
-          if (context == Context::GenomeInitMAFs) spec.genome.v_maf = matrix(0);
-          if (context == Context::GenomeRecombinationProbs)
+          if (context == Context::GenomeInitMAFs) {
+            if (matrix.size() != 1)
+              throw std::invalid_argument(
+                  "--locus-maf takes a single constant with --value");
+            spec.genome.v_maf = matrix(0);
+          }
+          if (context == Context::GenomeRecombinationProbs) {
+            if (matrix.size() != 1)
+              throw std::invalid_argument(
+                  "--locus-rec takes a single constant with --value");
             spec.genome.v_rec = matrix(0);
-          if (context == Context::GenomeMutationProbs)
+          }
+          if (context == Context::GenomeMutationProbs) {
+            if (matrix.size() != 1)
+              throw std::invalid_argument(
+                  "--locus-mut takes a single constant with --value");
             spec.genome.v_mut = matrix(0);
-          if (context == Context::PhenotypeEffectSizes)
+          }
+          if (context == Context::PhenotypeEffectSizes) {
+            if (matrix.size() != 1)
+              throw std::invalid_argument(
+                  "--effects takes a single constant with --value");
             spec.phenotypes.back().effects = matrix(0);
+          }
           if (context == Context::PhenotypeGeneticCorrelation)
             spec.genetic_component_cor = matrix;
           if (context == Context::PhenotypeEnvironmentalCorrelation)
