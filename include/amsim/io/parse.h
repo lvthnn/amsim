@@ -30,6 +30,7 @@
 #include <fstream>
 #include <utility>
 #include <vector>
+#include <concepts>
 
 namespace amsim {
 
@@ -44,8 +45,8 @@ inline std::string parseExceptionStr(
 
 // TODO: add templating to specify the arguments to be parsed from the function.
 // For example, when parsing case-control weight functions, we would like to be
-// able to declare three parameters: a threshold (double), a direction ('<'|'>'),
-// and a vector of weights (Eigen::VectorXd).
+// able to declare three parameters: a threshold (double), a direction
+// ('<'|'>'), and a vector of weights (Eigen::VectorXd).
 //
 // So we could, for example, while processing the params (which is currently
 // done via utils::splitString), we could declare
@@ -94,6 +95,21 @@ inline std::pair<std::string, std::vector<std::string>> parseFunction(
 template <typename T>
 inline T parse(const std::string& s);
 
+template <>
+inline std::string parse(const std::string& s) {
+  return s;
+}
+
+template <std::unsigned_integral T>
+inline T parse(const std::string& s) {
+  return static_cast<T>(std::stoull(s));
+}
+
+template <>
+inline double parse(const std::string& s) {
+  return std::stod(s);
+}
+
 template <typename T>
 inline std::vector<T> parseEach(const std::vector<std::string>& ss) {
   std::vector<T> result(ss.size());
@@ -113,26 +129,6 @@ inline T parse(const std::string& s, const std::optional<std::string>& flag) {
   } catch (const std::exception& e) {
     throw std::runtime_error(parseExceptionStr(s, flag));
   }
-}
-
-template <>
-inline std::string parse(const std::string& s) {
-  return s;
-}
-
-template <>
-inline std::size_t parse(const std::string& s) {
-  return std::stoull(s);
-}
-
-template <>
-inline std::uint64_t parse(const std::string& s) {
-  return std::stoull(s);
-}
-
-template <>
-inline double parse(const std::string& s) {
-  return std::stod(s);
 }
 
 template <>

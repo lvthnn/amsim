@@ -29,9 +29,7 @@ struct PopulationEstimator {
   std::function<std::unique_ptr<PopulationEstimatorStrategy>(const Params&)> fn;
 
   std::unique_ptr<PopulationEstimatorStrategy> operator()(
-      const Params& params) const {
-    return fn(params);
-  }
+      const Params& params) const;
 };
 
 }  // namespace amsim

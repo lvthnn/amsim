@@ -21,6 +21,8 @@
 #include <toml++/toml.h>
 
 #include <fstream>
+#include <concepts>
+#include <cstdint>
 
 namespace amsim {
 
@@ -69,6 +71,9 @@ class ConfigWriter {
   void writeToSection(const std::string& name);
 
   template <typename T>
+  auto toTOML(const T& val);
+
+  template <std::unsigned_integral T>
   auto toTOML(const T& val);
 
   template <typename T>
@@ -126,13 +131,8 @@ inline auto ConfigWriter::toTOML(const std::vector<T>& val) {
   return toArrayTOML(val);
 }
 
-template <>
-inline auto ConfigWriter::toTOML(const std::size_t& val) {
-  return static_cast<int64_t>(val);
-}
-
-template <>
-inline auto ConfigWriter::toTOML(const std::uint64_t& val) {
+template <std::unsigned_integral T>
+inline auto ConfigWriter::toTOML(const T& val) {
   return static_cast<int64_t>(val);
 }
 
