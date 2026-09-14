@@ -7,7 +7,7 @@ on:
     branches: [dev]
 
 concurrency:
-  group: pr-check-${{ github.ref }}
+  group: pr-check-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 env:
