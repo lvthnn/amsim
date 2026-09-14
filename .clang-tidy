@@ -13,7 +13,6 @@ Checks: >
   -google-runtime-references,
   -misc-non-private-member-variables-in-classes,
   -misc-const-correctness,
-  -misc-include-cleaner,
   -misc-use-internal-linkage,
   -modernize-return-braced-init-list,
   -modernize-use-trailing-return-type,
