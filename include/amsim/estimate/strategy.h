@@ -16,6 +16,7 @@
 #pragma once
 
 #include <amsim/core/state.h>
+#include <amsim/estimate/estimator.h>
 #include <amsim/io/h5_writer.h>
 
 #include <Eigen/Dense>
@@ -63,5 +64,10 @@ class PopulationEstimatorStrategy {
   std::size_t n_cols_;
   Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data_;
 };
+
+inline std::unique_ptr<PopulationEstimatorStrategy> PopulationEstimator::operator()(
+    const Params& params) const {
+  return fn(params);
+}
 
 }  // namespace amsim
