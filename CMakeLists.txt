@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+
 # Add debugging options depending on CMAKE_BUILD_TYPE
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
@@ -21,6 +22,12 @@ target_include_directories(amsimlib
   INTERFACE
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
+
+# Require explicit includes on macOS
+if (APPLE)
+  target_compile_definitions(amsimlib INTERFACE
+      _LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
+endif()
 
 # Use Eigen with BLAS/LAPACK
 
