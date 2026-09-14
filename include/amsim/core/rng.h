@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <type_traits>
+#include <vector>
 #if __cpp_lib_bitops
 #include <bit>
 #endif
