@@ -25,7 +25,7 @@ To install amsim, grab the appropriate filename for your platform (e.g.
 ### Prerequisites
 
 - CMake >= 3.20
-- A C++20 compiler (tested with recent Clang and GCC)
+- A C++23 compiler (tested with recent Clang and GCC)
 - BLAS and LAPACK (on macOS, Apple's Accelerate framework is used automatically;
   on Linux, install e.g. OpenBLAS: `apt install libopenblas-dev liblapack-dev`
   or equivalent)
