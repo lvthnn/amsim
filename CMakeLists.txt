@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(amsimcpp LANGUAGES CXX VERSION 0.2.0)
+project(amsimlib LANGUAGES CXX VERSION 0.2.0)
 
 # C++ standard
 set(CMAKE_CXX_STANDARD 23)
@@ -14,10 +14,10 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 # Register amsim as a header-only library
-add_library(amsimcpp INTERFACE)
+add_library(amsimlib INTERFACE)
 
 # Public headers for users of the lib
-target_include_directories(amsimcpp
+target_include_directories(amsimlib
   INTERFACE
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
@@ -26,19 +26,19 @@ target_include_directories(amsimcpp
 
 if (APPLE)
   find_library(ACCELERATE_FRAMEWORK Accelerate REQUIRED)
-  target_link_libraries(amsimcpp INTERFACE ${ACCELERATE_FRAMEWORK})
-  target_compile_definitions(amsimcpp INTERFACE ACCELERATE_NEW_LAPACK)
+  target_link_libraries(amsimlib INTERFACE ${ACCELERATE_FRAMEWORK})
+  target_compile_definitions(amsimlib INTERFACE ACCELERATE_NEW_LAPACK)
 else()
   set(BLA_STATIC ON)
   find_package(BLAS REQUIRED)
   find_package(LAPACK REQUIRED)
-  target_link_libraries(amsimcpp INTERFACE BLAS::BLAS LAPACK::LAPACK)
+  target_link_libraries(amsimlib INTERFACE BLAS::BLAS LAPACK::LAPACK)
 endif()
 
 # HDF5 support
 set(HDF5_USE_STATIC_LIBRARIES ON)
 find_package(HDF5 REQUIRED COMPONENTS C)
-target_link_libraries(amsimcpp INTERFACE HDF5::HDF5)
+target_link_libraries(amsimlib INTERFACE HDF5::HDF5)
 
 # Fetch dependencies
 include(FetchContent)
@@ -60,7 +60,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(Boost)
 
-target_link_libraries(amsimcpp INTERFACE
+target_link_libraries(amsimlib INTERFACE
   Boost::math
   Boost::algorithm
   Boost::process
@@ -77,7 +77,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(Eigen)
 
-target_link_libraries(amsimcpp INTERFACE Eigen3::Eigen)
+target_link_libraries(amsimlib INTERFACE Eigen3::Eigen)
 
 # HighFive
 FetchContent_Declare(
@@ -93,7 +93,7 @@ set(HIGHFIVE_UNIT_TESTS OFF CACHE BOOL "" FORCE)
 set(HIGHFIVE_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(HighFive)
 
-target_link_libraries(amsimcpp INTERFACE HighFive::HighFive)
+target_link_libraries(amsimlib INTERFACE HighFive::HighFive)
 
 # tomlplusplus
 FetchContent_Declare(
@@ -105,7 +105,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(tomlplusplus)
 
-target_link_libraries(amsimcpp INTERFACE tomlplusplus::tomlplusplus)
+target_link_libraries(amsimlib INTERFACE tomlplusplus::tomlplusplus)
 
 # include(FetchContent)
 # set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
@@ -121,15 +121,15 @@ target_link_libraries(amsimcpp INTERFACE tomlplusplus::tomlplusplus)
 #
 # include(GoogleTest)
 
-target_compile_definitions(amsimcpp INTERFACE EIGEN_USE_BLAS EIGEN_USE_LAPACK)
-target_compile_definitions(amsimcpp INTERFACE HIGHFIVE_USE_EIGEN)
+target_compile_definitions(amsimlib INTERFACE EIGEN_USE_BLAS EIGEN_USE_LAPACK)
+target_compile_definitions(amsimlib INTERFACE HIGHFIVE_USE_EIGEN)
 
 # The CLI tool
 option(BUILD_EXECUTABLE "Build the amsim CLI tool" ON)
 
 if (BUILD_EXECUTABLE)
   add_executable(amsim src/amsim.cc)
-  target_link_libraries(amsim PRIVATE amsimcpp)
+  target_link_libraries(amsim PRIVATE amsimlib)
   target_compile_definitions(amsim PRIVATE
     AMSIM_OS="${CMAKE_SYSTEM_NAME}"
     AMSIM_VERSION="${PROJECT_VERSION}"
