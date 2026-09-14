@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - CMakeLists.txt
+  workflow_dispatch: {}
 
 jobs:
   tag:
