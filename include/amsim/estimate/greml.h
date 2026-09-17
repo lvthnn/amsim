@@ -34,7 +34,7 @@ namespace amsim {
 
 namespace bp = boost::process;
 
-template <Proband P>
+template <ProbandType P>
 class SampleEstimatorGREMLStrategy : public SampleEstimatorStrategy<P> {
  public:
   SampleEstimatorGREMLStrategy(
@@ -135,7 +135,7 @@ class SampleEstimatorGREMLStrategy : public SampleEstimatorStrategy<P> {
   }
 };
 
-template <Proband P>
+template <ProbandType P>
 inline SampleEstimator<P> sampleGREML(std::string name = "greml") {
   return SampleEstimator<P>{
       .name = name,

@@ -29,7 +29,7 @@
 
 namespace amsim {
 
-template <Proband P>
+template <ProbandType P>
 class SampleEstimatorStrategy {
  public:
   SampleEstimatorStrategy(
@@ -76,7 +76,7 @@ class SampleEstimatorStrategy {
   Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data_;
 };
 
-template <Proband P>
+template <ProbandType P>
 class SampleEstimatorMeanStrategy : public SampleEstimatorStrategy<P> {
  public:
   explicit SampleEstimatorMeanStrategy(
@@ -98,7 +98,7 @@ class SampleEstimatorMeanStrategy : public SampleEstimatorStrategy<P> {
   }
 };
 
-template <Proband P>
+template <ProbandType P>
 class SampleEstimatorVarStrategy : public SampleEstimatorStrategy<P> {
  public:
   explicit SampleEstimatorVarStrategy(
@@ -125,7 +125,7 @@ class SampleEstimatorVarStrategy : public SampleEstimatorStrategy<P> {
   }
 };
 
-template <Proband P>
+template <ProbandType P>
 class SampleEstimatorCovStrategy : public SampleEstimatorStrategy<P> {
  public:
   explicit SampleEstimatorCovStrategy(
@@ -155,7 +155,7 @@ class SampleEstimatorCovStrategy : public SampleEstimatorStrategy<P> {
   std::size_t n_ind_;
 };
 
-template <Proband P>
+template <ProbandType P>
 class SampleEstimatorMateCorStrategy : public SampleEstimatorStrategy<P> {
  public:
   explicit SampleEstimatorMateCorStrategy(
@@ -173,11 +173,11 @@ class SampleEstimatorMateCorStrategy : public SampleEstimatorStrategy<P> {
             params.pheno.n_pheno),
         n_probands_(n_probands),
         n_pheno_(params.pheno.n_pheno),
-        std_male_((n_probands_ * ProbandData<P>::ProbandSize) / 2, n_pheno_),
-        std_female_((n_probands_ * ProbandData<P>::ProbandSize) / 2, n_pheno_) {
-    if constexpr (P == Proband::Individual) {
+        std_male_((n_probands_ * ProbandSize<P>) / 2, n_pheno_),
+        std_female_((n_probands_ * ProbandSize<P>) / 2, n_pheno_) {
+    if constexpr (P == ProbandType::Self) {
       throw std::runtime_error(
-          "Unsupported proband type Proband::Individual for estimator "
+          "Unsupported proband type Proband::Self for estimator "
           "SampleMateCor");
     }
   }
@@ -187,7 +187,7 @@ class SampleEstimatorMateCorStrategy : public SampleEstimatorStrategy<P> {
     Eigen::MatrixXd phenotypes =
         parsePhenoFile(this->sample_dir_ / "data.pheno");
     const std::size_t n_pairs = n_probands_ * 3;
-    const std::size_t outer = n_probands_ * ProbandData<P>::ProbandSize;
+    const std::size_t outer = n_probands_ * ProbandSize<P>;
 
     using MateMat = Eigen::Map<
         const Eigen::MatrixXd,
@@ -219,7 +219,7 @@ class SampleEstimatorMateCorStrategy : public SampleEstimatorStrategy<P> {
   Eigen::MatrixXd std_female_;
 };
 
-template <Proband P>
+template <ProbandType P>
 inline SampleEstimator<P> sampleMean() {
   return SampleEstimator<P>{
       .name = "sample-mean",
@@ -231,7 +231,7 @@ inline SampleEstimator<P> sampleMean() {
       }};
 }
 
-template <Proband P>
+template <ProbandType P>
 inline SampleEstimator<P> sampleVar() {
   return SampleEstimator<P>{
       .name = "sample-var",
@@ -243,7 +243,7 @@ inline SampleEstimator<P> sampleVar() {
       }};
 }
 
-template <Proband P>
+template <ProbandType P>
 inline SampleEstimator<P> sampleCov() {
   return SampleEstimator<P>{
       .name = "sample-cov",
@@ -255,7 +255,7 @@ inline SampleEstimator<P> sampleCov() {
       }};
 }
 
-template <Proband P>
+template <ProbandType P>
 inline SampleEstimator<P> sampleMateCor() {
   return SampleEstimator<P>{
       .name = "sample-mate-cor",

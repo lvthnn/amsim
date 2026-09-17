@@ -17,37 +17,48 @@
 
 #include <amsim/core/generation.h>
 #include <amsim/core/utils.h>
-#include <amsim/sample/weight.h>
+#include <amsim/data/pedigree.h>
+#include <amsim/sample/selection.h>
 
 #include <boost/algorithm/string/case_conv.hpp>
 
 namespace amsim {
 
-// proband types — these define the unit of sampling
-enum class Proband { Individual, Mate, Family };
+/**
+ * A proband is a collection of individuals related either through familial
+ * relations or through spouses (in-laws) that represents the unit of sampling
+ * for a given sample. In other words, if we imagine a proband consists of the
+ * three members {son, father, mother}, then if the proband is sampled, then
+ * all constituents of the proband (son, father, mother) enter the sample.
+ *
+ * amsim currently supports three proband types:
+ *   - Proband::Self: Singleton sets of individuals in the current generation.
+ *   - Proband::Family: A sextuple consisting of a nuclear-family plus the
+ *       spouses of the children. Spans two generations.
+ *   - Proband::Mate: Two nuclear families plus spouses, linked through a single
+ *       spouse pair.
+ *
+ * Currently, intergenerational sampling is unsupported for the Proband::Self
+ * type. This is planned for future release.
+ *
+ * The constituents of the proband type are defined through the enums Self,
+ * Family and Mate, with members represented through unsigned integer types.
+ * This allows representation of subsets of the proband through the following
+ * binary operations:
+ *
+ *   Family::Son | Family::Father                             (father-son pairs)
+ *   HusbandFather | HusbandMother | HusbandSister              (wife's in-laws)
+ *   proband_member & Family::Males                              (subset checks)
+ */
+enum class ProbandType { Self, Family, Mate };
 
-// proband subtypes — the members constituting a sampling unit and various
-// combinations of them, such as parents, siblings, in-laws, etc.
-enum class Individual : uint8_t { Unknown = 0b0, Self = 0b1 };
+inline std::string probandToString(ProbandType p) {
+  if (p == ProbandType::Self) return "self";
+  if (p == ProbandType::Family) return "family";
+  return "mate";
+}
 
-enum class Mate : uint8_t {
-  Unknown = 0b000000,
-  Husband = 0b000001,
-  Wife = 0b000010,
-  HusbandFather = 0b000100,
-  HusbandMother = 0b001000,
-  WifeFather = 0b010000,
-  WifeMother = 0b100000,
-  All = 0b111111,
-  Couple = Husband | Wife,
-  HusbandInLaws = WifeFather | WifeMother,
-  WifeInLaws = HusbandFather | HusbandMother,
-  Parents = HusbandInLaws | WifeInLaws,
-  HusbandFamily = Husband | WifeInLaws,
-  WifeFamily = Wife | HusbandInLaws,
-  Males = Husband | HusbandFather | WifeFather,
-  Females = Wife | HusbandMother | WifeMother
-};
+enum class Self : uint8_t { Unknown = 0b0, Self = 0b1 };
 
 enum class Family : uint8_t {
   Unknown = 0b000000,
@@ -64,219 +75,339 @@ enum class Family : uint8_t {
   Females = Mother | Daughter
 };
 
-constexpr uint8_t operator&(Individual a, Individual b) {
-  return static_cast<uint8_t>(a) & static_cast<uint8_t>(b);
-}
-
-constexpr uint8_t operator&(Mate a, Mate b) {
-  return static_cast<uint8_t>(a) & static_cast<uint8_t>(b);
-}
-
-constexpr uint8_t operator&(Family a, Family b) {
-  return static_cast<uint8_t>(a) & static_cast<uint8_t>(b);
-}
-
-constexpr Individual operator|(Individual a, Individual b) {
-  return static_cast<Individual>(
-      static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
-}
-
-constexpr Mate operator|(Mate a, Mate b) {
-  return static_cast<Mate>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
-}
-
-constexpr Family operator|(Family a, Family b) {
-  return static_cast<Family>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
-}
-
-// aggregator types — functions to reduce a proband subtype into a statistics
-// that can enter into a sampling probability transformer
-enum class Aggregator { Max, Min, Mean, Identity };
-
-inline Aggregator aggregatorFromString(const std::string& s) {
-  std::string l = boost::to_lower_copy(s);
-  if (l == "max") return Aggregator::Max;
-  if (l == "min") return Aggregator::Min;
-  if (l == "mean") return Aggregator::Mean;
-  if (l == "identity") return Aggregator::Identity;
-  throw std::runtime_error("Unknown aggregator type" + l);
-}
-
-// declares member information
-template <typename ProbandEnum>
-struct ProbandMember {
-  ProbandEnum self;
-  ProbandEnum father;
-  ProbandEnum mother;
-  Generation generation;
-  Sex sex;
+enum class Mate : uint16_t {
+  Unknown = 0b0000000000,
+  Husband = 0b0000000001,
+  Wife = 0b0000000010,
+  HusbandFather = 0b0000000100,
+  HusbandMother = 0b0000001000,
+  HusbandSister = 0b0000010000,
+  HusbandBrotherInLaw = 0b0000100000,
+  WifeFather = 0b0001000000,
+  WifeMother = 0b0010000000,
+  WifeBrother = 0b0100000000,
+  WifeSisterInLaw = 0b1000000000,
+  All = 0b1111111111,
+  Couple = Husband | Wife,
+  WifeSiblings = Wife | WifeBrother,
+  HusbandSiblings = Husband | HusbandSister,
+  HusbandInLaws = WifeFather | WifeMother,
+  WifeInLaws = HusbandFather | HusbandMother,
+  Parents = HusbandInLaws | WifeInLaws,
+  HusbandFamily = Husband | WifeInLaws,
+  WifeFamily = Wife | HusbandInLaws,
+  Males = Husband | HusbandFather | WifeFather,
+  Females = Wife | HusbandMother | WifeMother
 };
 
-// for each kind of proband type, the extracted data from sampling has a
-// fixed layout, depending on the size (or "dimension") of the sampling unit
-// with respect to the number of "atomic" members comprising it
-template <Proband P>
-struct ProbandData;
+/**
+ * Each proband is associated with an ID, which can be interpreted as follows:
+ *   - Proband::Self: The index of the individual in the range [0,...,<n_ind>).
+ *   - Proband::Family: Index of the father in the range [0,...,<n_ind>/2).
+ *   - Proband::Mate: Index of the husband in the range [0,...,<n_ind>/2).
+ */
+template <ProbandType P>
+struct ProbandId {
+  std::size_t index;
 
-template <>
-struct ProbandData<Proband::Individual> {
-  using ProbandEnum = Individual;
-  static constexpr std::size_t ProbandSize = 1;
-  static constexpr ProbandEnum ProbandDefault = Individual::Self;
-  static constexpr ProbandMember<ProbandEnum> ProbandMembers[ProbandSize] = {
-      {.self = Individual::Self,
-       .generation = Generation::Current,
-       .sex = Sex::Unknown}};
-  static constexpr Aggregator AggDefault = Aggregator::Identity;
-  static ProbandEnum fromString(const std::string& s) {
-    std::string l = boost::to_lower_copy(s);
-    if (l == "self") return Individual::Self;
-    throw std::runtime_error("Unknown Individual proband member " + s);
+  // Get all proband identifiers for the given proband type
+  static auto all(std::size_t n_ind) {
+    return std::views::iota(std::size_t{0}, getProbandRange(n_ind)) |
+           std::views::transform([](std::size_t id) { return ProbandId(id); });
+  }
+
+ private:
+  // creating a ProbandId is disallowed, access is only allowed through
+  // all() public function which returns all valid ProbandIds simultaneously
+  explicit ProbandId(std::size_t index_) : index(index_) {}
+
+  static std::size_t getProbandRange(std::size_t n_ind) {
+    return (P == ProbandType::Self) ? n_ind : n_ind / 2;
   }
 };
 
+// Wraps ProbandId<P>::all – retrieves all proband identifiers for a given type
+template <ProbandType P>
+inline auto getProbandIds(const Pedigree& pedigree) {
+  return ProbandId<P>::all(pedigree.numInd());
+}
+
+template <typename Enum>
+struct Member {
+  Enum self;
+  Individual (*relation)(const Individual& via);
+  std::string name;
+  std::string code;
+};
+
+/**
+ * Stores compile-time data on sample structure and defaults for each proband
+ * type
+ */
+template <ProbandType P>
+struct Data;
+
 template <>
-struct ProbandData<Proband::Mate> {
-  using ProbandEnum = Mate;
-  static constexpr std::size_t ProbandSize = 6;
-  static constexpr ProbandEnum ProbandDefault = Mate::Couple;
-  static constexpr ProbandMember<ProbandEnum> ProbandMembers[ProbandSize] = {
-      {.self = Mate::Husband,
-       .father = Mate::HusbandFather,
-       .mother = Mate::HusbandMother,
-       .generation = Generation::Current,
-       .sex = Sex::Male},
+struct Data<ProbandType::Self> {
+  using MemberEnum = Self;
 
-      {.self = Mate::Wife,
-       .father = Mate::WifeFather,
-       .mother = Mate::WifeMother,
-       .generation = Generation::Current,
-       .sex = Sex::Female},
+  static constexpr MemberEnum OfDefault = Self::Self;
+  static constexpr AggFunction AggDefault = AggFunction::Identity;
 
-      {.self = Mate::HusbandFather,
-       .father = Mate::Unknown,
-       .mother = Mate::Unknown,
-       .generation = Generation::Parents,
-       .sex = Sex::Male},
+  static constexpr Member<MemberEnum> Root = {
+      .self = Self::Self,
+      .relation = [](const Individual& via) { return via; },
+      .name = "self",
+      .code = "IND"};
 
-      {.self = Mate::HusbandMother,
-       .father = Mate::Unknown,
-       .mother = Mate::Unknown,
-       .generation = Generation::Parents,
-       .sex = Sex::Female},
+  static constexpr std::size_t RootDepth = 0;
 
-      {.self = Mate::WifeFather,
-       .father = Mate::Unknown,
-       .mother = Mate::Unknown,
-       .generation = Generation::Parents,
-       .sex = Sex::Male},
-
-      {.self = Mate::WifeMother,
-       .father = Mate::Unknown,
-       .mother = Mate::Unknown,
-       .generation = Generation::Parents,
-       .sex = Sex::Female}};
-  static constexpr Aggregator AggDefault = Aggregator::Mean;
-  static ProbandEnum fromString(const std::string& s) {
-    std::string l = boost::to_lower_copy(s);
-    if (l == "husband") return Mate::Husband;
-    if (l == "wife") return Mate::Wife;
-    if (l == "husbandfather") return Mate::HusbandFather;
-    if (l == "husbandmother") return Mate::HusbandMother;
-    if (l == "wifefather") return Mate::WifeFather;
-    if (l == "wifemother") return Mate::WifeMother;
-    if (l == "all") return Mate::All;
-    if (l == "couple") return Mate::Couple;
-    if (l == "husbandinlaws") return Mate::HusbandInLaws;
-    if (l == "wifeinlaws") return Mate::WifeInLaws;
-    if (l == "parents") return Mate::Parents;
-    if (l == "husbandfamily") return Mate::HusbandFamily;
-    if (l == "wifefamily") return Mate::WifeFamily;
-    if (l == "males") return Mate::Males;
-    if (l == "females") return Mate::Females;
-    throw std::runtime_error("Unknown Mate proband member " + l);
-  }
+  static constexpr std::size_t NumDerive = 0;
+  static constexpr std::array<Member<MemberEnum>, NumDerive> Derive = {{}};
 };
 
 template <>
-struct ProbandData<Proband::Family> {
-  using ProbandEnum = Family;
-  static constexpr std::size_t ProbandSize = 6;
-  static constexpr ProbandEnum ProbandDefault = Family::All;
-  static constexpr ProbandMember<ProbandEnum> ProbandMembers[ProbandSize] = {
-      {.self = Family::Father,
-       .father = Family::Unknown,
-       .mother = Family::Unknown,
-       .generation = Generation::Parents,
-       .sex = Sex::Male},
+struct Data<ProbandType::Family> {
+  using MemberEnum = Family;
 
+  static constexpr MemberEnum OfDefault = Family::All;
+  static constexpr AggFunction AggDefault = AggFunction::Mean;
+
+  static constexpr Member<MemberEnum> Root = {
+      .self = Family::Father,
+      .relation = [](const Individual& root) { return root; },
+      .name = "father",
+      .code = "FAT"};
+
+  static constexpr std::size_t RootDepth = 1;
+
+  static constexpr std::size_t NumDerive = 5;
+  static constexpr std::array<Member<MemberEnum>, NumDerive> Derive = {{
       {.self = Family::Mother,
-       .father = Family::Unknown,
-       .mother = Family::Unknown,
-       .generation = Generation::Parents,
-       .sex = Sex::Female},
+       .relation = [](const Individual& root) { return root.spouse(); },
+       .name = "mother",
+       .code = "MOT"},
 
       {.self = Family::Son,
-       .father = Family::Father,
-       .mother = Family::Mother,
-       .generation = Generation::Current,
-       .sex = Sex::Male},
+       .relation = [](const Individual& root) { return root.son(); },
+       .name = "son",
+       .code = "SON"},
 
       {.self = Family::SonWife,
-       .father = Family::Unknown,
-       .mother = Family::Unknown,
-       .generation = Generation::Current,
-       .sex = Sex::Female},
-
-      {.self = Family::DaughterHusband,
-       .father = Family::Unknown,
-       .mother = Family::Unknown,
-       .generation = Generation::Current,
-       .sex = Sex::Male},
+       .relation = [](const Individual& root) { return root.son().spouse(); },
+       .name = "son-wife",
+       .code = "SOW"},
 
       {.self = Family::Daughter,
-       .father = Family::Father,
-       .mother = Family::Mother,
-       .generation = Generation::Current,
-       .sex = Sex::Female},
-  };
-  static constexpr Aggregator AggDefault = Aggregator::Mean;
-  static ProbandEnum fromString(const std::string& s) {
-    std::string l = boost::to_lower_copy(s);
-    if (l == "father") return Family::Father;
-    if (l == "mother") return Family::Mother;
-    if (l == "son") return Family::Son;
-    if (l == "daughter") return Family::Daughter;
-    if (l == "sonwife") return Family::SonWife;
-    if (l == "daughterhusband") return Family::DaughterHusband;
-    if (l == "all") return Family::All;
-    if (l == "parents") return Family::Parents;
-    if (l == "siblings") return Family::Siblings;
-    if (l == "males") return Family::Males;
-    if (l == "females") return Family::Females;
-    throw std::runtime_error("Unknown Family proband member " + l);
+       .relation = [](const Individual& root) { return root.daughter(); },
+       .name = "daughter",
+       .code = "DAU"},
+
+      {.self = Family::DaughterHusband,
+       .relation =
+           [](const Individual& root) { return root.daughter().spouse(); },
+       .name = "daughter-husband",
+       .code = "DAH"},
+  }};
+};
+
+template <>
+struct Data<ProbandType::Mate> {
+  using MemberEnum = Mate;
+
+  static constexpr MemberEnum OfDefault = Mate::Couple;
+  static constexpr AggFunction AggDefault = AggFunction::Mean;
+
+  static constexpr Member<MemberEnum> Root = {
+      .self = Mate::Husband,
+      .relation = [](const Individual& root) { return root; },
+      .name = "husband",
+      .code = "hus"};
+
+  static constexpr std::size_t RootDepth = 0;
+
+  static constexpr std::size_t NumDerive = 9;
+  static constexpr std::array<Member<MemberEnum>, NumDerive> Derive = {{
+      {.self = Mate::HusbandFather,
+       .relation = [](const Individual& root) { return root.father(); },
+       .name = "husband-father",
+       .code = "HUF"},
+
+      {.self = Mate::HusbandMother,
+       .relation = [](const Individual& root) { return root.mother(); },
+       .name = "husband-mother",
+       .code = "HUM"},
+
+      {.self = Mate::HusbandSister,
+       .relation = [](const Individual& root) { return root.sibling(); },
+       .name = "husband-sister",
+       .code = "HSS"},
+
+      {.self = Mate::HusbandBrotherInLaw,
+       .relation =
+           [](const Individual& root) { return root.sibling().spouse(); },
+       .name = "husband-brother-in-law",
+       .code = "HBL"},
+
+      {.self = Mate::Wife,
+       .relation = [](const Individual& root) { return root.spouse(); },
+       .name = "wife",
+       .code = "WIF"},
+
+      {.self = Mate::WifeFather,
+       .relation =
+           [](const Individual& root) { return root.spouse().father(); },
+       .name = "wife-father",
+       .code = "WFF"},
+
+      {.self = Mate::WifeMother,
+       .relation =
+           [](const Individual& root) { return root.spouse().mother(); },
+       .name = "wife-mother",
+       .code = "WFM"},
+
+      {.self = Mate::WifeBrother,
+       .relation =
+           [](const Individual& root) { return root.spouse().sibling(); },
+       .name = "wife-brother",
+       .code = "WFB"},
+
+      {.self = Mate::WifeSisterInLaw,
+       .relation =
+           [](const Individual& root) {
+             return root.spouse().sibling().spouse();
+           },
+       .name = "wife-sister-in-law",
+       .code = "WSL"},
+  }};
+};
+
+// template wrapper for convenience
+template <ProbandType P>
+using ProbandMemberEnum = Data<P>::MemberEnum;
+
+template <ProbandType P>
+using ProbandEnumType = std::underlying_type_t<ProbandMemberEnum<P>>;
+
+template <ProbandType P>
+static constexpr std::size_t ProbandSize = Data<P>::NumDerive + 1;
+
+template <ProbandType P>
+static constexpr ProbandMemberEnum<P> ProbandOfDefault = Data<P>::OfDefault;
+
+template <ProbandType P>
+static constexpr AggFunction ProbandAggDefault = Data<P>::AggDefault;
+
+/**
+ * An run-time instantiation of a proband, has an associated Id and is filled
+ * with its constituent members, represented as Individual types
+ */
+template <ProbandType P>
+struct Proband {
+  ProbandId<P> id;
+  std::array<Individual, ProbandSize<P>> member;
+
+  static constexpr std::size_t size() { return ProbandSize<P>; }
+
+  static const Member<typename Data<P>::MemberEnum>& memberData(
+      std::size_t mem) {
+    return (mem == 0) ? Data<P>::Root : Data<P>::Derive[mem - 1];
   }
 };
 
-template <Proband P>
-typename ProbandData<P>::ProbandEnum parseProband(
-    const std::vector<std::string>& probands_str) {
-  using ProbandEnum = typename ProbandData<P>::ProbandEnum;
-  std::vector<ProbandEnum> probands(probands_str.size());
+/**
+ * Retrieve the proband that corresponds to this supplied ProbandId
+ */
+template <ProbandType P>
+Proband<P> getProband(ProbandId<P> id, const Pedigree& pedigree) {
+  std::array<Individual, ProbandSize<P>> member;
 
-  if (probands.empty())
-    throw std::runtime_error("Empty proband string supplied");
+  member[0] = pedigree.at(id.index, Data<P>::RootDepth);
+  for (std::size_t mem = 1; mem < ProbandSize<P>; ++mem)
+    member[mem] = Data<P>::Derive[mem - 1].relation(member[0]);
 
-  std::ranges::transform(
-      probands_str, probands.begin(), [](const std::string& s) {
-        return ProbandData<P>::fromString(s);
-      });
+  return Proband<P>{.id = id, .member = member};
+}
 
-  return std::accumulate(
-      probands.begin() + 1,
-      probands.end(),
-      probands[0],
-      [](const ProbandEnum& a, ProbandEnum b) { return a | b; });
+/**
+ * Retrieve all probands and pass them as a transform view
+ */
+template <ProbandType P>
+auto getProbands(const Pedigree& pedigree) {
+  return getProbandIds<P>(pedigree) |
+         std::views::transform([&](const ProbandId<P>& proband_id) {
+           return getProband(proband_id, pedigree);
+         });
+}
+
+// wrap operations on proband enums
+
+inline Self operator|(Self a, Self b) {
+  return static_cast<Self>(
+      static_cast<std::underlying_type_t<Self>>(a) |
+      static_cast<std::underlying_type_t<Self>>(b));
+}
+
+inline Self operator&(Self a, Self b) {
+  return static_cast<Self>(
+      static_cast<std::underlying_type_t<Self>>(a) &
+      static_cast<std::underlying_type_t<Self>>(b));
+}
+
+inline Mate operator|(Mate a, Mate b) {
+  return static_cast<Mate>(
+      static_cast<std::underlying_type_t<Mate>>(a) |
+      static_cast<std::underlying_type_t<Mate>>(b));
+}
+
+inline Mate operator&(Mate a, Mate b) {
+  return static_cast<Mate>(
+      static_cast<std::underlying_type_t<Mate>>(a) &
+      static_cast<std::underlying_type_t<Mate>>(b));
+}
+
+inline Family operator|(Family a, Family b) {
+  return static_cast<Family>(
+      static_cast<std::underlying_type_t<Family>>(a) |
+      static_cast<std::underlying_type_t<Family>>(b));
+}
+
+inline Family operator&(Family a, Family b) {
+  return static_cast<Family>(
+      static_cast<std::underlying_type_t<Family>>(a) &
+      static_cast<std::underlying_type_t<Family>>(b));
+}
+
+// string interface
+
+template <ProbandType P>
+inline ProbandMemberEnum<P> probandEnumFromString(const std::string& s) {
+  if (Data<P>::Root.name == s) return Data<P>::Root.self;
+  for (const auto& m : Data<P>::Derive)
+    if (m.name == s) return m.self;
+
+  if constexpr (P == ProbandType::Family) {
+    if (s == "all") return Family::All;
+    if (s == "parents") return Family::Parents;
+    if (s == "siblings") return Family::Siblings;
+    if (s == "males") return Family::Males;
+    if (s == "females") return Family::Females;
+  } else if constexpr (P == ProbandType::Mate) {
+    if (s == "all") return Mate::All;
+    if (s == "couple") return Mate::Couple;
+    if (s == "wife-siblings") return Mate::WifeSiblings;
+    if (s == "husband-siblings") return Mate::HusbandSiblings;
+    if (s == "husband-in-laws") return Mate::HusbandInLaws;
+    if (s == "wife-in-laws") return Mate::WifeInLaws;
+    if (s == "parents") return Mate::Parents;
+    if (s == "husband-family") return Mate::HusbandFamily;
+    if (s == "wife-family") return Mate::WifeFamily;
+    if (s == "males") return Mate::Males;
+    if (s == "females") return Mate::Females;
+  }
+
+  throw std::invalid_argument(
+      std::format("Unknown proband member name '{}'", s));
 }
 
 }  // namespace amsim

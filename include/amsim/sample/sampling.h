@@ -25,6 +25,7 @@
 
 #include <filesystem>
 #include <variant>
+#include <ranges>
 
 namespace amsim {
 
@@ -207,10 +208,12 @@ inline void Sampler::Model<P>::fillAggregates(const State& state) {
 
         preaggregate(mem_pos, on) =
             individualPhenotype(state, proband.member[m], pheno_id, component);
+
         ++mem_pos;
       }
     }
 
+    // apply aggregation
     aggregates.row(proband.id.index) = aggregate(preaggregate, agg);
   }
 }
@@ -273,7 +276,7 @@ inline void Sampler::Model<P>::writeBED(const State& state) const {
     std::uint8_t byte = 0;
     std::size_t bit_pos = 0;
 
-    for (std::size_t sel : selected) {
+    for (std::size_t sel : selected | std::views::take(n_probands)) {
       Proband<P> proband = probands[sel];
 
       for (std::size_t m = 0; m < proband.size(); ++m)
@@ -306,16 +309,15 @@ inline void Sampler::Model<P>::writeFAM(const State& state) const {
 
   auto probands = getProbands<P>(state.pedigree);
 
-  for (std::size_t prob = 0; prob < n_probands; ++prob) {
-    std::size_t sel = selected[prob];
+  for (std::size_t sel : std::views::take(selected, n_probands)) {
     Proband<P> proband = probands[sel];
 
     for (std::size_t m = 0; m < proband.size(); ++m) {
       const Individual& individual = proband.member[m];
 
-      std::string fam_id = std::format("FAM{}", prob);
-      std::string self_id = std::format(
-          "{}{}", proband.memberData(m).code, individual.index);
+      std::string fam_id = std::format("FAM{}", proband.id.index);
+      std::string self_id =
+          std::format("{}{}", proband.memberData(m).code, individual.index);
       std::string father_id = member_id(proband, individual.father());
       std::string mother_id = member_id(proband, individual.mother());
       int sex = individual.isMale() ? 1 : 2;
@@ -349,7 +351,7 @@ inline void Sampler::Model<P>::writePHENO(
 
   auto probands = getProbands<P>(state.pedigree);
 
-  for (std::size_t sel : selected) {
+  for (std::size_t sel : selected | std::views::take(n_probands)) {
     Proband<P> proband = probands[sel];
 
     for (std::size_t m = 0; m < proband.size(); ++m) {
@@ -389,7 +391,6 @@ inline void Sampler::Model<P>::draw(const State& state) {
       selected.end(),
       [&](auto a, auto b) { return keys(a) > keys(b); });
 
-  // write to PLINK if necessary
   writePLINK(state);
 }
 

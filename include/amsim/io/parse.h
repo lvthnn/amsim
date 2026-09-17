@@ -18,7 +18,7 @@
 #include <amsim/core/distributions.h>
 #include <amsim/core/utils.h>
 #include <amsim/sample/proband.h>
-#include <amsim/sample/weight.h>
+#include <amsim/sample/selection.h>
 
 #include <Eigen/Dense>
 #include <algorithm>
@@ -26,18 +26,17 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
+#include <concepts>
 #include <filesystem>
 #include <fstream>
 #include <utility>
 #include <vector>
-#include <concepts>
 
 namespace amsim {
 
 inline std::string parseExceptionStr(
     const std::string& s, const std::optional<std::string>& flag) {
   return std::format(
-
       "Failed to parse '{}' {}",
       s,
       flag.has_value() ? "(passed to " + flag.value() + ")" : "");
@@ -236,6 +235,30 @@ inline WeightFunction parse(const std::string& s) {
   }
 
   throw std::runtime_error("Unrecognised weight function " + s);
+}
+
+template <ProbandType P>
+inline ProbandMemberEnum<P> parse(const std::string& s) {
+  std::vector<std::string> probands_str = utils::splitString(s);
+  std::vector<ProbandMemberEnum<P>> probands(probands_str.size());
+
+  if (probands.empty())
+    throw std::runtime_error("Empty proband string supplied");
+
+  std::ranges::transform(
+      probands_str, probands.begin(), [](const std::string& s) {
+        return probandEnumFromString<P>(s);
+      });
+
+  // static cast required since the accumulation operation produces
+  // ProbandEnumType<P> but return type is ProbandEnum<P>
+  return static_cast<ProbandMemberEnum<P>>(std::accumulate(
+      probands.begin() + 1,
+      probands.end(),
+      probands[0],
+      [](const ProbandMemberEnum<P>& a, ProbandMemberEnum<P> b) {
+        return a | b;
+      }));
 }
 
 template <typename T>

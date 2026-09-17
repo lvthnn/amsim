@@ -28,7 +28,7 @@ namespace amsim {
 
 namespace bp = boost::process;
 
-template <Proband P>
+template <ProbandType P>
 class SampleEstimatorExternalStrategy : public SampleEstimatorStrategy<P> {
  public:
   SampleEstimatorExternalStrategy(
@@ -101,7 +101,7 @@ class SampleEstimatorExternalStrategy : public SampleEstimatorStrategy<P> {
   }
 };
 
-template <Proband P>
+template <ProbandType P>
 inline SampleEstimator<P> sampleExternal(
     std::string name,
     std::string cmd,
