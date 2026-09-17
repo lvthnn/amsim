@@ -172,8 +172,10 @@ inline void H5Writer::writeEstimator(
         [this,
          copy = data,
          dir = std::format("raw/{}/rep{:03d}", name, rep + 1),
-         path = std::format("raw/{}/rep{:03d}/gen{:03d}", name, rep + 1, gen)] {
+         path = std::format(
+             "raw/{}/rep{:03d}/gen{:03d}", name, rep + 1, gen + 1)] {
           if (!file_.exist(dir)) file_.createGroup(dir);
+          Log::debug("H5Writer::writeEstimator: creating data set {}", path);
           file_.createDataSet(path, copy);
         });
 
@@ -301,8 +303,9 @@ inline void H5Writer::summarise() {
 
       for (std::size_t rep = 0; rep < n_reps_; ++rep) {
         file_
-            .getDataSet(std::format(
-                "{}/rep{:03d}/gen{:03d}", path_raw, rep + 1, gen + 1))
+            .getDataSet(
+                std::format(
+                    "{}/rep{:03d}/gen{:03d}", path_raw, rep + 1, gen + 1))
             .read(m);
         mean += m;
       }
@@ -310,8 +313,9 @@ inline void H5Writer::summarise() {
 
       for (std::size_t rep = 0; rep < n_reps_; ++rep) {
         file_
-            .getDataSet(std::format(
-                "{}/rep{:03d}/gen{:03d}", path_raw, rep + 1, gen + 1))
+            .getDataSet(
+                std::format(
+                    "{}/rep{:03d}/gen{:03d}", path_raw, rep + 1, gen + 1))
             .read(m);
         stderr += (m - mean).array().square().matrix();
       }

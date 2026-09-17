@@ -65,8 +65,8 @@ class PopulationEstimatorStrategy {
   Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> data_;
 };
 
-inline std::unique_ptr<PopulationEstimatorStrategy> PopulationEstimator::operator()(
-    const Params& params) const {
+inline std::unique_ptr<PopulationEstimatorStrategy>
+PopulationEstimator::operator()(const Params& params) const {
   return fn(params);
 }
 
