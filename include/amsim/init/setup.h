@@ -129,6 +129,8 @@ struct SimulationSpec {
 
   LogLevel log_level = LogLevel::Info;
   bool log_to_file = true;
+
+  bool delete_tmp = true; 
 };
 
 inline PhenomeParams buildPhenoParams(const SimulationSpec& spec) {

@@ -224,6 +224,8 @@ inline void runReplicate(const Params& params) {
     state.advance();
   }
 
+  state.gen = 0;
+
   Log::info("Finished simulating founder generation(s)");
 
   if (params.global.post_init_seed.has_value()) {
@@ -318,7 +320,8 @@ inline void runSimulation(const SimulationSpec& spec) {
 
   for (auto& t : pool) t.join();
 
-  std::filesystem::remove_all(tmp_dir);
+  if (spec.delete_tmp)
+    std::filesystem::remove_all(tmp_dir);
 }
 
 }  // namespace amsim

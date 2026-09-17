@@ -96,6 +96,7 @@ enum Option {
   GlobalSaveConfig,
   GlobalLoadConfig,
   GlobalShareInitState,
+  GlobalNoDeleteTmp,
   GlobalNoRun,
   GenomeLocusInitFreqs,
   GenomeLocusRecombinationProbs,
@@ -254,12 +255,13 @@ the population with inclusion probability governed by a weighting function of
 declarations make this up:
 
   --sample <name>
-    --proband {individual | mate | family}
+    --proband {self | mate | family}
     --n-probands <n_prob>
     --on <phenotype(s)>
     --of <member(s)>
     --agg {mean | max | min | identity}
-    --weight {uniform() | logistic(<coef>, ...) | case-control(<thresh>, {<|>}, <coef>, ...)}
+    --weight {uniform() | logistic(<coef>, ...) |
+              case-control(<thresh>, {<|>}, <coef>, ...)}
     --estimators <est_name(s)>
 
   --sample-estimator <name>
@@ -274,15 +276,18 @@ declarations make this up:
 --proband fixes the unit of sampling and, with it, which family members are
 addressable through --of:
 
-  individual   a single person (--of is not applicable)
-  mate         a mated couple: husband, wife, and their parents-in-law. Valid
-                options are {'husband', 'wife', 'husbandfather', 'husbandmother',
-                'wifefather', 'wifemother', 'couple', 'husbandinlaws', 'wifeinlaws',
-                'parents', 'husbandfamily', 'wifefamily', 'males', 'females', 'all'}.
-  family       a nuclear family: father, mother, their children, and whoever their
-                children married. Valid options are {'father', 'mother', 'son',
-                'daughter', 'sonwife', 'daughterhusband', 'parents', 'siblings',
-                'males', 'females', 'all'}.
+  self     a single person (--of is not applicable)
+  mate     a mated couple: husband, wife, and their in-laws. Valid options are
+            {'husband', 'wife', 'husband-father', 'husband-mother',
+            'husband-sister', 'husband-brother-in-law', 'wife-father',
+            'wife-mother', 'wife-brother', 'wife-sister-in-law', 'couple',
+            'husband-siblings', 'wife-siblings', 'husband-in-laws',
+            'wife-in-laws', 'parents', 'husband-family', 'wife-family',
+            'males', 'females', 'all'}.
+  family   a nuclear family: father, mother, their children, and whoever their
+            children married. Valid options are {'father', 'mother', 'son',
+            'daughter', 'son-wife', 'daughter-husband', 'parents', 'siblings',
+            'males', 'females', 'all'}.
 
 For each proband, --on selects which phenotype(s) enter the weighting calculation
 and --of selects whose values are used; --agg then reduces the values across the
@@ -323,7 +328,7 @@ that reads a --bfile-style PLINK prefix. Whatever program you point --exec at
 must write its result to the --out path as plain text in the same matrix format
 --file accepts elsewhere (values comma- or space-separated, rows separated by a
 semicolon or newline), sized --n-rows x --n-cols; amsim reads that file back in
-once --exec returns.
+once --exec has finished running.
   )";
 }
 
@@ -381,6 +386,7 @@ global options:
   --save-config
   --load-config <config_path>
   --share-init-state
+  --no-delete-tmp
   --no-run
 
 genome options:
@@ -423,9 +429,10 @@ sampling and estimation options:
     --row-names <row_names>
     --col-names <col_names>
   --sample <sample_name>
-    --proband {individual | mate | family}
+    --proband {self | mate | family}
     --n-probands <n-prob>
-    --weight {logistic(<pheno_coefs>) | uniform() | case-control(<thresh>, {<|>}, <pheno_coefs>)}
+    --weight {logistic(<pheno_coefs>) | uniform() |
+              case-control(<thresh>, {<|>}, <pheno_coefs>)}
     --on <weight_on>
     --of <weight_of>
     --agg <agg_fn>
@@ -524,6 +531,12 @@ to the existing configuration.
   docs[Option::GlobalShareInitState] = R"(
 If enabled, starts simulations from the same founder population and state.
   )";
+
+  docs[Option::GlobalNoDeleteTmp] = R"(
+If enabled, temporary files produced during simulation are not deleted once the
+run has completed. To access the path of the scratch directory, run amsim with
+--log-level debug and see the log.
+)";
 
   docs[Option::GlobalNoRun] = R"(
 If enabled, the software exits without performing simulation. This is useful when
@@ -743,6 +756,7 @@ std::vector<option> getOptions() {
       {"save-config", no_argument, nullptr, GlobalSaveConfig},
       {"load-config", required_argument, nullptr, GlobalLoadConfig},
       {"share-init-state", no_argument, nullptr, GlobalShareInitState},
+      {"no-delete-tmp", no_argument, nullptr, GlobalNoDeleteTmp},
       {"no-run", no_argument, nullptr, GlobalNoRun},
 
       // Genome options
@@ -974,6 +988,10 @@ int main(int argc, char* argv[]) {
           context = Context::Global;
           spec.share_init_state = true;
           continue;
+        case Option::GlobalNoDeleteTmp:
+          context = Context::Global;
+          spec.delete_tmp = false;
+          continue;
         case Option::GlobalNoRun:
           context = Context::Global;
           run = false;
@@ -1161,12 +1179,12 @@ int main(int argc, char* argv[]) {
           continue;
         case Option::SampleWeightOnPhenotypes: {
           checkContext(context, Context::Sample, "--on");
-          spec.sample_spec.back().on = amsim::utils::splitString(optarg);
+          spec.sample_spec.back().on = optarg;
           continue;
         }
         case Option::SampleWeightOfMembers:
           checkContext(context, Context::Sample, "--of");
-          spec.sample_spec.back().of = amsim::utils::splitString(optarg);
+          spec.sample_spec.back().of = optarg;
           continue;
         case Option::SampleWeightAggregation:
           checkContext(context, Context::Sample, "--agg");
