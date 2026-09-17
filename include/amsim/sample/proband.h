@@ -22,6 +22,8 @@
 
 #include <boost/algorithm/string/case_conv.hpp>
 
+#include <string_view>
+
 namespace amsim {
 
 /**
@@ -136,8 +138,8 @@ template <typename Enum>
 struct Member {
   Enum self;
   Individual (*relation)(const Individual& via);
-  std::string name;
-  std::string code;
+  std::string_view name;
+  std::string_view code;
 };
 
 /**
