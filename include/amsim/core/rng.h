@@ -178,9 +178,11 @@ struct BernoulliWord {
 
 using BW16 = BernoulliWord<16>;
 
+// NOLINTBEGIN(readability-identifier-naming)
 inline double u01_53(const uint64_t x) noexcept {
   return ((x >> 11) + 0.5) * (1.0 / 9007199254740992.0);
 }
+// NOLINTEND(readability-identifier-naming)
 
 struct NormalPolar {
   NormalPolar() = default;

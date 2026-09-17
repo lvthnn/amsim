@@ -16,19 +16,45 @@
 #pragma once
 
 #include <amsim/core/generation.h>
-#include <amsim/core/params.h>
 #include <amsim/data/matching.h>
 
 #include <algorithm>
 #include <cstddef>
 #include <deque>
+#include <format>
+#include <ranges>
+#include <utility>
 
 namespace amsim {
 
-struct PedigreeNode {
+class Pedigree;
+
+/**
+ * Represents the atomic unit of the population, the individual. Each individual
+ * has an index which locates them within the data buffers, and a depth which
+ * specifies which generation they are in. Moreover, each individual holds a
+ * reference to a pedigree which allows traversal of the pedigree.
+ */
+struct Individual {
   std::size_t index;
   std::size_t depth;
-  Sex sex;  // this is immediate from index but convenient
+  const Pedigree* pedigree;
+
+  bool operator==(const Individual&) const = default;
+
+  bool isMale() const;
+
+  // these are immediate
+  Individual spouse() const;
+  Individual sibling() const;
+  Individual father() const;
+  Individual mother() const;
+  Individual son() const;
+  Individual daughter() const;
+
+  // these are "generic"
+  Individual parent(Sex sex) const;
+  Individual child(Sex sex) const;
 };
 
 struct PedigreePath {
@@ -39,227 +65,166 @@ struct PedigreePath {
 
 class Pedigree {
  public:
-  explicit Pedigree(const Params& params)
-      : max_depth_(params.global.pedigree_max_depth),
-        n_ind_(params.global.n_ind),
-        n_sex_(params.global.n_ind / 2) {}
+  explicit Pedigree(std::size_t max_depth, std::size_t n_ind)
+      : max_depth_(max_depth), n_ind_(n_ind), n_sex_(n_ind / 2) {}
 
   void push(const Matching& matching, const Matching& inv_matching);
 
-  std::size_t depth() const;
+  std::size_t depth() const { return history_.first.size(); }
 
-  std::size_t max_depth() const;
+  std::size_t maxDepth() const { return max_depth_; }
 
-  std::vector<std::vector<PedigreeNode>> findCousins(
-      const PedigreeNode& self, std::size_t degree = 1) const;
+  std::size_t numInd() const { return n_ind_; }
 
-  std::vector<std::vector<PedigreeNode>> findCousins(
+  std::size_t numSex() const { return n_sex_; }
+
+  bool isMale(const Individual& self) const;
+
+  std::size_t spouseIndex(const Individual& self) const;
+  std::size_t fatherIndex(const Individual& self) const;
+  std::size_t motherIndex(const Individual& self) const;
+  std::size_t siblingIndex(const Individual& self) const;
+  Individual at(std::size_t index, std::size_t depth) const;
+
+  static std::vector<Individual> traversal(
+      const Individual& init, const PedigreePath& path);
+
+  static std::vector<std::vector<Individual>> getCousins(
+      const Individual& self, std::size_t degree = 1);
+
+  std::vector<std::vector<Individual>> getCousins(std::size_t degree = 1) const;
+
+  static std::vector<std::vector<Individual>> getAncestors(
+      const Individual& self, std::size_t degree = 1);
+
+  std::vector<std::vector<Individual>> getAncestors(
       std::size_t degree = 1) const;
 
-  std::vector<std::vector<PedigreeNode>> findAncestors(
-      const PedigreeNode& self, std::size_t degree = 1) const;
-
-  std::vector<std::vector<PedigreeNode>> findAncestors(
-      std::size_t degree = 1) const;
+  auto getSpousePairs(std::size_t depth = 1) const;
 
  private:
   std::size_t max_depth_;
   std::size_t n_ind_;
   std::size_t n_sex_;
-  std::deque<std::pair<Matching, Matching>> mate_history_;
+  std::pair<std::deque<Matching>, std::deque<Matching>> history_;
 
-  PedigreeNode node(std::size_t index, std::size_t depth) const;
-
-  PedigreeNode father(const PedigreeNode& self) const;
-  PedigreeNode mother(const PedigreeNode& self) const;
-  PedigreeNode sibling(const PedigreeNode& self) const;
-  PedigreeNode son(const PedigreeNode& self) const;
-  PedigreeNode daughter(const PedigreeNode& self) const;
-  PedigreeNode parent(const PedigreeNode& self, Sex sex) const;
-  PedigreeNode offspring(const PedigreeNode& self, Sex sex) const;
-
-  std::vector<PedigreeNode> traversal(
-      const PedigreeNode& init, const PedigreePath& path) const;
+  bool isMaxDepth(std::size_t depth) const {
+    return (depth == max_depth_) || (this->depth() == 1);
+  }
 };
 
 inline void Pedigree::push(
     const Matching& matching, const Matching& inv_matching) {
-  if (mate_history_.size() == max_depth_) mate_history_.pop_back();
-
-  mate_history_.emplace_front(matching, inv_matching);
-}
-
-inline std::size_t Pedigree::depth() const {
-  return mate_history_.size();
-}
-
-inline std::size_t Pedigree::max_depth() const {
-  return max_depth_;
-}
-
-inline std::vector<std::vector<PedigreeNode>> Pedigree::findCousins(
-    const PedigreeNode& self, std::size_t degree) const {
-  if (degree == 0)
-    throw std::invalid_argument(
-        "Pedigree::find_cousins: degree must be non-zero.");
-
-  std::size_t seq_len = 2 * degree;
-  std::vector<std::vector<PedigreeNode>> cousins;
-
-  // 2^(2d) bits in total
-  for (std::uint64_t seq = 0; seq < (1ULL << seq_len); ++seq) {
-    PedigreePath path{.seq = seq, .seq_len = seq_len, .pivot = degree};
-    cousins.push_back(traversal(self, path));
+  if (depth() == max_depth_ + 1) {
+    history_.first.pop_back();
+    history_.second.pop_back();
   }
-
-  return cousins;
+  history_.first.emplace_front(matching);
+  history_.second.emplace_front(inv_matching);
 }
 
-inline std::vector<std::vector<PedigreeNode>> Pedigree::findCousins(
-    std::size_t degree) const {
-  if (degree == 0)
+inline Individual Pedigree::at(std::size_t index, std::size_t depth) const {
+  if (index > n_ind_)
     throw std::invalid_argument(
-        "Pedigree::find_cousins: degree must be non-zero.");
+        std::format("Individual index must be in range [0, {}]", n_ind_ - 1));
 
-  auto cousins_per_ind = static_cast<std::size_t>(1ULL << (2 * degree));
-  std::vector<std::vector<PedigreeNode>> cousins(n_ind_ * cousins_per_ind);
-
-  for (std::size_t ind = 0; ind < n_ind_; ++ind) {
-    auto ind_cousins = findCousins(node(ind, 0), degree);
-    std::ranges::move(ind_cousins, (cousins.begin() + (ind * cousins_per_ind)));
-  }
-
-  return cousins;
-}
-
-inline std::vector<std::vector<PedigreeNode>> Pedigree::findAncestors(
-    const PedigreeNode& self, std::size_t degree) const {
-  if (degree == 0)
-    throw std::invalid_argument(
-        "Pedigree::find_ancestors: degree must be non-zero");
-
-  std::size_t seq_len = degree;
-  std::vector<std::vector<PedigreeNode>> ancestors;
-
-  for (std::uint64_t seq = 0; seq < (1ULL << seq_len); ++seq) {
-    PedigreePath path{.seq = seq, .seq_len = seq_len};
-    ancestors.push_back(traversal(self, path));
-  }
-
-  return ancestors;
-}
-
-inline std::vector<std::vector<PedigreeNode>> Pedigree::findAncestors(
-    std::size_t degree) const {
-  if (degree == 0)
-    throw std::invalid_argument(
-        "Pedigree::find_ancestors: degree must be non-zero");
-
-  auto ancestors_per_ind = static_cast<std::size_t>(1ULL << degree);
-  std::vector<std::vector<PedigreeNode>> ancestors(n_ind_ * ancestors_per_ind);
-
-  for (std::size_t ind = 0; ind < n_ind_; ++ind) {
-    auto ind_ancestors = findAncestors(node(ind, 0), degree);
-    std::ranges::move(
-        ind_ancestors, ancestors.begin() + (ancestors_per_ind * ind));
-  }
-
-  return ancestors;
-}
-
-inline PedigreeNode Pedigree::node(std::size_t index, std::size_t depth) const {
   if (depth >= max_depth_)
     throw std::invalid_argument(
-        "Pedigree::node depth argument exceeds maximum pedigree depth");
+        std::format(
+            "Pedigree::at depth {} exceeds pedigree depth {}",
+            depth,
+            max_depth_));
 
-  return PedigreeNode{
-      .index = index,
+  return Individual{.index = index, .depth = depth, .pedigree = this};
+}
+
+inline bool Pedigree::isMale(const Individual& self) const {
+  return self.index < n_sex_;
+}
+
+inline std::size_t Pedigree::spouseIndex(const Individual& self) const {
+  return isMale(self) ? n_sex_ + history_.first[self.depth][self.index]
+                      : history_.second[self.depth][self.index - n_sex_];
+}
+
+inline std::size_t Pedigree::fatherIndex(const Individual& self) const {
+  if (isMaxDepth(self.depth))
+    throw std::runtime_error(
+        "Pedigree::fatherIndex: Individual is at maximum depth");
+
+  return isMale(self) ? self.index
+                      : history_.second[self.depth + 1][self.index - n_sex_];
+}
+
+inline std::size_t Pedigree::motherIndex(const Individual& self) const {
+  if (isMaxDepth(self.depth))
+    throw std::runtime_error(
+        "Pedigree::motherIndex: Individual is at maximum depth");
+
+  return isMale(self) ? n_sex_ + history_.first[self.depth + 1][self.index]
+                      : self.index;
+}
+
+inline std::size_t Pedigree::siblingIndex(const Individual& self) const {
+  return isMale(self) ? n_sex_ + history_.first[self.depth + 1][self.index]
+                      : history_.second[self.depth + 1][self.index - n_sex_];
+}
+
+inline bool Individual::isMale() const { return pedigree->isMale(*this); }
+
+inline Individual Individual::father() const {
+  return Individual{
+      .index = pedigree->fatherIndex(*this),
+      .depth = depth + 1,
+      .pedigree = pedigree};
+}
+
+inline Individual Individual::mother() const {
+  return Individual{
+      .index = pedigree->motherIndex(*this),
+      .depth = depth + 1,
+      .pedigree = pedigree};
+}
+
+inline Individual Individual::parent(Sex sex) const {
+  return (sex == Sex::Male) ? this->father() : this->mother();
+}
+
+inline Individual Individual::sibling() const {
+  return Individual{
+      .index = pedigree->siblingIndex(*this),
       .depth = depth,
-      .sex = (index < n_sex_) ? Sex::Male : Sex::Female};
+      .pedigree = pedigree};
 }
 
-inline PedigreeNode Pedigree::father(const PedigreeNode& self) const {
-  if (self.depth == max_depth_)
-    throw std::range_error(
-        "Pedigree::father invoked at maximum pedigree depth");
-
-  return PedigreeNode{
-      .index = (self.sex == Sex::Male)
-                   ? self.index
-                   : mate_history_[self.depth + 1].second[self.index - n_sex_],
-      .depth = self.depth + 1,
-      .sex = Sex::Male};
+inline Individual Individual::spouse() const {
+  return Individual{
+      .index = pedigree->spouseIndex(*this),
+      .depth = depth,
+      .pedigree = pedigree};
 }
 
-inline PedigreeNode Pedigree::mother(const PedigreeNode& self) const {
-  if (self.depth == max_depth_)
-    throw std::range_error(
-        "Pedigree::mother invoked at maximum pedigree depth");
-
-  return PedigreeNode{
-      .index = (self.sex == Sex::Male)
-                   ? n_sex_ + mate_history_[self.depth + 1].first[self.index]
-                   : self.index,
-      .depth = self.depth + 1,
-      .sex = Sex::Female};
+inline Individual Individual::son() const {
+  return Individual{
+      .index = isMale() ? index : pedigree->spouseIndex(*this),
+      .depth = depth - 1,
+      .pedigree = pedigree};
 }
 
-inline PedigreeNode Pedigree::parent(const PedigreeNode& self, Sex sex) const {
-  if (sex == Sex::Male) return father(self);
-  if (sex == Sex::Female) return mother(self);
-  throw std::invalid_argument(
-      "Pedigree::parent invoked with parental sex Sex::Unknown");
+inline Individual Individual::daughter() const {
+  return Individual{
+      .index = isMale() ? pedigree->spouseIndex(*this) : index,
+      .depth = depth - 1,
+      .pedigree = pedigree};
 }
 
-inline PedigreeNode Pedigree::sibling(const PedigreeNode& self) const {
-  if (self.depth == max_depth_)
-    throw std::range_error(
-        "Pedigree::sibling invoked at maximum pedigree depth");
-
-  return PedigreeNode{
-      .index = (self.sex == Sex::Male)
-                   ? n_sex_ + mate_history_[self.depth + 1].first[self.index]
-                   : mate_history_[self.depth + 1].second[self.index - n_sex_],
-      .depth = self.depth,
-      .sex = (self.sex == Sex::Male) ? Sex::Female : Sex::Male};
+inline Individual Individual::child(Sex sex) const {
+  return (sex == Sex::Male) ? this->son() : this->daughter();
 }
 
-inline PedigreeNode Pedigree::son(const PedigreeNode& self) const {
-  if (self.depth == 0)
-    throw std::range_error(
-        "Pedigree::son invoked at current generation of pedigree");
-
-  return PedigreeNode{
-      .index = (self.sex == Sex::Male)
-                   ? self.index
-                   : mate_history_[self.depth].second[self.index - n_sex_],
-      .depth = self.depth - 1,
-      .sex = Sex::Male};
-}
-
-inline PedigreeNode Pedigree::daughter(const PedigreeNode& self) const {
-  if (self.depth == 0)
-    throw std::range_error(
-        "Pedigree::son invoked at current generation of pedigree");
-
-  return PedigreeNode{
-      .index = (self.sex == Sex::Male)
-                   ? n_sex_ + mate_history_[self.depth].first[self.index]
-                   : self.index,
-      .depth = self.depth - 1,
-      .sex = Sex::Female};
-}
-
-inline PedigreeNode Pedigree::offspring(
-    const PedigreeNode& self, Sex sex) const {
-  if (sex == Sex::Male) return son(self);
-  if (sex == Sex::Female) return daughter(self);
-  throw std::invalid_argument("Pedigree::offspring invoked with Sex::Unknown");
-}
-
-inline std::vector<PedigreeNode> Pedigree::traversal(
-    const PedigreeNode& init, const PedigreePath& path) const {
-  std::vector<PedigreeNode> result(path.seq_len + 1);
+inline std::vector<Individual> Pedigree::traversal(
+    const Individual& init, const PedigreePath& path) {
+  std::vector<Individual> result(path.seq_len + 1);
   result[0] = init;
 
   for (std::size_t l = 0; l < path.seq_len; ++l) {
@@ -272,12 +237,97 @@ inline std::vector<PedigreeNode> Pedigree::traversal(
     // node preceding the apex node simply steps over to its sibling which
     // always yields a valid cousin-cousin sequence.
     if (path.pivot.has_value() && (l == path.pivot.value()))
-      result[l + 1] = offspring(sibling(result[l]), sex);
+      result[l + 1] = result[l].sibling().child(sex);
     else
-      result[l + 1] = up ? parent(result[l], sex) : offspring(result[l], sex);
+      result[l + 1] = up ? result[l].parent(sex) : result[l].child(sex);
   }
 
   return result;
+}
+
+inline std::vector<std::vector<Individual>> Pedigree::getCousins(
+    const Individual& self, std::size_t degree) {
+  if (degree == 0)
+    throw std::invalid_argument(
+        "Pedigree::find_cousins: degree must be non-zero.");
+
+  std::size_t seq_len = 2 * degree;
+  std::vector<std::vector<Individual>> cousins;
+
+  // 2^(2d) bits in total
+  for (std::uint64_t seq = 0; seq < (1ULL << seq_len); ++seq) {
+    PedigreePath path{.seq = seq, .seq_len = seq_len, .pivot = degree};
+    cousins.push_back(traversal(self, path));
+  }
+
+  return cousins;
+}
+
+inline std::vector<std::vector<Individual>> Pedigree::getCousins(
+    std::size_t degree) const {
+  if (degree == 0)
+    throw std::invalid_argument(
+        "Pedigree::find_cousins: degree must be non-zero.");
+
+  auto cousins_per_ind = static_cast<std::size_t>(1ULL << (2 * degree));
+  std::vector<std::vector<Individual>> cousins(n_ind_ * cousins_per_ind);
+
+  for (std::size_t ind = 0; ind < n_ind_; ++ind) {
+    auto ind_cousins = getCousins(at(ind, 0), degree);
+    std::ranges::move(
+        ind_cousins,
+        (cousins.begin() + (ind * cousins_per_ind)));
+  }
+
+  return cousins;
+}
+
+inline std::vector<std::vector<Individual>> Pedigree::getAncestors(
+    const Individual& self, std::size_t degree) {
+  if (degree == 0)
+    throw std::invalid_argument(
+        "Pedigree::find_ancestors: degree must be non-zero");
+
+  std::size_t seq_len = degree;
+  std::vector<std::vector<Individual>> ancestors;
+
+  for (std::uint64_t seq = 0; seq < (1ULL << seq_len); ++seq) {
+    PedigreePath path{.seq = seq, .seq_len = seq_len};
+    ancestors.push_back(traversal(self, path));
+  }
+
+  return ancestors;
+}
+
+inline std::vector<std::vector<Individual>> Pedigree::getAncestors(
+    std::size_t degree) const {
+  if (degree == 0)
+    throw std::invalid_argument(
+        "Pedigree::find_ancestors: degree must be non-zero");
+
+  auto ancestors_per_ind = static_cast<std::size_t>(1ULL << degree);
+  std::vector<std::vector<Individual>> ancestors(n_ind_ * ancestors_per_ind);
+
+  for (std::size_t ind = 0; ind < n_ind_; ++ind) {
+    auto ind_ancestors = getAncestors(at(ind, 0), degree);
+    std::ranges::move(
+        ind_ancestors, ancestors.begin() + (ancestors_per_ind * ind));
+  }
+
+  return ancestors;
+}
+
+inline auto Pedigree::getSpousePairs(std::size_t depth) const {
+  auto males = std::views::iota(std::size_t{0}, n_sex_) |
+               std::views::transform([this, depth](std::size_t idx) {
+                 return this->at(idx, depth);
+               });
+
+  auto females = males | std::views::transform([](const Individual& ind) {
+                   return ind.spouse();
+                 });
+
+  return std::views::zip(males, females);
 }
 
 }  // namespace amsim

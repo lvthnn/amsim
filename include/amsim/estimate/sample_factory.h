@@ -24,7 +24,7 @@
 
 namespace amsim {
 
-template <Proband P>
+template <ProbandType P>
 inline SampleEstimator<P> buildSampleEstimator(
     const SampleEstimatorSpec& spec) {
   if (spec.type == "external") {

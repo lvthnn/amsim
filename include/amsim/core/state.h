@@ -37,7 +37,7 @@ struct State {
   std::array<Matching, 2> matchings;
   std::array<Matching, 2> inv_matchings;
 
-  // for stoing family data
+  // for storing family data
   Pedigree pedigree;
 
   std::size_t getParity(Generation generation) const {
@@ -60,11 +60,13 @@ struct State {
     return inv_matchings[getParity(generation)];
   }
 
-  const GenotypeBuffer& geno(Generation generation = Generation::Current) const {
+  const GenotypeBuffer& geno(
+      Generation generation = Generation::Current) const {
     return genos[getParity(generation)];
   }
 
-  const PhenotypeBuffer& pheno(Generation generation = Generation::Current) const {
+  const PhenotypeBuffer& pheno(
+      Generation generation = Generation::Current) const {
     return phenos[getParity(generation)];
   }
 
@@ -78,8 +80,8 @@ struct State {
   }
 
   void transpose() {
-    (*this).geno(Generation::Current).transpose();
-    (*this).geno(Generation::Parents).transpose();
+    this->geno(Generation::Current).transpose();
+    this->geno(Generation::Parents).transpose();
   }
 
   void advance() {
@@ -102,7 +104,8 @@ inline State buildState(const Params& params) {
       .inv_matchings =
           {std::vector<std::size_t>(params.global.n_ind / 2),
            std::vector<std::size_t>(params.global.n_ind / 2)},
-      .pedigree = Pedigree(params)};
+      .pedigree =
+          Pedigree(params.global.pedigree_max_depth, params.global.n_ind)};
 }
 
 }  // namespace amsim

@@ -20,38 +20,48 @@
 #include <amsim/estimate/sample.h>
 #include <amsim/estimate/sample_factory.h>
 #include <amsim/io/parse.h>
-#include <amsim/sample/member.h>
 #include <amsim/sample/proband.h>
-#include <amsim/sample/sample_variant.h>
+#include <amsim/sample/sample.h>
 
 #include <filesystem>
-#include <optional>
 #include <variant>
+#include <ranges>
+#include <numeric>
 
 namespace amsim {
 
-namespace details {
+// TODO: this should be an accessor in PhenotypeBuffer
+inline double individualPhenotype(
+    const State& state,
+    const Individual& ind,
+    std::size_t pheno_id,
+    Component component = Component::Total) {
+  Generation gen = (ind.depth == 0) ? Generation::Current : Generation::Parents;
+  return state.pheno(gen)(pheno_id, component)(ind.index);
+}
 
-template <Proband P>
-auto get_prefix = [](auto member_enum) -> std::string_view {
-  for (std::size_t i = 0; i < ProbandData<P>::ProbandSize; ++i) {
-    if (ProbandData<P>::ProbandMembers[i].member == member_enum)
-      return ProbandData<P>::ProbandMembers[i].prefix;
-  }
-  return "";
-};
+// TODO: this should be an accessor in GenotypeBuffer
+inline std::uint8_t individualGenotypePLINK(
+    const State& state, const Individual& ind, std::size_t loc) {
+  Generation gen = (ind.depth == 0) ? Generation::Current : Generation::Parents;
+  std::size_t word = ind.index / 64;
+  std::size_t bit = ind.index % 64;
 
-}  // namespace details
+  std::uint8_t h0 = (state.geno(gen).h0()(loc, word) >> bit) & 1;
+  std::uint8_t h1 = (state.geno(gen).h1()(loc, word) >> bit) & 1;
 
-template <Proband P>
-inline void Sample<P>::attachEstimator(const SampleEstimatorSpec& spec) {
+  return (h0 & h1) | ((h0 | h1) << 1);
+}
+
+template <ProbandType P>
+inline void SampleFor<P>::attachEstimator(const SampleEstimatorSpec& spec) {
   estimators.push_back(buildSampleEstimator<P>(spec));
 }
 
 class Sampler {
  public:
-  template <Proband P>
-  explicit Sampler(Sample<P> sample, const Params& params)
+  template <ProbandType P>
+  explicit Sampler(SampleFor<P> sample, const Params& params)
       : self_(std::make_unique<Model<P>>(std::move(sample), params)){};
 
   void operator()(const State& state) { (*self_)(state); }
@@ -66,9 +76,9 @@ class Sampler {
   };
 
   // implementation strategy
-  template <Proband P>
+  template <ProbandType P>
   struct Model : Concept {
-    explicit Model(Sample<P> sample, const Params& params)
+    explicit Model(SampleFor<P> sample, const Params& params)
         : name(sample.name),
           n_probands(sample.n_probands),
           sample_dir(params.global.out_dir / name),
@@ -77,10 +87,11 @@ class Sampler {
           weighting(std::move(sample.weighting)),
           decompress_genotypes(sample.decompress_genotypes),
           n_probands_total(
-              P == Proband::Individual ? params.global.n_ind
-                                       : params.global.n_ind / 2),
+              P == ProbandType::Self ? params.global.n_ind
+                                     : params.global.n_ind / 2),
           n_sex(params.global.n_ind / 2),
-          n_members(__builtin_popcountll(static_cast<uint8_t>(sample.of))),
+          n_of(
+              __builtin_popcountll(static_cast<ProbandEnumType<P>>(sample.of))),
           n_pheno(params.pheno.n_pheno),
           n_loc(params.geno.n_loc),
           n_on(sample.on.has_value() ? sample.on.value().size() : 1),
@@ -88,12 +99,12 @@ class Sampler {
               sample.on_components.has_value()
                   ? std::move(sample.on_components.value())
                   : std::vector<Component>(n_on, Component::Total)),
-          members(n_probands_total * n_members, n_on),
+          preaggregate(n_of, n_on),
           aggregates(n_probands_total, n_on),
           unif(n_probands_total),
           keys(n_probands_total),
           names(params.pheno.names),
-          phenotypes(sample.n_probands * ProbandData<P>::ProbandSize, n_pheno),
+          phenotypes(sample.n_probands * ProbandSize<P>, n_pheno),
           selected(n_probands_total) {
       if (n_probands > n_probands_total)
         throw std::runtime_error(
@@ -114,8 +125,8 @@ class Sampler {
     std::string name;
     std::size_t n_probands;
     std::filesystem::path sample_dir;
-    ProbandData<P>::ProbandEnum of;
-    Aggregator agg;
+    ProbandMemberEnum<P> of;
+    AggFunction agg;
     WeightFunction weighting;
     std::vector<std::unique_ptr<SampleEstimatorStrategy<P>>> estimators;
     bool decompress_genotypes;
@@ -123,7 +134,7 @@ class Sampler {
     // derived dimensions
     std::size_t n_probands_total;
     std::size_t n_sex;
-    std::size_t n_members;
+    std::size_t n_of;
     std::size_t n_pheno;
     std::size_t n_loc;
     std::size_t n_on;
@@ -133,7 +144,7 @@ class Sampler {
     std::vector<Component> on_components;
 
     // buffers to store sampling keys and data
-    Eigen::MatrixXd members;
+    Eigen::MatrixXd preaggregate;
     Eigen::MatrixXd aggregates;
     Eigen::VectorXd unif;
     Eigen::VectorXd keys;
@@ -145,17 +156,16 @@ class Sampler {
     std::vector<std::size_t> selected;
 
     void fillAggregates(const State& state);
-    void extractProbands(const State& state);
 
-    void addGenotype(
+    void writeGenotype(
         const State& state,
-        std::size_t proband_id,
-        std::size_t locus,
-        const ProbandMember<typename ProbandData<P>::ProbandEnum>& member,
+        const Individual& ind,
+        std::size_t loc,
         std::uint8_t& byte,
         std::size_t& bit_pos,
         std::fstream& bed) const;
 
+    // TODO: migrate these into io/, should not be responsibility of sampler
     void writeBIM() const;
     void writeBED(const State& state) const;
     void writeFAM(const State& state) const;
@@ -182,71 +192,42 @@ class Sampler {
   std::unique_ptr<Concept> self_;
 };
 
-template <Proband P>
+template <ProbandType P>
 inline void Sampler::Model<P>::fillAggregates(const State& state) {
   if (on_indices.empty()) return;
 
-  for (std::size_t on = 0; on < n_on; ++on) {
-    std::size_t pheno_id = on_indices[on];
-    Component comp = on_components[on];
+  for (const Proband<P>& proband : getProbands<P>(state.pedigree)) {
+    // fill preaggregation buffer
+    for (std::size_t on = 0; on < n_on; ++on) {
+      std::size_t pheno_id = on_indices[on];
+      Component component = on_components[on];
+      std::size_t mem_pos = 0;
 
-    for (std::size_t prob = 0; prob < n_probands_total; ++prob) {
-      std::size_t row = prob * n_members;
-      std::size_t member_idx = 0;
+      for (std::size_t m = 0; m < ProbandSize<P>; ++m) {
+        if ((proband.memberData(m).self & of) == ProbandMemberEnum<P>{})
+          continue;
 
-      for (std::size_t m = 0; m < ProbandData<P>::ProbandSize; ++m) {
-        const auto& member = ProbandData<P>::ProbandMembers[m];
-        if (of & member.self)
-          members(row + member_idx++, on) =
-              memberPheno(state, member, prob, pheno_id, comp);
+        preaggregate(mem_pos, on) =
+            individualPhenotype(state, proband.member[m], pheno_id, component);
+
+        ++mem_pos;
       }
     }
-  }
 
-  // aggregate each of the probands
-  for (std::size_t prob = 0; prob < n_probands_total; ++prob) {
-    auto proband = members.middleRows(prob * n_members, n_members);
-
-    if (agg == Aggregator::Mean)
-      aggregates.row(prob) = proband.colwise().mean();
-
-    else if (agg == Aggregator::Max)
-      aggregates.row(prob) = proband.colwise().maxCoeff();
-
-    else if (agg == Aggregator::Min)
-      aggregates.row(prob) = proband.colwise().minCoeff();
-
-    else if (agg == Aggregator::Identity)
-      aggregates.row(prob) = proband.row(0);
+    // apply aggregation
+    aggregates.row(proband.id.index) = aggregate(preaggregate, agg);
   }
 }
 
-template <Proband P>
-inline void Sampler::Model<P>::extractProbands(const State& state) {
-  for (std::size_t pheno_id = 0; pheno_id < n_pheno; ++pheno_id) {
-    for (std::size_t prob = 0; prob < n_probands; ++prob) {
-      std::size_t prob_id = selected[prob];
-      std::size_t row = prob * ProbandData<P>::ProbandSize;
-
-      for (std::size_t m = 0; m < ProbandData<P>::ProbandSize; ++m) {
-        const auto& member_data = ProbandData<P>::ProbandMembers[m];
-        phenotypes(row + m, pheno_id) =
-            memberPheno(state, member_data, prob_id, pheno_id);
-      }
-    }
-  }
-}
-
-template <Proband P>
-inline void Sampler::Model<P>::addGenotype(
+template <ProbandType P>
+inline void Sampler::Model<P>::writeGenotype(
     const State& state,
-    std::size_t proband_id,
-    std::size_t locus,
-    const ProbandMember<typename ProbandData<P>::ProbandEnum>& member,
+    const Individual& ind,
+    std::size_t loc,
     std::uint8_t& byte,
     std::size_t& bit_pos,
     std::fstream& bed) const {
-  byte |= (memberGenoPLINK(state, member, proband_id, locus) << bit_pos);
+  byte |= (individualGenotypePLINK(state, ind, loc) << bit_pos);
   bit_pos += 2;
   if (bit_pos == 8) {
     bed.put(byte);
@@ -255,7 +236,7 @@ inline void Sampler::Model<P>::addGenotype(
   }
 }
 
-template <Proband P>
+template <ProbandType P>
 inline void Sampler::Model<P>::writeBIM() const {
   Table<
       Column<"chrom", std::size_t>,
@@ -272,7 +253,7 @@ inline void Sampler::Model<P>::writeBIM() const {
   writeTable(bim, sample_dir / "data.bim", '\t', '\n', false);
 }
 
-template <Proband P>
+template <ProbandType P>
 inline void Sampler::Model<P>::writeBED(const State& state) const {
   if (state.geno().view() != BufferLayout::LocusMajor)
     throw std::runtime_error(
@@ -289,24 +270,18 @@ inline void Sampler::Model<P>::writeBED(const State& state) const {
   // magic numbers
   bed_file.put(0x6c).put(0x1b).put(0x01);
 
-  // start looping
+  // retrieve the probands we want
+  auto probands = getProbands<P>(state.pedigree);
+
   for (std::size_t loc = 0; loc < n_loc; ++loc) {
     std::uint8_t byte = 0;
     std::size_t bit_pos = 0;
 
-    for (std::size_t prob = 0; prob < n_probands; ++prob) {
-      std::size_t id = selected[prob];
+    for (std::size_t sel : selected | std::views::take(n_probands)) {
+      Proband<P> proband = probands[sel];
 
-      // add the genotypes of all members in the proband
-      for (std::size_t m = 0; m < ProbandData<P>::ProbandSize; ++m)
-        addGenotype(
-            state,
-            id,
-            loc,
-            ProbandData<P>::ProbandMembers[m],
-            byte,
-            bit_pos,
-            bed_file);
+      for (std::size_t m = 0; m < proband.size(); ++m)
+        writeGenotype(state, proband.member[m], loc, byte, bit_pos, bed_file);
     }
 
     // flush partial buffer at end of locus
@@ -314,7 +289,7 @@ inline void Sampler::Model<P>::writeBED(const State& state) const {
   }
 }
 
-template <Proband P>
+template <ProbandType P>
 inline void Sampler::Model<P>::writeFAM(const State& state) const {
   Table<
       Column<"FID", std::string>,
@@ -325,21 +300,28 @@ inline void Sampler::Model<P>::writeFAM(const State& state) const {
       Column<"PHENO", double>>
       table_fam;
 
-  for (std::size_t prob = 0; prob < n_probands; ++prob) {
-    std::size_t id = selected[prob];
+  auto member_id = [](const Proband<P>& proband, const Individual& who) {
+    for (std::size_t m = 0; m < proband.size(); ++m)
+      if (proband.member[m] == who)
+        return std::format(
+            "{}{}", proband.memberData(m).code, proband.member[m].index);
+    return std::string("0");
+  };
 
-    for (std::size_t m = 0; m < ProbandData<P>::ProbandSize; ++m) {
-      auto member = ProbandData<P>::ProbandMembers[m];
+  auto probands = getProbands<P>(state.pedigree);
 
-      std::string fam_id = std::format("FAM{}", prob);
-      std::string self_id = memberID<P>(state, member.self, id);
-      std::string father_id = memberID<P>(state, member.father, id);
-      std::string mother_id = memberID<P>(state, member.mother, id);
+  for (std::size_t sel : std::views::take(selected, n_probands)) {
+    Proband<P> proband = probands[sel];
 
-      int sex =
-          (member.sex == Sex::Unknown)
-              ? (static_cast<int>(memberIndex(state, member, id) >= n_sex) + 1)
-              : static_cast<int>(member.sex);
+    for (std::size_t m = 0; m < proband.size(); ++m) {
+      const Individual& individual = proband.member[m];
+
+      std::string fam_id = std::format("FAM{}", proband.id.index);
+      std::string self_id =
+          std::format("{}{}", proband.memberData(m).code, individual.index);
+      std::string father_id = member_id(proband, individual.father());
+      std::string mother_id = member_id(proband, individual.mother());
+      int sex = individual.isMale() ? 1 : 2;
 
       table_fam.insertRow({fam_id, self_id, father_id, mother_id, sex, -9});
     }
@@ -348,7 +330,7 @@ inline void Sampler::Model<P>::writeFAM(const State& state) const {
   writeTable(table_fam, sample_dir / "data.fam", '\t', '\n', false);
 }
 
-template <Proband P>
+template <ProbandType P>
 inline void Sampler::Model<P>::writePHENO(
     const State& state, Component type) const {
   auto path =
@@ -368,27 +350,30 @@ inline void Sampler::Model<P>::writePHENO(
 
   pheno_file << header;
 
-  for (std::size_t prob = 0; prob < n_probands; ++prob) {
-    std::size_t id = selected[prob];
+  auto probands = getProbands<P>(state.pedigree);
 
-    for (std::size_t m = 0; m < ProbandData<P>::ProbandSize; ++m) {
-      auto member = ProbandData<P>::ProbandMembers[m];
+  for (std::size_t sel : selected | std::views::take(n_probands)) {
+    Proband<P> proband = probands[sel];
 
-      std::size_t fid = prob;
-      std::string istr = memberID<P>(state, member.self, id);
+    for (std::size_t m = 0; m < proband.size(); ++m) {
+      const Individual& member = proband.member[m];
 
-      pheno_file << std::format("FAM{}\t{}", fid, istr);
+      pheno_file << std::format(
+          "FAM{}\t{}{}",
+          proband.id.index,
+          proband.memberData(m).code,
+          member.index);
 
       for (std::size_t pheno = 0; pheno < n_pheno; ++pheno)
         pheno_file << std::format(
-            "\t{}", memberPheno(state, member, id, pheno, type));
+            "\t{}", individualPhenotype(state, member, pheno, type));
 
       pheno_file << "\n";
     }
   }
 }
 
-template <Proband P>
+template <ProbandType P>
 inline void Sampler::Model<P>::draw(const State& state) {
   // fill the aggregation buffer with phenotypes of the respective members
   fillAggregates(state);
@@ -396,30 +381,28 @@ inline void Sampler::Model<P>::draw(const State& state) {
   // generate uniform weights for Efraimidis-Spirakis
   rng::UniformRange::fill(unif.data(), n_probands_total);
 
-  // run the aggregation buffer
+  // run the weighting fn on the aggregation buffer
   weighting(aggregates, keys);
   keys = unif.array().pow(1.0 / keys.array());
 
+  // NOLINTBEGIN(modernize-use-ranges)
   std::iota(selected.begin(), selected.end(), 0);
+  // NOLINTEND(modernize-use-ranges)
   std::nth_element(
       selected.begin(),
       selected.begin() + n_probands,
       selected.end(),
       [&](auto a, auto b) { return keys(a) > keys(b); });
 
-  // extract selected proband data
-  extractProbands(state);
-
-  // write to PLINK if necessary
   writePLINK(state);
 }
 
-template <Proband P>
+template <ProbandType P>
 inline void Sampler::Model<P>::estimate(const State& state) {
   for (const auto& estimator : estimators) (*estimator)(state.gen, state.rep);
 }
 
-template <Proband P>
+template <ProbandType P>
 inline void Sampler::Model<P>::operator()(const State& state) {
   std::vector<std::filesystem::path> to_remove;
   for (const auto& entry : std::filesystem::directory_iterator(sample_dir))
@@ -429,9 +412,9 @@ inline void Sampler::Model<P>::operator()(const State& state) {
   estimate(state);
 }
 
-template struct Sampler::Model<Proband::Individual>;
-template struct Sampler::Model<Proband::Mate>;
-template struct Sampler::Model<Proband::Family>;
+template struct Sampler::Model<ProbandType::Self>;
+template struct Sampler::Model<ProbandType::Mate>;
+template struct Sampler::Model<ProbandType::Family>;
 
 class ComputeSampleEstimates {
  public:

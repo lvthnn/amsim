@@ -28,8 +28,8 @@ class UpdateGenome {
       : n_loc_(params.geno.n_loc),
         n_ind_(params.global.n_ind),
         n_sex_(n_ind_ / 2),
-        v_rec_(params.geno.locus_rec),
-        v_mut_(params.geno.locus_mut),
+        loc_rec_(params.geno.locus_rec),
+        loc_mut_(params.geno.locus_mut),
         bw_() {};
   void operator()(State& state);
 
@@ -37,8 +37,8 @@ class UpdateGenome {
   const std::size_t n_loc_;
   const std::size_t n_ind_;
   const std::size_t n_sex_;
-  const Eigen::VectorXd& v_rec_;
-  const Eigen::VectorXd& v_mut_;
+  const Eigen::VectorXd& loc_rec_;
+  const Eigen::VectorXd& loc_mut_;
   const double* ptr_rec_;
   const double* ptr_mut_;
   std::vector<std::uint64_t> transmit_chunk_;
@@ -48,7 +48,6 @@ class UpdateGenome {
       std::uint64_t h0, std::uint64_t h1, bool& par0, std::size_t valid = 64);
 
   void updateGenome(State& state);
-  void updateNurture(State& state);
 };
 
 inline std::uint64_t UpdateGenome::gamWord(
@@ -82,7 +81,6 @@ inline void UpdateGenome::operator()(State& state) {
   if (state.geno().view() != BufferLayout::IndividualMajor)
     throw std::runtime_error("update genome requires ind-major view");
 
-  constexpr std::size_t IncWord = 64;
   const std::size_t n_words = state.geno().numWords();
 
   HaplotypeBuffer& h0 = state.geno().h0();
@@ -91,10 +89,12 @@ inline void UpdateGenome::operator()(State& state) {
   HaplotypeBuffer& h1_off = state.geno(Generation::Parents).h1();
   const Matching& matching = state.matching();
 
+  // TODO: consume Pedigree class and use .father / .mother instead of hand
+  // computing indices
   for (std::size_t pair = 0; pair < n_sex_; ++pair) {
     std::size_t fpair = matching[pair] + n_sex_;
-    ptr_rec_ = v_rec_.data();
-    ptr_mut_ = v_mut_.data();
+    ptr_rec_ = loc_rec_.data();
+    ptr_mut_ = loc_mut_.data();
     std::size_t valid = 64;
 
     // select starting strands uniformly at random
@@ -106,6 +106,8 @@ inline void UpdateGenome::operator()(State& state) {
     for (std::size_t word = 0; word < n_words; ++word) {
       if (word == n_words - 1) valid = (n_loc_ % 64 == 0) ? 64 : n_loc_ % 64;
 
+      // TODO: migrate this into generateOffspring() helper or similar to
+      // increase readability
       std::uint64_t male_h0 = h0(pair, word);
       std::uint64_t male_h1 = h1(pair, word);
       std::uint64_t female_h0 = h0(fpair, word);
@@ -119,8 +121,8 @@ inline void UpdateGenome::operator()(State& state) {
       h0_off(fpair, word) = gamWord(male_h0, male_h1, par_h0_female, valid);
       h1_off(fpair, word) = gamWord(female_h0, female_h1, par_h1_female, valid);
 
-      ptr_rec_ += IncWord;
-      ptr_mut_ += IncWord;
+      ptr_rec_ += 64;
+      ptr_mut_ += 64;
     }
   }
 }

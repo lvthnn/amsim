@@ -34,7 +34,7 @@ namespace amsim {
 
 namespace bp = boost::process;
 
-template <Proband P>
+template <ProbandType P>
 class SampleEstimatorGWASStrategy : public SampleEstimatorStrategy<P> {
  public:
   SampleEstimatorGWASStrategy(
@@ -255,7 +255,7 @@ class SampleEstimatorGWASStrategy : public SampleEstimatorStrategy<P> {
       return {0.0, NaN};
     }
 
-    // read in genetic component of phenotype written out by sampler.h
+    // read in genetic component of phenotype written out by sampling.h
     TableXd<Column<"FID", std::string>, Column<"IID", std::string>> gen_table;
     gen_table.readFile(gen_path, '\t');
     if (gen_table.known().empty() ||
@@ -297,7 +297,7 @@ class SampleEstimatorGWASStrategy : public SampleEstimatorStrategy<P> {
   }
 };
 
-template <Proband P>
+template <ProbandType P>
 inline SampleEstimator<P> sampleGWAS(
     std::string name = "gwas",
     std::size_t n_pcs = 0,

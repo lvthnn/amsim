@@ -28,7 +28,7 @@ namespace amsim {
 
 struct Params;
 
-template <Proband P>
+template <ProbandType P>
 class SampleEstimatorStrategy;
 
 struct SampleEstimatorSpec {
@@ -43,7 +43,7 @@ struct SampleEstimatorSpec {
   std::vector<std::string> params;
 };
 
-template <Proband P>
+template <ProbandType P>
 struct SampleEstimator {
   std::string name;
   std::function<std::unique_ptr<SampleEstimatorStrategy<P>>(
@@ -58,7 +58,7 @@ struct SampleEstimator {
   }
 };
 
-template <Proband P>
+template <ProbandType P>
 using SampleEstimators = std::vector<SampleEstimator<P>>;
 
 }  // namespace amsim

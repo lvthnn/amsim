@@ -3,9 +3,13 @@
 amsim is a CLI tool for efficient, flexible forward-time simulation of
 assortative mating and participation/ascertainment effects. It supports arbitary
 multivariate assortment regimes and a highly configurable sampling suite for
-simulating various genetic study designs.
+simulating various study designs.
 
 amsim is free software, licensed under the GNU General Public License v3.
+
+This software is under development and may contain bugs. Please report bugs
+via [issues](https://github.com/lvthnn/amsim/issues) on GitHub or by
+[email](mailto:kh626@imperial.ac.uk).
 
 ## Installation
 

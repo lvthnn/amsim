@@ -63,8 +63,8 @@ class EstimatorCousinCovStrategy : public PopulationEstimatorStrategy {
       return;
     }
 
-    std::vector<std::vector<PedigreeNode>> paths =
-        state.pedigree.findCousins(degree_);
+    std::vector<std::vector<Individual>> paths =
+        state.pedigree.getCousins(degree_);
 
     auto buf = state.pheno()(type_);
     for (std::size_t ind = 0; ind < paths.size(); ++ind) {
@@ -116,8 +116,8 @@ class EstimatorAncestorCovStrategy : public PopulationEstimatorStrategy {
       return;
     }
 
-    std::vector<std::vector<PedigreeNode>> paths =
-        state.pedigree.findAncestors(degree_);
+    std::vector<std::vector<Individual>> paths =
+        state.pedigree.getAncestors(degree_);
 
     auto self_buf = state.pheno()(type_);
     auto ancestor_buf = history_[degree_](type_);

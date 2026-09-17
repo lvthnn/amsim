@@ -41,7 +41,9 @@ class RandomMating {
 };
 
 inline void RandomMating::randomiseMatching() {
+  // NOLINTBEGIN(modernize-use-ranges)
   std::iota(match_cur_.begin(), match_cur_.end(), 0);
+  // NOLINTEND(modernize-use-ranges)
   for (std::size_t el = 0; el < n_sex_; ++el) {
     std::size_t le = rng::UniformIntRange::sample(el, n_sex_);
     std::swap(match_cur_[el], match_cur_[le]);
@@ -156,7 +158,9 @@ class AssortativeMating {
 };
 
 inline void AssortativeMating::randomiseMatching() {
+  // NOLINTBEGIN(modernize-use-ranges)
   std::iota(match_cur_.begin(), match_cur_.end(), 0);
+  // NOLINTEND(modernize-use-ranges)
   for (std::size_t el = 0; el < n_sex_; ++el) {
     std::size_t le = rng::UniformIntRange::sample(el, n_sex_);
     std::swap(match_cur_[el], match_cur_[le]);

@@ -169,7 +169,6 @@ inline std::string Log::formatMsg(
   return prefix + body;
 }
 
-// TODO: make this wrap std::format
 template <typename... Args>
 inline void Log::log(
     LogLevel level, std::format_string<Args...> fmt, Args&&... args) {

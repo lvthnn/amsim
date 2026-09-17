@@ -32,8 +32,8 @@ class ScorePhenotypes {
         n_pheno_(params.pheno.n_pheno),
         pheno_effects_(params.pheno.pheno_effects),
         pheno_loc_(params.pheno.pheno_loc),
-        h2_env_(params.pheno.var_env),
-        h2_vert_(params.pheno.var_vert),
+        var_env_(params.pheno.var_env),
+        var_vert_(params.pheno.var_vert),
         rnur_pat_(params.pheno.rnur_pat),
         rnur_env_(params.pheno.rnur_env),
         vert_pat_(params.pheno.vert_pat),
@@ -56,8 +56,8 @@ class ScorePhenotypes {
 
   const std::vector<Eigen::VectorXd>& pheno_effects_;
   const std::vector<std::vector<std::size_t>>& pheno_loc_;
-  const Eigen::VectorXd& h2_env_;
-  const Eigen::VectorXd& h2_vert_;
+  const Eigen::VectorXd& var_env_;
+  const Eigen::VectorXd& var_vert_;
   const Eigen::VectorXd& rnur_pat_;
   const Eigen::VectorXd& rnur_env_;
   const Eigen::VectorXd& vert_pat_;
@@ -108,11 +108,11 @@ inline void ScorePhenotypes::scoreEnvironmental(State& state) {
 
   for (std::size_t pheno = 0; pheno < n_pheno_; ++pheno)
     pheno_env_buf.col(pheno).noalias() =
-        std::sqrt(h2_env_[pheno]) * pheno_env_buf.col(pheno);
+        std::sqrt(var_env_[pheno]) * pheno_env_buf.col(pheno);
 }
 
 inline void ScorePhenotypes::scoreVertical(State& state) {
-  if (h2_vert_.isZero(0)) return;
+  if (var_vert_.isZero(0)) return;
 
   // parental phenotype buffer
   auto phenos_father = utils::standardise(
@@ -138,7 +138,7 @@ inline void ScorePhenotypes::scoreVertical(State& state) {
       pheno_off(n_sex_ + pair) = pheno_off(pair);
     }
 
-    phenos_off.col(pheno) *= std::sqrt(h2_vert_(pheno)) * norm;
+    phenos_off.col(pheno) *= std::sqrt(var_vert_(pheno)) * norm;
   }
 }
 

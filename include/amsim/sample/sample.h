@@ -19,6 +19,7 @@
 #include <amsim/estimate/sample_estimator.h>
 #include <amsim/io/parse.h>
 #include <amsim/sample/proband.h>
+#include <amsim/sample/selection.h>
 
 #include <algorithm>
 #include <optional>
@@ -33,25 +34,23 @@ struct SampleSpec {
   std::string name;
   std::string proband_type;
   std::size_t n_probands;
-  std::optional<std::vector<std::string>> on;
-  std::optional<std::vector<std::string>> of;
+  std::optional<std::string> on;
+  std::optional<std::string> of;
   std::optional<std::string> agg;
   std::optional<std::string> weight_function;
   std::vector<std::string> estimators;
 };
 
 // user-facing specification struct
-template <Proband P>
-struct Sample {
-  using ProbandEnum = ProbandData<P>::ProbandEnum;
-
+template <ProbandType P>
+struct SampleFor {
   // selection parameters — which data, from whom, and what to do
   std::string name;
   std::size_t n_probands;
   std::optional<std::vector<std::string>> on;
   std::optional<std::vector<Component>> on_components;
-  ProbandEnum of = ProbandData<P>::ProbandDefault;
-  Aggregator agg = ProbandData<P>::AggDefault;
+  ProbandMemberEnum<P> of = ProbandOfDefault<P>;
+  AggFunction agg = ProbandAggDefault<P>;
   bool decompress_genotypes = false;
 
   // weighting method — probability of selecting based on proband aggregate
@@ -60,39 +59,38 @@ struct Sample {
   // estimators are declared here
   SampleEstimators<P> estimators;
 
-  // defined out-of-line in sample/sampler.h, where build_sample_estimator's
+  // defined out-of-line in sample/sampling.h, where build_sample_estimator's
   // full implementation (and everything it depends on) is available
   void attachEstimator(const SampleEstimatorSpec& spec);
 };
 
-using SampleVariant = std::variant<
-    Sample<Proband::Individual>,
-    Sample<Proband::Mate>,
-    Sample<Proband::Family>>;
+using Sample = std::variant<
+    SampleFor<ProbandType::Self>,
+    SampleFor<ProbandType::Mate>,
+    SampleFor<ProbandType::Family>>;
 
-template <Proband P>
-inline Sample<P> buildSample(const SampleSpec& spec) {
-  Sample<P> sample;
+template <ProbandType P>
+inline SampleFor<P> buildSample(const SampleSpec& spec) {
+  SampleFor<P> sample;
   sample.name = spec.name;
   sample.n_probands = spec.n_probands;
-  if (spec.on.has_value()) sample.on = spec.on.value();
-  if (spec.of.has_value()) sample.of = parseProband<P>(spec.of.value());
-  if (spec.agg.has_value())
-    sample.agg = aggregatorFromString(spec.agg.value());
+  if (spec.on.has_value()) sample.on = utils::splitString(spec.on.value());
+  if (spec.of.has_value()) sample.of = parse<P>(spec.of.value());
+  if (spec.agg.has_value()) sample.agg = aggregatorFromString(spec.agg.value());
   if (spec.weight_function.has_value())
     sample.weighting = parse<WeightFunction>(spec.weight_function.value());
   return sample;
 }
 
-inline SampleVariant buildSample(const SampleSpec& spec) {
-  if (spec.proband_type == "individual")
-    return buildSample<Proband::Individual>(spec);
-  if (spec.proband_type == "family") return buildSample<Proband::Family>(spec);
-  if (spec.proband_type == "mate") return buildSample<Proband::Mate>(spec);
+inline Sample buildSample(const SampleSpec& spec) {
+  if (spec.proband_type == "self")
+    return buildSample<ProbandType::Self>(spec);
+  if (spec.proband_type == "family") return buildSample<ProbandType::Family>(spec);
+  if (spec.proband_type == "mate") return buildSample<ProbandType::Mate>(spec);
   throw std::runtime_error("Invalid Proband type " + spec.proband_type);
 }
 
-inline std::vector<SampleVariant> buildSamples(
+inline std::vector<Sample> buildSamples(
     const std::vector<SampleSpec>& spec,
     const std::vector<SampleEstimatorSpec>& estimator_spec) {
   for (const auto& se : estimator_spec) {
@@ -112,13 +110,13 @@ inline std::vector<SampleVariant> buildSamples(
     }
   }
 
-  std::vector<SampleVariant> samples;
+  std::vector<Sample> samples;
   for (const auto& sample_spec : spec) {
     if (sample_spec.estimators.empty())
       throw std::runtime_error(
           "sample '" + sample_spec.name + "' has no estimators declared");
 
-    SampleVariant sample = buildSample(sample_spec);
+    Sample sample = buildSample(sample_spec);
     for (const auto& estimator : sample_spec.estimators) {
       auto it = std::ranges::find_if(
           estimator_spec,
