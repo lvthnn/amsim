@@ -384,7 +384,9 @@ inline void Sampler::Model<P>::draw(const State& state) {
   weighting(aggregates, keys);
   keys = unif.array().pow(1.0 / keys.array());
 
-  std::ranges::iota(selected, 0);
+  // NOLINTBEGIN(modernize-use-ranges)
+  std::iota(selected.begin(), selected.end(), 0);
+  // NOLINTEND(modernize-use-ranges)
   std::nth_element(
       selected.begin(),
       selected.begin() + n_probands,

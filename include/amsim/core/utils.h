@@ -25,6 +25,7 @@
 #include <numeric>
 #include <string>
 #include <vector>
+#include <ranges>
 
 namespace amsim::utils {
 
@@ -108,7 +109,9 @@ inline Eigen::MatrixXd standardise(
 
 inline std::vector<std::size_t> order(const Eigen::VectorXd& v) {
   std::vector<std::size_t> idx(v.size());
-  std::ranges::iota(idx, 0);
+  // NOLINTBEGIN(modernize-use-ranges)
+  std::iota(idx.begin(), idx.end(), 0);
+  // NOLINTEND(modernize-use-ranges)
   std::ranges::stable_sort(
       idx, [&v](std::size_t i0, std::size_t i1) { return v(i0) < v(i1); });
   return idx;
