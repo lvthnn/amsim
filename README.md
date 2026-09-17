@@ -1,7 +1,7 @@
 # amsim
 
 [![release](https://github.com/lvthnn/amsim/actions/workflows/release.yml/badge.svg)](https://github.com/lvthnn/amsim/actions/workflows/release.yml)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22820020.svg)](https://doi.org/10.5281/zenodo.22820020)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22741101.svg)](https://doi.org/10.5281/zenodo.22741101)
 
 amsim is a CLI tool for efficient, flexible forward-time simulation of
 assortative mating and participation/ascertainment effects. It supports arbitary
