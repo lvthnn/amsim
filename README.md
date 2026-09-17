@@ -23,8 +23,7 @@ attached to every [release](https://github.com/lvthnn/amsim/releases).
 Dependencies are linked statically or built directly into the binary, so no
 installation aside from the binary is required.
 
-To install amsim, grab the appropriate filename for your platform (e.g.
-`amsim-v0.2.0-macos-arm64.tar.gz`) from the
+To install amsim, grab the appropriate filename for your platform from the
 [latest release page](https://github.com/lvthnn/amsim/releases/latest).
 
 ### Option B: build from source
