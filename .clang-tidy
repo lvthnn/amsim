@@ -18,7 +18,6 @@ Checks: >
   -modernize-use-trailing-return-type,
   -modernize-concat-nested-namespaces,
   -modernize-use-nodiscard,
-  -modernize-avoid-c-arrays,
   -modernize-type-traits,
   -modernize-unary-static-assert,
   -performance-move-const-arg,

@@ -26,6 +26,7 @@
 #include <filesystem>
 #include <variant>
 #include <ranges>
+#include <numeric>
 
 namespace amsim {
 
