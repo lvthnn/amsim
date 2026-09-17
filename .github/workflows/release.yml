@@ -82,20 +82,23 @@ jobs:
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && \
-             sudo apt-get install -y libhdf5-dev libopenblas-dev
+        run: |
+          sudo apt-get update &&
+          sudo apt-get install -y libhdf5-dev libopenblas-dev
 
       - name: Create build directory
-        run: cmake -B ${{github.workspace}}/build \
-                   -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+        run: |
+          cmake -B ${{github.workspace}}/build \
+                -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build \
                    --config ${{env.BUILD_TYPE}}
 
       - name: Package CLI binary
-        run: tar -czf amsim-v${{ needs.create-tag.outputs.version }}-${{ matrix.name }}.tar.gz \
-                 -C ${{github.workspace}}/build amsim
+        run: |
+          tar -czf amsim-v${{ needs.create-tag.outputs.version }}-${{ matrix.name }}.tar.gz \
+              -C ${{github.workspace}}/build amsim
 
       - name: Upload CLI binary
         uses: softprops/action-gh-release@v3
