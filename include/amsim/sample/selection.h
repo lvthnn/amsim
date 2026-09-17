@@ -15,12 +15,49 @@
 
 #pragma once
 
-#include <functional>
-
 #include <Eigen/Dense>
+#include <boost/algorithm/string/case_conv.hpp>
+#include <functional>
 
 namespace amsim {
 
+/**
+ * Aggregators are functions that are applied to the phenotype values of a
+ * subset of a proband's constituents to produce a single aggregate trait vector
+ * that enters a weighting function.
+ */
+enum class AggFunction { Max, Min, Mean, Identity };
+
+inline AggFunction aggregatorFromString(const std::string& s) {
+  std::string l = boost::to_lower_copy(s);
+  if (l == "max") return AggFunction::Max;
+  if (l == "min") return AggFunction::Min;
+  if (l == "mean") return AggFunction::Mean;
+  if (l == "identity") return AggFunction::Identity;
+  throw std::runtime_error("Unknown aggregator type" + s);
+}
+
+inline Eigen::MatrixXd aggregate(
+    const Eigen::MatrixXd& preaggregate, AggFunction agg) {
+  if (agg == AggFunction::Mean) return preaggregate.colwise().mean();
+  if (agg == AggFunction::Max) return preaggregate.colwise().maxCoeff();
+  if (agg == AggFunction::Min) return preaggregate.colwise().minCoeff();
+  if (agg == AggFunction::Identity) {
+    if (preaggregate.rows() > 1)
+      throw std::runtime_error(
+          std::format(
+              "Identity aggregation can only be applied to single individual "
+              "(got {})",
+              preaggregate.rows()));
+    return preaggregate.row(0);
+  }
+  throw std::invalid_argument("Unrecognised aggregation function");
+}
+
+/**
+ * Weight functions are used to assign the probability of selection into a
+ * sample based on some rule.
+ */
 using WeightFunction =
     std::function<void(const Eigen::MatrixXd&, Eigen::VectorXd&)>;
 
