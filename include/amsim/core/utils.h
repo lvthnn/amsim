@@ -19,13 +19,12 @@
 #include <sys/wait.h>
 
 #include <Eigen/Dense>
+#include <boost/process.hpp>
 #include <cstddef>
 #include <cstdio>
 #include <numeric>
 #include <string>
 #include <vector>
-
-#include <boost/process.hpp>
 
 namespace amsim::utils {
 
@@ -109,7 +108,7 @@ inline Eigen::MatrixXd standardise(
 
 inline std::vector<std::size_t> order(const Eigen::VectorXd& v) {
   std::vector<std::size_t> idx(v.size());
-  std::iota(idx.begin(), idx.end(), 0);
+  std::ranges::iota(idx, 0);
   std::ranges::stable_sort(
       idx, [&v](std::size_t i0, std::size_t i1) { return v(i0) < v(i1); });
   return idx;

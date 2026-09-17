@@ -1,0 +1,29 @@
+[estimators]
+population = []
+
+[genome]
+locus_maf = 0.5
+locus_mut = 0.0
+locus_rec = 0.5
+n_loci = 50
+
+[global]
+log_level = "INFO"
+log_to_file = 1
+n_generations = 15
+n_individuals = 100
+n_replicates = 1
+n_threads = 1
+output_dir = "."
+pedigree_max_depth = 1
+pedigree_warmup = 0
+share_init_state = 0
+
+[mating]
+type = "random"
+
+[phenotypes.phenotypes]
+
+[samples.sample]
+
+[samples.sample_estimators]
