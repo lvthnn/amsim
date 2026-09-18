@@ -505,7 +505,10 @@ If enabled, amsim logs directly to the shell instead of writing to file.
   )";
 
   docs[Option::GlobalPedigreeMaxDepth] = R"(
-Maximum depth of pedigree structure.
+Maximum depth of pedigree structure, used when working with kinship-based
+estimators such as ancestor-cov and cousin-cov. For a former such estimator of
+degree <degree>, --pedigree-max-depth must be configured to be at least
+<degree>, whereas for the latter a minimum of <degree> + 1 is required.
   )";
 
   docs[Option::GlobalPedigreeWarmup] = R"(
@@ -514,6 +517,10 @@ pairs so that the pedigree is at full capacity immediately in the first generati
 This option is useful when employing kinship-based estimators so estimates are
 available immediately from the initial generation. Otherwise, the estimators
 return NA until the pedigree is filled to its desired depth.
+
+NOTE: ancestor-cov estimators currently produce NA values for the first <degree>
+generations irrespective of whether --pedigree-warmup is enabled. This is a known
+issue and will be fixed soon.
   )";
 
   docs[Option::GlobalSaveConfig] = R"(
@@ -642,8 +649,10 @@ default component selected is total.
 cousin-cov and ancestor-cov additionally take an optional <degree> (default: 1):
 the pedigree distance to compute the covariance at degree 1 for first cousins /
 grandparent-grandchild, degree 2 for second cousins / great-grandparents, and so
-on. Resolving degree d requires a pedigree deep enough to reach it; see
---pedigree-max-depth and --pedigree-warmup.
+on. Resolving degree <degree> requires a pedigree deep enough to reach it; see
+--pedigree-max-depth and --pedigree-warmup. NOTE: As of the current version,
+ancestor-cov estimators will produce NA values for the first <degree>
+generations; this will be fixed in future releases.
 
 Examples:
   --estimator genotype-freq
@@ -904,9 +913,14 @@ int main(int argc, char* argv[]) {
     for (int i = 1; i < argc; ++i) {
       if (std::string_view(argv[i]) == "--load-config") {
         if ((i + 1) == argc) break;
-        std::filesystem::path config_path = argv[i + 1];
-        amsim::ConfigReader config(config_path);
-        spec = config.result();
+        try {
+          std::filesystem::path config_path = std::string_view(argv[i + 1]);
+          amsim::ConfigReader config(config_path);
+          spec = config.result();
+        } catch (std::exception& e) {
+          std::cerr << "Error parsing config file: " << e.what();
+          exit(EXIT_FAILURE);
+        }
       }
     }
 
