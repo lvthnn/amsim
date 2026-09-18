@@ -91,15 +91,20 @@ class EstimatorCousinCovStrategy : public PopulationEstimatorStrategy {
             utils::vectorPrefix(params.pheno.names, "cousin_"),
             params.pheno.n_pheno,
             params.pheno.n_pheno) {
-    if (params.global.pedigree_max_depth < degree_ + 2)
-      Log::warning(
-          "Pedigree depth is insufficient to compute cousin covariance of "
-          "degree {}",
-          degree_);
+    if (params.global.pedigree_max_depth < degree_ + 1) {
+      throw std::invalid_argument(
+          std::format(
+              "Pedigree depth {} is insufficient to compute cousin "
+              "covariance of degree {}; --pedigree-max-depth must be at least "
+              "{}",
+              params.global.pedigree_max_depth,
+              degree_,
+              degree_ + 1));
+    }
   }
 
   void compute(const State& state) override {
-    if (state.pedigree.depth() < degree_ + 2) {
+    if (state.pedigree.depth() < degree_ + 1) {
       data_.setConstant(std::numeric_limits<double>::quiet_NaN());
       return;
     }
@@ -131,6 +136,7 @@ class EstimatorCousinCovStrategy : public PopulationEstimatorStrategy {
   Eigen::MatrixXd cousin_;
 };
 
+// TODO: rework this once arbitrarily deep states enter simulation
 class EstimatorAncestorCovStrategy : public PopulationEstimatorStrategy {
  public:
   explicit EstimatorAncestorCovStrategy(
@@ -147,12 +153,35 @@ class EstimatorAncestorCovStrategy : public PopulationEstimatorStrategy {
             utils::vectorPrefix(params.pheno.names, "self_"),
             utils::vectorPrefix(params.pheno.names, "ancestor_"),
             params.pheno.n_pheno,
-            params.pheno.n_pheno) {}
+            params.pheno.n_pheno) {
+    if (params.global.pedigree_max_depth < degree_) {
+      throw std::invalid_argument(
+          std::format(
+              "Pedigree depth {} is insufficient to compute ancestor "
+              "covariance of degree {}; --pedigree-max-depth must be at least "
+              "{}",
+              params.global.pedigree_max_depth,
+              degree_,
+              degree_));
+    }
+  }
 
   void compute(const State& state) override {
     syncPhenotypes(state);
 
-    if (state.pedigree.depth() < degree_) {
+    // needs history_.size() for now, not pedigree depth since this estimator
+    // maintains its own phenotype buffer
+    if (history_.size() < degree_ + 1) {
+      Log::debug(
+          "Setting ancestral covariance estimator of degree {} to NaN in "
+          "generation {}; pedigree "
+          "size {}, max depth {}; history size {}",
+          degree_,
+          state.gen,
+          state.pedigree.depth(),
+          state.pedigree.maxDepth(),
+          history_.size());
+
       data_.setConstant(std::numeric_limits<double>::quiet_NaN());
       return;
     }
@@ -190,7 +219,7 @@ class EstimatorAncestorCovStrategy : public PopulationEstimatorStrategy {
 };
 
 inline void EstimatorAncestorCovStrategy::syncPhenotypes(const State& state) {
-  if (state.gen == 1) {
+  if (state.gen == 0) {
     history_.emplace_front(state.pheno(Generation::Parents));
     history_.emplace_front(state.pheno(Generation::Current));
   } else {
