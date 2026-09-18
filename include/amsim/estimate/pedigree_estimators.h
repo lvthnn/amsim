@@ -31,6 +31,47 @@ namespace amsim {
 
 namespace details {
 
+class EstimatorSiblingCovStrategy : public PopulationEstimatorStrategy {
+ public:
+  explicit EstimatorSiblingCovStrategy(const Params& params, Component type)
+      : type_(type),
+        n_ind_(params.global.n_ind),
+        n_pheno_(params.pheno.n_pheno),
+        self_(params.global.n_ind, params.pheno.n_pheno),
+        sibling_(params.global.n_ind, params.pheno.n_pheno),
+        PopulationEstimatorStrategy(
+            std::format("sibling_{}_cov", componentToString(type)),
+            utils::vectorPrefix(params.pheno.names, "self_"),
+            utils::vectorPrefix(params.pheno.names, "sibling_"),
+            params.pheno.n_pheno,
+            params.pheno.n_pheno) {}
+
+  void compute(const State& state) override {
+    std::vector<std::vector<Individual>> siblings =
+        state.pedigree.getSiblings();
+
+    auto buf = state.pheno()(type_);
+    for (std::size_t ind = 0; ind < n_ind_; ++ind) {
+      auto self = siblings[ind].front().index;
+      auto sibling = siblings[ind].back().index;
+      self_.row(self) = buf.row(self);
+      sibling_.row(sibling) = buf.row(sibling);
+    }
+
+    self_ = utils::standardise(self_, true, true, false);
+    sibling_ = utils::standardise(sibling_, true, true, false);
+
+    data_ = (self_.transpose() * sibling_) / static_cast<double>(n_ind_ - 1);
+  }
+
+ private:
+  Component type_;
+  std::size_t n_ind_;
+  std::size_t n_pheno_;
+  Eigen::MatrixXd self_;
+  Eigen::MatrixXd sibling_;
+};
+
 class EstimatorCousinCovStrategy : public PopulationEstimatorStrategy {
  public:
   explicit EstimatorCousinCovStrategy(
@@ -159,6 +200,16 @@ inline void EstimatorAncestorCovStrategy::syncPhenotypes(const State& state) {
 }
 
 }  // namespace details
+
+inline PopulationEstimator populationSiblingCov(
+    Component type = Component::Total) {
+  return PopulationEstimator{
+      .name = std::format("sibling-cov-", componentToString(type)),
+      .fn = [type](const Params& params) {
+        return std::make_unique<details::EstimatorSiblingCovStrategy>(
+            params, type);
+      }};
+}
 
 inline PopulationEstimator populationCousinCov(
     std::size_t degree = 1, Component type = Component::Total) {
