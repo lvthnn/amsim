@@ -913,14 +913,9 @@ int main(int argc, char* argv[]) {
     for (int i = 1; i < argc; ++i) {
       if (std::string_view(argv[i]) == "--load-config") {
         if ((i + 1) == argc) break;
-        try {
-          std::filesystem::path config_path = std::string_view(argv[i + 1]);
-          amsim::ConfigReader config(config_path);
-          spec = config.result();
-        } catch (std::exception& e) {
-          std::cerr << "Error parsing config file: " << e.what();
-          exit(EXIT_FAILURE);
-        }
+        std::filesystem::path config_path = std::string_view(argv[i + 1]);
+        amsim::ConfigReader config(config_path);
+        spec = config.result();
       }
     }
 

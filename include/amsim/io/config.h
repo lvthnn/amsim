@@ -294,7 +294,7 @@ inline void ConfigWriter::writePhenotypeConfig() {
   writeToSection("phenotypes");
   writeParam(spec_.genetic_component_cor, "genetic_cor");
   writeParam(spec_.environmental_component_cor, "environmental_cor");
-  writeParam(spec_.phenotypes, "phenotypes");
+  writeParam(spec_.phenotypes, "phenotype");
 }
 
 inline void ConfigWriter::writeMatingConfig() {
