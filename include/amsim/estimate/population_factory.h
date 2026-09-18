@@ -89,6 +89,12 @@ inline PopulationEstimator buildPopulationEstimator(
              if (!s.empty()) component = componentFromString(s[0]);
              return populationMateCor(component);
            }},
+          {"sibling-cov",
+           [](const std::vector<std::string>& s) {
+             Component component = Component::Total;
+             if (!s.empty()) component = componentFromString(s[0]);
+             return populationSiblingCov(component);
+           }},
           {"cousin-cov",
            [](const std::vector<std::string>& s) {
              std::size_t degree = 1;

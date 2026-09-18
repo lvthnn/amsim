@@ -363,8 +363,8 @@ void displayHeader() {
 void displayHelp() {
   std::string help_str = R"(
 For full documentation and usage examples, see https://github.com/lvthnn/amsim.
-Running amsim --help <flag> prints usage guides on the various command flags
-listed below. Example: amsim --help --n-individuals.
+Running amsim --help <option(s)...> prints usage guides on the various command
+flags listed below. Example: amsim --help --n-individuals.
 
 program options:
   -h, --help
@@ -418,7 +418,7 @@ sampling and estimation options:
                genotype-cor | heritability | pheno-mean(<component>) |
                pheno-var(<component>) | pheno-cov(<component>) |
                pheno-cor(<component>) | mate-cor(<component>) |
-               cousin-cov(<component>,<degree>) |
+               sibling-cov(<component>) | cousin-cov(<component>,<degree>) |
                ancestor-cov(<component>,<degree>)}
   --sample-estimator <name>
     --type {gwas(<n_pcs>, <pval_thresh>) | haseman-elston | greml | external |
@@ -444,9 +444,9 @@ sampling and estimation options:
 
 void displayHelpShort() {
   std::string help_str = R"(
-  amsim <option(s)>
-  amsim --load-config <config_file> <option(s)>
-  amsim --help <option(s)>
+  amsim <option(s)...>
+  amsim --load-config <config_file> <option(s)...>
+  amsim --help <option(s)...>
 
 To see all options, run "amsim --help".)";
 
@@ -631,7 +631,7 @@ than one.
                genotype-cor | heritability | pheno-mean(<component>) |
                pheno-var(<component>) | pheno-cor(<component>) |
                pheno-cov(<component>) | mate-cor(<component>) |
-               cousin-cov(<component>, <degree>) |
+               sibling-cov(<component>) | cousin-cov(<component>, <degree>) |
                ancestor-cov(<component>, <degree>)}
 
 genotype-* and heritability take no arguments and operate on the genome buffer /

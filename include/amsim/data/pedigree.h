@@ -92,6 +92,8 @@ class Pedigree {
   static std::vector<std::vector<Individual>> getCousins(
       const Individual& self, std::size_t degree = 1);
 
+  std::vector<std::vector<Individual>> getSiblings() const;
+
   std::vector<std::vector<Individual>> getCousins(std::size_t degree = 1) const;
 
   static std::vector<std::vector<Individual>> getAncestors(
@@ -166,6 +168,10 @@ inline std::size_t Pedigree::motherIndex(const Individual& self) const {
 }
 
 inline std::size_t Pedigree::siblingIndex(const Individual& self) const {
+  if (isMaxDepth(self.depth))
+    throw std::runtime_error(
+        "Pedigree::siblingIndex: Individual is at maximum depth");
+
   return isMale(self) ? n_sex_ + history_.first[self.depth + 1][self.index]
                       : history_.second[self.depth + 1][self.index - n_sex_];
 }
@@ -263,6 +269,18 @@ inline std::vector<std::vector<Individual>> Pedigree::getCousins(
   return cousins;
 }
 
+inline std::vector<std::vector<Individual>> Pedigree::getSiblings() const {
+  std::vector<std::vector<Individual>> siblings(n_ind_);
+
+  for (std::size_t ind = 0; ind < n_ind_; ++ind) {
+    Individual self = at(ind, 0);
+    Individual sib = self.sibling();
+    siblings[ind] = {self, sib};
+  }
+
+  return siblings;
+}
+
 inline std::vector<std::vector<Individual>> Pedigree::getCousins(
     std::size_t degree) const {
   if (degree == 0)
@@ -274,9 +292,7 @@ inline std::vector<std::vector<Individual>> Pedigree::getCousins(
 
   for (std::size_t ind = 0; ind < n_ind_; ++ind) {
     auto ind_cousins = getCousins(at(ind, 0), degree);
-    std::ranges::move(
-        ind_cousins,
-        (cousins.begin() + (ind * cousins_per_ind)));
+    std::ranges::move(ind_cousins, (cousins.begin() + (ind * cousins_per_ind)));
   }
 
   return cousins;
