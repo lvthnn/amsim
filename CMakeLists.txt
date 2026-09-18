@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(amsimlib LANGUAGES CXX VERSION 0.3.1)
+project(amsimlib LANGUAGES CXX VERSION 0.3.2)
 
 # C++ standard
 set(CMAKE_CXX_STANDARD 23)
@@ -12,6 +12,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
   add_link_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
+endif()
+
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")
+  add_compile_options(-march=x86-64 -mtune=haswell)
 endif()
 
 # Register amsim as a header-only library

@@ -284,9 +284,14 @@ inline void runSimulation(const SimulationSpec& spec) {
   params.global.rng_seed = seed;
 
   // validate output directory
-  if (!std::filesystem::exists(spec.output_dir))
-    throw std::runtime_error(
-        "output directory does not exist: " + spec.output_dir.string());
+  if (!std::filesystem::exists(spec.output_dir)) {
+    try {
+      std::filesystem::create_directory(spec.output_dir);
+    } catch (std::exception& e) {
+      Log::debug("Could not create output directory: {}", e.what());
+      exit(EXIT_FAILURE);
+    }
+  }
 
   // set up scratch directory in tmp
   std::filesystem::path tmp_dir = details::outputSetup(seed);

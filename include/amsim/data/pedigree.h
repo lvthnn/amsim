@@ -66,13 +66,13 @@ struct PedigreePath {
 class Pedigree {
  public:
   explicit Pedigree(std::size_t max_depth, std::size_t n_ind)
-      : max_depth_(max_depth), n_ind_(n_ind), n_sex_(n_ind / 2) {}
+      : max_size_(max_depth), n_ind_(n_ind), n_sex_(n_ind / 2) {}
 
   void push(const Matching& matching, const Matching& inv_matching);
 
-  std::size_t depth() const { return history_.first.size(); }
+  std::size_t size() const { return history_.first.size(); }
 
-  std::size_t maxDepth() const { return max_depth_; }
+  std::size_t maxSize() const { return max_size_; }
 
   std::size_t numInd() const { return n_ind_; }
 
@@ -105,19 +105,19 @@ class Pedigree {
   auto getSpousePairs(std::size_t depth = 1) const;
 
  private:
-  std::size_t max_depth_;
+  std::size_t max_size_;
   std::size_t n_ind_;
   std::size_t n_sex_;
   std::pair<std::deque<Matching>, std::deque<Matching>> history_;
 
   bool isMaxDepth(std::size_t depth) const {
-    return (depth == max_depth_) || (this->depth() == 1);
+    return (depth == max_size_) || (this->size() == 1);
   }
 };
 
 inline void Pedigree::push(
     const Matching& matching, const Matching& inv_matching) {
-  if (depth() == max_depth_ + 1) {
+  if (size() == max_size_ + 1) {
     history_.first.pop_back();
     history_.second.pop_back();
   }
@@ -130,12 +130,12 @@ inline Individual Pedigree::at(std::size_t index, std::size_t depth) const {
     throw std::invalid_argument(
         std::format("Individual index must be in range [0, {}]", n_ind_ - 1));
 
-  if (depth >= max_depth_)
+  if (depth >= max_size_)
     throw std::invalid_argument(
         std::format(
             "Pedigree::at depth {} exceeds pedigree depth {}",
             depth,
-            max_depth_));
+            max_size_));
 
   return Individual{.index = index, .depth = depth, .pedigree = this};
 }
