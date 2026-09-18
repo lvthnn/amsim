@@ -104,7 +104,7 @@ class EstimatorCousinCovStrategy : public PopulationEstimatorStrategy {
   }
 
   void compute(const State& state) override {
-    if (state.pedigree.depth() < degree_ + 1) {
+    if (state.pedigree.size() < degree_ + 1) {
       data_.setConstant(std::numeric_limits<double>::quiet_NaN());
       return;
     }
@@ -178,8 +178,8 @@ class EstimatorAncestorCovStrategy : public PopulationEstimatorStrategy {
           "size {}, max depth {}; history size {}",
           degree_,
           state.gen,
-          state.pedigree.depth(),
-          state.pedigree.maxDepth(),
+          state.pedigree.size(),
+          state.pedigree.maxSize(),
           history_.size());
 
       data_.setConstant(std::numeric_limits<double>::quiet_NaN());
