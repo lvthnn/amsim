@@ -240,6 +240,11 @@ inline void AssortativeMating::operator()(State& state) {
 
   // if max_itr_ has been assigned zero, we are doing random mating
   if (max_itr_ == 0) {
+    state.matching() = match_cur_;
+
+    for (std::size_t ind = 0; ind < n_sex_; ++ind)
+      state.invMatching()[state.matching()[ind]] = ind;
+
     n_itr_ = 0;
     return;
   }
