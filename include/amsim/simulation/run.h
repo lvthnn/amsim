@@ -35,6 +35,8 @@ inline std::uint64_t shuffleSeed(std::uint64_t rng_seed, std::size_t rep_id) {
   return rng_seed + (Phi * rep_id);
 }
 
+inline void validateSimulation(const SimulationSpec& spec) {}
+
 inline Params preprocessSimulation(const SimulationSpec& spec) {
   Log::info("Preprocessing simulation");
 
@@ -169,7 +171,8 @@ inline void logSimulationSpec(const SimulationSpec& spec) {
   }
 
   Log::debug(
-      "  sample estimator specs ({} total):", spec.sample_estimator_spec.size());
+      "  sample estimator specs ({} total):",
+      spec.sample_estimator_spec.size());
   for (const auto& est : spec.sample_estimator_spec)
     Log::debug("    {} (type={})", est.name, est.type);
 }
@@ -265,6 +268,8 @@ inline void runReplicate(const Params& params) {
 }
 
 inline void runSimulation(const SimulationSpec& spec) {
+  // validate the spec object
+
   // set up thread pool for parallel simulation
   std::atomic<std::size_t> next{0};
   std::vector<std::thread> pool;
@@ -325,8 +330,7 @@ inline void runSimulation(const SimulationSpec& spec) {
 
   for (auto& t : pool) t.join();
 
-  if (spec.delete_tmp)
-    std::filesystem::remove_all(tmp_dir);
+  if (spec.delete_tmp) std::filesystem::remove_all(tmp_dir);
 }
 
 }  // namespace amsim

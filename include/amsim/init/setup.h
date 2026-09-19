@@ -130,7 +130,7 @@ struct SimulationSpec {
   LogLevel log_level = LogLevel::Info;
   bool log_to_file = true;
 
-  bool delete_tmp = true; 
+  bool delete_tmp = true;
 };
 
 inline PhenomeParams buildPhenoParams(const SimulationSpec& spec) {
@@ -170,8 +170,8 @@ inline PhenomeParams buildPhenoParams(const SimulationSpec& spec) {
         raw_effects = Eigen::VectorXd::Constant(
             pheno_data.n_causal_loci,
             std::get<double>(pheno_data.effects.value()));
-      } else if (std::holds_alternative<Distribution>(
-                     pheno_data.effects.value())) {
+      } else if (
+          std::holds_alternative<Distribution>(pheno_data.effects.value())) {
         raw_effects = std::get<Distribution>(pheno_data.effects.value())(
             pheno_data.n_causal_loci);
       } else {

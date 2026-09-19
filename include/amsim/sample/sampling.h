@@ -24,9 +24,9 @@
 #include <amsim/sample/sample.h>
 
 #include <filesystem>
-#include <variant>
-#include <ranges>
 #include <numeric>
+#include <ranges>
+#include <variant>
 
 namespace amsim {
 
@@ -62,7 +62,7 @@ class Sampler {
  public:
   template <ProbandType P>
   explicit Sampler(SampleFor<P> sample, const Params& params)
-      : self_(std::make_unique<Model<P>>(std::move(sample), params)){};
+      : self_(std::make_unique<Model<P>>(std::move(sample), params)) {};
 
   void operator()(const State& state) { (*self_)(state); }
 

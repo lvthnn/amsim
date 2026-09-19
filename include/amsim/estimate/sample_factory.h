@@ -41,8 +41,7 @@ inline SampleEstimator<P> buildSampleEstimator(
   if (spec.type == "sample-var") return sampleVar<P>();
   if (spec.type == "sample-cov") return sampleCov<P>();
   if (spec.type == "sample-mate-cor") return sampleMateCor<P>();
-  if (spec.type == "haseman-elston")
-    return sampleHasemanElston<P>(spec.name);
+  if (spec.type == "haseman-elston") return sampleHasemanElston<P>(spec.name);
   if (spec.type == "greml") return sampleGREML<P>(spec.name);
   if (spec.type == "gwas") {
     std::size_t n_pcs = 0;

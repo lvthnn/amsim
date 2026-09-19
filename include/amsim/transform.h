@@ -15,6 +15,6 @@
 
 #pragma once
 
-#include <amsim/transform/update.h>
-#include <amsim/transform/score.h>
 #include <amsim/transform/mating.h>
+#include <amsim/transform/score.h>
+#include <amsim/transform/update.h>

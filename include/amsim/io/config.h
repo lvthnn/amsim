@@ -20,9 +20,9 @@
 #include <amsim/init/setup.h>
 #include <toml++/toml.h>
 
-#include <fstream>
 #include <concepts>
 #include <cstdint>
+#include <fstream>
 
 namespace amsim {
 
@@ -253,8 +253,8 @@ inline void ConfigWriter::writeParam(
 template <typename T>
 inline void ConfigWriter::writeParam(
     const std::vector<T>& val, const std::string& name) {
-  if constexpr (std::
-                    is_same_v<decltype(toTOML(std::declval<T>())), toml::table>)
+  if constexpr (
+      std::is_same_v<decltype(toTOML(std::declval<T>())), toml::table>)
     write_to_->insert(name, toTableTOML(val));
   else
     write_to_->insert(name, toArrayTOML(val));

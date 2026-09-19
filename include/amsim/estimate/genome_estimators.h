@@ -31,7 +31,9 @@ class EstimatorGenotypeMeanStrategy : public PopulationEstimatorStrategy {
   explicit EstimatorGenotypeMeanStrategy(const Params& params)
       : PopulationEstimatorStrategy("geno_mean", {}, {}, params.geno.n_loc) {};
 
-  void compute(const State& state) override { data_ = state.geno().locusMean(); }
+  void compute(const State& state) override {
+    data_ = state.geno().locusMean();
+  }
 };
 
 class EstimatorGenotypeVarStrategy : public PopulationEstimatorStrategy {
@@ -47,7 +49,9 @@ class EstimatorGenotypeFreqStrategy : public PopulationEstimatorStrategy {
   explicit EstimatorGenotypeFreqStrategy(const Params& params)
       : PopulationEstimatorStrategy("geno_freq", {}, {}, params.geno.n_loc) {}
 
-  void compute(const State& state) override { data_ = state.geno().locusFreq(); }
+  void compute(const State& state) override {
+    data_ = state.geno().locusFreq();
+  }
 };
 
 class EstimatorGenotypeCovStrategy : public PopulationEstimatorStrategy {
@@ -87,8 +91,8 @@ class EstimatorGenotypeCovStrategy : public PopulationEstimatorStrategy {
                    __builtin_popcountll(h11[word] & h12[word]);
           }
 
-        data_(loc1, loc2) =
-            ((1.0 / n_ind) * acc) - (geno.locusMean(loc1) * geno.locusMean(loc2));
+        data_(loc1, loc2) = ((1.0 / n_ind) * acc) -
+                            (geno.locusMean(loc1) * geno.locusMean(loc2));
       }
     }
 
@@ -136,8 +140,8 @@ class EstimatorGenotypeCorStrategy : public PopulationEstimatorStrategy {
           }
         }
 
-        double cov =
-            ((1.0 / n_ind) * acc) - (geno.locusMean(loc1) * geno.locusMean(loc2));
+        double cov = ((1.0 / n_ind) * acc) -
+                     (geno.locusMean(loc1) * geno.locusMean(loc2));
         double denom = std::sqrt(geno.locusVar(loc1) * geno.locusVar(loc2));
         data_(loc1, loc2) = (denom > 0.0) ? cov / denom : 0.0;
       }

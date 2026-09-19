@@ -301,8 +301,9 @@ inline void H5Writer::summarise() {
 
       for (std::size_t rep = 0; rep < n_reps_; ++rep) {
         file_
-            .getDataSet(std::format(
-                "{}/rep{:03d}/gen{:03d}", path_raw, rep + 1, gen + 1))
+            .getDataSet(
+                std::format(
+                    "{}/rep{:03d}/gen{:03d}", path_raw, rep + 1, gen + 1))
             .read(m);
         mean += m;
       }
@@ -310,8 +311,9 @@ inline void H5Writer::summarise() {
 
       for (std::size_t rep = 0; rep < n_reps_; ++rep) {
         file_
-            .getDataSet(std::format(
-                "{}/rep{:03d}/gen{:03d}", path_raw, rep + 1, gen + 1))
+            .getDataSet(
+                std::format(
+                    "{}/rep{:03d}/gen{:03d}", path_raw, rep + 1, gen + 1))
             .read(m);
         stderr += (m - mean).array().square().matrix();
       }

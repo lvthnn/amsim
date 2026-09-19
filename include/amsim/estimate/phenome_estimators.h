@@ -95,9 +95,11 @@ class EstimatorComponentCorStrategy : public PopulationEstimatorStrategy {
       : PopulationEstimatorStrategy(
             "pheno_" + componentToString(type_l) + "_" +
                 componentToString(type_r.value_or(type_l)) + "_cor",
-            utils::vectorSuffix(params.pheno.names, "_" + componentToString(type_l)),
             utils::vectorSuffix(
-                params.pheno.names, "_" + componentToString(type_r.value_or(type_l))),
+                params.pheno.names, "_" + componentToString(type_l)),
+            utils::vectorSuffix(
+                params.pheno.names,
+                "_" + componentToString(type_r.value_or(type_l))),
             params.pheno.n_pheno,
             params.pheno.n_pheno),
         n_ind_(params.global.n_ind),
@@ -129,9 +131,11 @@ class EstimatorComponentCovStrategy : public PopulationEstimatorStrategy {
       : PopulationEstimatorStrategy(
             "pheno_" + componentToString(type_l) + "_" +
                 componentToString(type_r.value_or(type_l)) + "_cov",
-            utils::vectorSuffix(params.pheno.names, "_" + componentToString(type_l)),
             utils::vectorSuffix(
-                params.pheno.names, "_" + componentToString(type_r.value_or(type_l))),
+                params.pheno.names, "_" + componentToString(type_l)),
+            utils::vectorSuffix(
+                params.pheno.names,
+                "_" + componentToString(type_r.value_or(type_l))),
             params.pheno.n_pheno,
             params.pheno.n_pheno),
         n_ind_(params.global.n_ind),
@@ -171,7 +175,8 @@ inline PopulationEstimator populationComponentMean(
   return PopulationEstimator{
       .name = "pheno-mean-" + componentToString(type),
       .fn = [type](const Params& params) {
-        return std::make_unique<details::EstimatorComponentMeanStrategy>(params, type);
+        return std::make_unique<details::EstimatorComponentMeanStrategy>(
+            params, type);
       }};
 }
 
@@ -180,7 +185,8 @@ inline PopulationEstimator populationComponentVar(
   return PopulationEstimator{
       .name = "pheno-var-" + componentToString(type),
       .fn = [type](const Params& params) {
-        return std::make_unique<details::EstimatorComponentVarStrategy>(params, type);
+        return std::make_unique<details::EstimatorComponentVarStrategy>(
+            params, type);
       }};
 }
 
