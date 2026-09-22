@@ -34,10 +34,10 @@ namespace amsim {
 
 template <std::size_t N>
 struct FixedString {
+  // NOLINTBEGIN(modernize-avoid-c-arrays, google-explicit-constructor)
   char data[N]{};
-  // NOLINTBEGIN(google-explicit-constructor)
   constexpr FixedString(const char (&s)[N]) { std::copy_n(s, N, data); }
-  // NOLINTEND(google-explicit-constructor)
+  // NOLINTEND(modernize-avoid-c-arrays, google-explicit-constructor)
   constexpr bool operator==(const FixedString&) const = default;
 };
 
