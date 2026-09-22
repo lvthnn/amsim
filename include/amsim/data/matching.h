@@ -22,4 +22,4 @@ namespace amsim {
 
 using Matching = std::vector<std::size_t>;
 
-} // namespace amsim
+}  // namespace amsim

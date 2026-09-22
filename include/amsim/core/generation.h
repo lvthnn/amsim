@@ -23,8 +23,6 @@ enum class Generation { Current, Parents };
 
 enum class Sex : uint8_t { Unknown = 0, Male = 1, Female = 2 };
 
-inline Sex bitToSex(std::uint64_t bit) {
-  return bit ? Sex::Female : Sex::Male;
-}
+inline Sex bitToSex(std::uint64_t bit) { return bit ? Sex::Female : Sex::Male; }
 
 }  // namespace amsim

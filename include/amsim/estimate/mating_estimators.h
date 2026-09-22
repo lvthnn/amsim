@@ -68,7 +68,8 @@ inline PopulationEstimator populationMateCor(
   return PopulationEstimator{
       .name = "mate-cor-" + componentToString(type),
       .fn = [type](const Params& params) {
-        return std::make_unique<details::EstimatorMateCorStrategy>(params, type);
+        return std::make_unique<details::EstimatorMateCorStrategy>(
+            params, type);
       }};
 }
 

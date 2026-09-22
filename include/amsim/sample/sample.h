@@ -83,9 +83,9 @@ inline SampleFor<P> buildSample(const SampleSpec& spec) {
 }
 
 inline Sample buildSample(const SampleSpec& spec) {
-  if (spec.proband_type == "self")
-    return buildSample<ProbandType::Self>(spec);
-  if (spec.proband_type == "family") return buildSample<ProbandType::Family>(spec);
+  if (spec.proband_type == "self") return buildSample<ProbandType::Self>(spec);
+  if (spec.proband_type == "family")
+    return buildSample<ProbandType::Family>(spec);
   if (spec.proband_type == "mate") return buildSample<ProbandType::Mate>(spec);
   throw std::runtime_error("Invalid Proband type " + spec.proband_type);
 }

@@ -54,8 +54,8 @@ class EstimatorSiblingCovStrategy : public PopulationEstimatorStrategy {
     for (std::size_t ind = 0; ind < n_ind_; ++ind) {
       auto self = siblings[ind].front().index;
       auto sibling = siblings[ind].back().index;
-      self_.row(self) = buf.row(self);
-      sibling_.row(sibling) = buf.row(sibling);
+      self_.row(ind) = buf.row(self);
+      sibling_.row(ind) = buf.row(sibling);
     }
 
     self_ = utils::standardise(self_, true, true, false);

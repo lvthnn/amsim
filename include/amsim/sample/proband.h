@@ -21,7 +21,6 @@
 #include <amsim/sample/selection.h>
 
 #include <boost/algorithm/string/case_conv.hpp>
-
 #include <string_view>
 
 namespace amsim {

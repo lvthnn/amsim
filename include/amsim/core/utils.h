@@ -23,9 +23,9 @@
 #include <cstddef>
 #include <cstdio>
 #include <numeric>
+#include <ranges>
 #include <string>
 #include <vector>
-#include <ranges>
 
 namespace amsim::utils {
 
